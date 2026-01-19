@@ -21,7 +21,7 @@ const NoticeApproval = () => {
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  const BASE_URL = 'http://172.20.80.224:8080';
+  const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
   
 

@@ -7,7 +7,8 @@
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:spring": "vite build && xcopy /E /I /Y dist ..\\app-api\\src\\main\\resources\\static"
   },
   "dependencies": {
     "@ckeditor/ckeditor5-build-classic": "^44.3.0",

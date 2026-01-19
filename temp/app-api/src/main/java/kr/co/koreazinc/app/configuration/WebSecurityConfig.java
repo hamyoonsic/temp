@@ -40,6 +40,7 @@ public class WebSecurityConfig {
         return CoreSecurityConfigurerAdapter.init(http, (security) -> {
             security.authorizeHttpRequests(request -> CoreSecurityConfigurerAdapter.Request
                     .init(request).requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+                    .requestMatchers("/", "/index.html", "/assets/**", "/*.svg", "/*.ico").permitAll()  // 추가
                     .anyRequest().access(accessChecker));
 
             security.addFilterAt(tokenAuthenticationFilter(), BasicAuthenticationFilter.class);

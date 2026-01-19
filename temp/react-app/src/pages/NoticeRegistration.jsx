@@ -21,6 +21,8 @@ const editorConfiguration = {
   language: 'ko'
 };
 
+import { API_BASE_URL, apiFetch } from '../config/api';
+
 const NoticeRegistration = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -39,7 +41,7 @@ const NoticeRegistration = () => {
   const [showCorpModal, setShowCorpModal] = useState(false);
   const [showOrgModal, setShowOrgModal] = useState(false);
 
-  // ✅ 완료 공지 관련 상태
+  // 완료 공지 관련 상태
   const [isCompletionNotice, setIsCompletionNotice] = useState(false);
   const [originalNotice, setOriginalNotice] = useState(null);
 
@@ -219,17 +221,16 @@ const NoticeRegistration = () => {
   const loadMasterData = async () => {
     setLoading(true);
     try {
-      const BASE_URL = 'http://172.20.80.224:8080';
       
-      // ✅ 토큰 가져오기
+      // 토큰 가져오기
       const token = sessionStorage.getItem('access_token');
       const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
-      const servicesRes = await fetch(`${BASE_URL}/api/services`, { headers });
+      const servicesRes = await fetch(`${API_BASE_URL}/api/services`, { headers });
       const servicesData = await servicesRes.json();
       setServices(servicesData.data || []);
 
-      const corpsRes = await fetch(`${BASE_URL}/api/corporations`, { headers });
+      const corpsRes = await fetch(`${API_BASE_URL}/api/corporations`, { headers });
       const corpsData = await corpsRes.json();
       setCorporations(corpsData.data || []);
 
@@ -240,13 +241,13 @@ const NoticeRegistration = () => {
       
     } catch (error) {
       console.error('마스터 데이터 로드 실패:', error);
-      alert('데이터를 불러오는데 실패했습니다.\n서버가 실행 중인지 확인하세요.');
+      alert(`데이터를 불러오는데 실패했습니다.: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ 마스터 데이터 로드 완료 후 targets 복원
+  // 마스터 데이터 로드 완료 후 targets 복원
   useEffect(() => {
     if (isCompletionNotice && originalNotice && 
         corporations.length > 0 && allOrganizations.length > 0) {
@@ -421,7 +422,7 @@ const NoticeRegistration = () => {
     try {
       console.log('📤 현재 사용자 정보:', userInfo);
       
-      // ✅ 완료 공지인 경우 isMaintenance = false, parentNoticeId 추가
+      // 완료 공지인 경우 isMaintenance = false, parentNoticeId 추가
       const isMaintenance = isCompletionNotice 
         ? false 
         : (formData.noticeType.includes('점검') || formData.noticeType.includes('장애'));
@@ -472,7 +473,7 @@ const NoticeRegistration = () => {
         fullRequest: requestData
       });
 
-      const response = await fetch('http://172.20.80.224:8080/api/notices', {
+      const response = await fetch(`${API_BASE_URL}/api/notices`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

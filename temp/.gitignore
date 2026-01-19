@@ -37,4 +37,11 @@ out/
 .vscode/
 
 ### Logs ###
-**/logs/
+**/logs/"" 
+"# React build output in static" 
+"app-api/src/main/resources/static/assets/" 
+"app-api/src/main/resources/static/index.html" 
+"app-api/src/main/resources/static/vite.svg" 
+
+app-api/src/main/resources/static/*
+!app-api/src/main/resources/static/.gitkeep

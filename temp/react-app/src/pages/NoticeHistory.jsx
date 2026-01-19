@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config/api';
 import './NoticeHistory.css';
 
 const NoticeHistory = () => {
@@ -15,8 +16,6 @@ const NoticeHistory = () => {
 
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-
-  const BASE_URL = 'http://172.20.80.224:8080';
 
   useEffect(() => {
     loadCorporations();
@@ -45,7 +44,7 @@ const NoticeHistory = () => {
 
   const loadCorporations = async () => {
     try {
-      const response = await fetch(`${BASE_URL}/api/corporations`);
+      const response = await fetch(`${API_BASE_URL}/api/corporations`);
       const result = await response.json();
       if (result.success) {
         setCorporations(result.data || []);
@@ -65,7 +64,7 @@ const NoticeHistory = () => {
     if (currentFilters.endDate) params.append('endDate', formatDateInput(currentFilters.endDate));
     if (currentFilters.searchTerm) params.append('search', currentFilters.searchTerm);
     
-    const response = await fetch(`${BASE_URL}/api/notices?${params.toString()}`);
+    const response = await fetch(`${API_BASE_URL}/api/notices?${params.toString()}`);
     const result = await response.json();
     
     if (result.success && result.data) {
@@ -83,7 +82,7 @@ const NoticeHistory = () => {
 
   const openDetailModal = async (noticeId) => {
     try {
-      const response = await fetch(`${BASE_URL}/api/notices/${noticeId}`);
+      const response = await fetch(`${API_BASE_URL}/api/notices/${noticeId}`);
       const result = await response.json();
       
       if (result.success && result.data) {
@@ -114,7 +113,7 @@ const NoticeHistory = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/notices/${noticeId}/retry`, {
+      const response = await fetch(`${API_BASE_URL}/api/notices/${noticeId}/retry`, {
         method: 'POST'
       });
       
