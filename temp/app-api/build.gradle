@@ -1,13 +1,19 @@
 dependencies {
     implementation project(":spring-core")
-
     implementation project(":cloud-doc")
     implementation project(":cloud-actuator")
     implementation project(":cloud-discovery")
     implementation project(":cloud-tomcat")
-
     implementation project(":data-temp")
 }
 
-bootJar {enabled = true}
+bootRun {
+    mainClass = 'kr.co.koreazinc.app.MainApplication'
+}
+
+bootJar {
+    enabled = true
+    mainClass = 'kr.co.koreazinc.app.MainApplication'
+}
+
 jar {enabled = false}

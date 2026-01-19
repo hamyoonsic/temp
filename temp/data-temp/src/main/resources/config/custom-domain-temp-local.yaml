@@ -1,28 +1,41 @@
 temp:
   datasource: # DB 접속정보
-    driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
-    jdbc-url: jdbc:log4jdbc:sqlserver://172.15.100.102:1433;databaseName=IAMS
-    username: sys_iams
-    password: iams!@345
+    driver-class-name: org.postgresql.Driver
+    jdbc-url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: hamyoonsic
     connection-timeout: 30000
-    max-lifetime: 30000
+    max-lifetime: 1800000
     maximum-pool-size: 10
     data-source-properties:
       cachePrepStmts: true
       prepStmtCacheSize: 250
       prepStmtCacheSqlLimit: 2048
-      useServerPrepStmts: true
-      useLocalSessionState: true
-      rewriteBatchedStatements: true
-      cacheResultSetMetadata: true
-      cacheServerConfiguration: true
-      elideSetAutoCommits: true
-      maintainTimeStats: false
-      trustServerCertificate: true
-      encrypt: true
+
+    # driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+    # jdbc-url: jdbc:log4jdbc:sqlserver://172.15.100.102:1433;databaseName=IAMS
+    # username: sys_iams
+    # password: iams!@345
+    # connection-timeout: 30000
+    # max-lifetime: 30000
+    # maximum-pool-size: 10
+    # data-source-properties:
+    #   cachePrepStmts: true
+    #   prepStmtCacheSize: 250
+    #   prepStmtCacheSqlLimit: 2048
+    #   useServerPrepStmts: true
+    #   useLocalSessionState: true
+    #   rewriteBatchedStatements: true
+    #   cacheResultSetMetadata: true
+    #   cacheServerConfiguration: true
+    #   elideSetAutoCommits: true
+    #   maintainTimeStats: false
+    #   trustServerCertificate: true
+    #   encrypt: true
 
   jpa: # JPA 설정
-    database-platform: kr.co.koreazinc.temp.configuration.CustomDialect
+    # database-platform: kr.co.koreazinc.temp.configuration.CustomDialect
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
     properties:
       hibernate:
@@ -50,4 +63,5 @@ temp:
         # 논리적 명명 전략
         # implicit-strategy:
         # 물리적 명명 전략
-        physical-strategy: kr.co.koreazinc.data.strategy.physical.NaturalNamingStrategy
+        # physical-strategy: kr.co.koreazinc.data.strategy.physical.NaturalNamingStrategy
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl

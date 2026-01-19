@@ -1,0 +1,289 @@
+package kr.co.koreazinc.app.service.notice;
+
+import kr.co.koreazinc.app.dto.notice.NoticeRegistrationDto;
+import kr.co.koreazinc.app.dto.notice.NoticeResponseDto;
+import kr.co.koreazinc.temp.model.entity.notice.*;
+import kr.co.koreazinc.temp.repository.notice.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.criteria.Predicate;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * 공지 관리 Service
+ * 위치: temp/app-api/src/main/java/kr/co/koreazinc/app/service/notice/NoticeService.java
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class NoticeService {
+    
+    private final NoticeBaseRepository noticeBaseRepository;
+    private final NoticeTargetRepository noticeTargetRepository;
+    private final ServiceMasterRepository serviceMasterRepository;
+    
+    /**
+     * 공지 등록
+     */
+    @Transactional
+    public Long createNotice(NoticeRegistrationDto dto, String userId) {
+        log.info("Creating notice: {} by {}", dto.getTitle(), userId);
+        
+        // 1. NoticeBase 생성
+        NoticeBase notice = NoticeBase.builder()
+                .title(dto.getTitle())
+                .content(dto.getContent())
+                .noticeLevel(dto.getNoticeLevel())
+                .noticeStatus("PENDING")  // 초기 상태: 승인 대기
+                .affectedServiceId(dto.getAffectedServiceId())
+                .senderOrgUnitId(dto.getSenderOrgUnitId())
+                .senderOrgUnitName(dto.getSenderOrgUnitName())
+                .publishStartAt(dto.getPublishStartAt())
+                .publishEndAt(dto.getPublishEndAt())
+                .isMaintenance(dto.getIsMaintenance() != null ? dto.getIsMaintenance() : false)
+                .isCompleted(false)
+                .mailSubject(dto.getMailSubject())
+                .createdBy(userId)
+                .updatedBy(userId)
+                .build();
+        
+        NoticeBase savedNotice = noticeBaseRepository.save(notice);
+        
+        // 2. 대상 저장
+        if (dto.getTargets() != null && !dto.getTargets().isEmpty()) {
+            List<NoticeTarget> targets = dto.getTargets().stream()
+                    .map(targetDto -> NoticeTarget.builder()
+                            .noticeId(savedNotice.getNoticeId())
+                            .targetType(targetDto.getTargetType())
+                            .targetKey(targetDto.getTargetKey())
+                            .targetName(targetDto.getTargetName())
+                            .build())
+                    .collect(Collectors.toList());
+            
+            noticeTargetRepository.saveAll(targets);
+        }
+        
+        log.info("Notice created successfully. ID: {}", savedNotice.getNoticeId());
+        return savedNotice.getNoticeId();
+    }
+    
+    /**
+     * 공지 목록 조회 (필터링)
+     */
+    @Transactional(readOnly = true)
+    public Page<NoticeResponseDto> getNotices(
+            String status,
+            NoticeBase.NoticeLevel noticeLevel,
+            Long serviceId,
+            LocalDate startDate,
+            LocalDate endDate,
+            String search,
+            Pageable pageable) {
+        
+        Specification<NoticeBase> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            // 상태 필터
+            if (status != null && !status.isEmpty()) {
+                predicates.add(cb.equal(root.get("noticeStatus"), status));
+            }
+            
+            // 중요도 필터
+            if (noticeLevel != null) {
+                predicates.add(cb.equal(root.get("noticeLevel"), noticeLevel));
+            }
+            
+            // 서비스 필터
+            if (serviceId != null) {
+                predicates.add(cb.equal(root.get("affectedServiceId"), serviceId));
+            }
+            
+            // 날짜 범위 필터
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(
+                    root.get("createdAt"), 
+                    startDate.atStartOfDay()
+                ));
+            }
+            if (endDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(
+                    root.get("createdAt"), 
+                    endDate.atTime(23, 59, 59)
+                ));
+            }
+            
+            // 검색어 필터 (제목)
+            if (search != null && !search.trim().isEmpty()) {
+                predicates.add(cb.like(
+                    cb.lower(root.get("title")), 
+                    "%" + search.toLowerCase() + "%"
+                ));
+            }
+            
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        
+        Page<NoticeBase> noticePage = noticeBaseRepository.findAll(spec, pageable);
+        return noticePage.map(this::convertToResponseDto);
+    }
+    
+    /**
+     * 공지 상세 조회
+     */
+    @Transactional(readOnly = true)
+    public NoticeResponseDto getNoticeDetail(Long noticeId) {
+        NoticeBase notice = noticeBaseRepository.findById(noticeId)
+                .orElseThrow(() -> new RuntimeException("공지를 찾을 수 없습니다. ID: " + noticeId));
+        
+        return convertToResponseDtoWithDetails(notice);
+    }
+
+    /**
+     * 공지 승인
+     */
+    @Transactional
+    public void approveNotice(Long noticeId, String approver) {
+        log.info("Approving notice: {} by {}", noticeId, approver);
+        
+        NoticeBase notice = noticeBaseRepository.findById(noticeId)
+                .orElseThrow(() -> new RuntimeException("공지를 찾을 수 없습니다. ID: " + noticeId));
+        
+        // 승인 대기 상태인지 확인
+        if (!"PENDING".equals(notice.getNoticeStatus())) {
+            throw new RuntimeException("승인 대기 상태의 공지만 승인할 수 있습니다.");
+        }
+        
+        // 상태를 APPROVED로 변경
+        notice.setNoticeStatus("APPROVED");
+        notice.setUpdatedBy(approver);
+        
+        noticeBaseRepository.save(notice);
+        
+        log.info("Notice approved successfully. ID: {}", noticeId);
+    }
+    
+    /**
+     * 공지 반려
+     */
+    @Transactional
+    public void rejectNotice(Long noticeId, String reason, String rejector) {
+        log.info("Rejecting notice: {} by {} - reason: {}", noticeId, rejector, reason);
+        
+        NoticeBase notice = noticeBaseRepository.findById(noticeId)
+                .orElseThrow(() -> new RuntimeException("공지를 찾을 수 없습니다. ID: " + noticeId));
+        
+        // 승인 대기 상태인지 확인
+        if (!"PENDING".equals(notice.getNoticeStatus())) {
+            throw new RuntimeException("승인 대기 상태의 공지만 반려할 수 있습니다.");
+        }
+        
+        // 상태를 REJECTED로 변경
+        notice.setNoticeStatus("REJECTED");
+        notice.setUpdatedBy(rejector);
+        
+        noticeBaseRepository.save(notice);
+        
+        log.info("Notice rejected successfully. ID: {}", noticeId);
+    }
+    
+    /**
+     * Entity -> DTO 변환 (기본)
+     */
+    private NoticeResponseDto convertToResponseDto(NoticeBase notice) {
+        NoticeResponseDto.NoticeResponseDtoBuilder builder = NoticeResponseDto.builder()
+                .noticeId(notice.getNoticeId())
+                .title(notice.getTitle())
+                .content(notice.getContent())
+                .noticeLevel(notice.getNoticeLevel())
+                .noticeStatus(notice.getNoticeStatus())
+                .affectedServiceId(notice.getAffectedServiceId())
+                .senderOrgUnitId(notice.getSenderOrgUnitId())
+                .senderOrgUnitName(notice.getSenderOrgUnitName())
+                .publishStartAt(notice.getPublishStartAt())
+                .publishEndAt(notice.getPublishEndAt())
+                .isMaintenance(notice.getIsMaintenance())
+                .isCompleted(notice.getIsCompleted())
+                .completedAt(notice.getCompletedAt())
+                .mailSubject(notice.getMailSubject())
+                .createdAt(notice.getCreatedAt())
+                .createdBy(notice.getCreatedBy())
+                .updatedAt(notice.getUpdatedAt())
+                .updatedBy(notice.getUpdatedBy())
+                .parentNoticeId(notice.getParentNoticeId());
+        
+        // 서비스 정보 추가
+        if (notice.getAffectedServiceId() != null) {
+            serviceMasterRepository.findById(notice.getAffectedServiceId())
+                    .ifPresent(service -> builder.affectedService(
+                            NoticeResponseDto.ServiceDto.builder()
+                                    .serviceId(service.getServiceId())
+                                    .serviceCode(service.getServiceCode())
+                                    .serviceName(service.getServiceName())
+                                    .serviceCategory(service.getServiceCategory())
+                                    .build()
+                    ));
+        }
+        
+        return builder.build();
+    }
+    
+    /**
+     * Entity -> DTO 변환 (상세 - 대상/태그 포함)
+     */
+    private NoticeResponseDto convertToResponseDtoWithDetails(NoticeBase notice) {
+        NoticeResponseDto dto = convertToResponseDto(notice);
+        
+        // 대상 정보 추가
+        List<NoticeTarget> targets = noticeTargetRepository.findByNoticeId(notice.getNoticeId());
+        dto.setTargets(targets.stream()
+                .map(target -> NoticeResponseDto.TargetDto.builder()
+                        .targetId(target.getTargetId())
+                        .targetType(target.getTargetType())
+                        .targetKey(target.getTargetKey())
+                        .targetName(target.getTargetName())
+                        .build())
+                .collect(Collectors.toList()));
+        
+        return dto;
+    }
+    
+    /**
+     * 대시보드용 통계 조회
+     */
+    @Transactional(readOnly = true)
+    public DashboardStats getDashboardStats() {
+        return DashboardStats.builder()
+                .pendingCount(noticeBaseRepository.countByNoticeStatus("PENDING"))
+                .approvedCount(noticeBaseRepository.countByNoticeStatus("APPROVED"))
+                .rejectedCount(noticeBaseRepository.countByNoticeStatus("REJECTED"))
+                .sentCount(noticeBaseRepository.countByNoticeStatus("SENT"))
+                .failedCount(noticeBaseRepository.countByNoticeStatus("FAILED"))
+                .build();
+    }
+    
+    /**
+     * 대시보드 통계 DTO
+     */
+    @lombok.Data
+    @lombok.Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class DashboardStats {
+        private Long pendingCount;
+        private Long approvedCount;
+        private Long rejectedCount;
+        private Long sentCount;
+        private Long failedCount;
+    }
+}
+

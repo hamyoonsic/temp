@@ -4,9 +4,9 @@ dependencies {
     // DB Driver
     // runtimeOnly "org.mariadb.jdbc:mariadb-java-client"
     // runtimeOnly "com.mysql:mysql-connector-j"
-    runtimeOnly "com.microsoft.sqlserver:mssql-jdbc"
+    // runtimeOnly "com.microsoft.sqlserver:mssql-jdbc"
     // runtimeOnly "com.oracle.database.jdbc:ojdbc11"
-    // runtimeOnly "org.postgresql:postgresql"
+    runtimeOnly "org.postgresql:postgresql"
     // runtimeOnly "org.xerial.sqlite-jdbc:sqlite-jdbc"
     // runtimeOnly "org.mongodb:mongodb-driver-sync"
     // runtimeOnly "com.h2database:h2"
