@@ -1,0 +1,83 @@
+############################
+# OS / Editor
+############################
+.DS_Store
+Thumbs.db
+
+.gradle/
+build/
+gradle/wrapper/gradle-*-bin.zip
+
+.vscode/
+.idea/
+*.iml
+
+############################
+# Logs
+############################
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+############################
+# Java / Gradle
+############################
+# Gradle cache & build outputs
+.gradle/
+**/build/
+
+# IntelliJ / Eclipse
+out/
+bin/
+.classpath
+.project
+.settings/
+
+############################
+# Spring Boot
+############################
+# (추가 산출물이 생기면 여기에)
+*.hprof
+
+############################
+# Node / React (Vite)
+############################
+node_modules/
+**/node_modules/
+
+# Vite build output
+dist/
+**/dist/
+
+# Vite / bundler caches
+.vite/
+**/.vite/
+
+# zip 
+*.zip
+gradle-*.zip
+
+# Coverage
+coverage/
+**/coverage/
+
+############################
+# Env files (비밀키/설정)
+############################
+.env
+.env.*
+!.env.example
+
+############################
+# Large / local-only files
+############################
+# 네 트리에 있는 큰 파일(원하면 보관은 하되 git에는 X)
+gradle-*.zip
+*.zip
+
+# (만약 로컬 DB 파일 쓰면)
+*.db
+*.sqlite
