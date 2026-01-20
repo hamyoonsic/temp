@@ -9,7 +9,7 @@
 export const API_VERSION = 'v1';
 
 // API Base URL
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5173';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // 전체 API 엔드포인트 (버전 포함)
 export const API_ENDPOINT = `${API_BASE_URL}/${API_VERSION}/api`;

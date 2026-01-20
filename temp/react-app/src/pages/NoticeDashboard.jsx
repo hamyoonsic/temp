@@ -64,8 +64,16 @@ export default function NoticeDashboard() {
       
       // 1. 통계 데이터
       const statsData = await apiClient.get('/dashboard/stats');
-      if (statsData.success) {
+      if (statsData?.success && statsData.data && typeof statsData.data === 'object') {
         setStats(statsData.data);
+      } else {
+        // ✅ 유지 or 기본값으로 복구
+        setStats({
+          pendingApprovalCount: 0,
+          scheduledSendCount: 0,
+          failedSendCount: 0,
+          completedSendCount: 0
+        });
       }
 
       // 2. 최근 공지 목록 (승인된 공지만 - APPROVED, SENT, COMPLETED)

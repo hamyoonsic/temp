@@ -81,7 +81,7 @@ class ApiClient {
       throw new Error('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     }
 
-    // ✅ 수정: 성공 응답 처리 개선
+    // 수정: 성공 응답 처리 개선
     if (response.ok) {
       // 204 No Content - 응답 본문 없음
       if (response.status === 204) {
@@ -89,31 +89,18 @@ class ApiClient {
       }
 
       const contentType = response.headers.get('content-type');
-      
-      // JSON 응답
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          return await response.json();
-        } catch (error) {
-          console.error('JSON 파싱 실패:', error);
-          // JSON 파싱 실패 시에도 성공으로 처리
-          return { success: true, data: null };
-        }
+      // HTML이 오면 즉시 에러로 처리
+      if (text?.trim().startsWith('<')) {
+        throw new Error('서버가 JSON 대신 HTML을 반환했습니다. API_BASE_URL/라우팅/시큐리티 설정을 확인하세요.');
       }
-      
-      // ✅ Content-Type이 없어도 JSON 파싱 시도
-      try {
-        const text = await response.text();
-        if (text) {
-          return JSON.parse(text);
-        }
-        // 빈 응답
-        return { success: true, data: null };
-      } catch (error) {
-        console.error('응답 처리 실패:', error);
-        // 파싱 실패 시에도 성공으로 처리
-        return { success: true, data: null };
+
+      // JSON이면 파싱
+      if (contentType.includes('application/json') || text?.trim().startsWith('{') || text?.trim().startsWith('[')) {
+        return JSON.parse(text);
       }
+
+      // 그 외는 에러 (또는 필요하면 raw text 반환)
+      throw new Error('예상치 못한 응답 형식입니다.');
     }
 
     // 기타 오류
