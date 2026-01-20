@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import apiClient from "../utils/apiClient";
+import { noticeApi } from '../api/notices';
 import { apiFetch } from '../config/api';
 import './NoticeRegistration.css';
 
@@ -74,13 +75,17 @@ const NoticeRegistration = () => {
 
   // 모달 오픈 시 바디 스크롤 방지
   useEffect(() => {
-    if (showDetailModal) {
+    const isAnyModalOpen = showServiceModal || showCorpModal || showOrgModal;
+
+    if (isAnyModalOpen) {
       document.body.classList.add('modal-open');
     } else {
       document.body.classList.remove('modal-open');
     }
+
     return () => document.body.classList.remove('modal-open');
-  }, [showDetailModal]);
+  }, [showServiceModal, showCorpModal, showOrgModal]);
+
 
   useEffect(() => {
     loadMasterData();
@@ -228,11 +233,12 @@ const NoticeRegistration = () => {
       ]);
 
       if (corpData.success) {
-        setCompanies(corpData.data || []);
+        setCorporations(corpData.data || []);
       }
       
       if (orgData.success) {
-        setDepartments(orgData.data || []);
+        setOrganizations(orgData.data || []);
+    setAllOrganizations(orgData.data || []);
       }
       
       if (serviceData.success) {
@@ -473,7 +479,8 @@ const NoticeRegistration = () => {
       console.log('🚀 공지 등록 요청:', requestData);
 
       // 새 코드: apiClient 사용
-      const result = await apiClient.post('/notices', requestData);
+      //const result = await apiClient.post('/notices', requestData);
+      const result = await noticeApi.createNotice(requestData)
     
       console.log('✅ 등록 성공:', result);
       navigate('/notices/history');

@@ -27,9 +27,9 @@ class ApiClient {
   }
 
   /**
-   * ✅ 수정: 응답 처리 개선 - null 방지
+   * 응답 처리 통합 & text 변수 정리
    */
-  async handleResponse(response) {
+   async handleResponse(response) {
     // 401 Unauthorized
     if (response.status === 401) {
       console.warn('🔒 인증 실패 (401) - 로그인 페이지로 이동');
@@ -40,24 +40,29 @@ class ApiClient {
 
     // 400 Bad Request - 토큰 만료 확인
     if (response.status === 400) {
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
         try {
           const errorData = await response.json();
           const errorMessage = errorData.message || JSON.stringify(errorData);
-          
-          if (errorMessage.includes('expired') || 
-              errorMessage.includes('Token has expired') ||
-              errorMessage.includes('만료')) {
+
+          if (
+            errorMessage.includes('expired') ||
+            errorMessage.includes('Token has expired') ||
+            errorMessage.includes('만료')
+          ) {
             console.warn('🔒 토큰 만료 (400) - 로그인 페이지로 이동');
             clearSession();
             window.location.replace('/login');
             throw new Error('토큰이 만료되었습니다.');
           }
-          
+
           throw new Error(errorMessage);
         } catch (parseError) {
-          if (parseError.message.includes('만료') || parseError.message.includes('로그인')) {
+          if (
+            parseError.message.includes('만료') ||
+            parseError.message.includes('로그인')
+          ) {
             throw parseError;
           }
           throw new Error('잘못된 요청입니다.');
@@ -81,29 +86,46 @@ class ApiClient {
       throw new Error('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     }
 
-    // 수정: 성공 응답 처리 개선
+    // ✅ 여기서부터 "성공 or 기타 2xx/3xx" 처리
     if (response.ok) {
       // 204 No Content - 응답 본문 없음
       if (response.status === 204) {
         return { success: true, data: null };
       }
 
-      const contentType = response.headers.get('content-type');
-      // HTML이 오면 즉시 에러로 처리
-      if (text?.trim().startsWith('<')) {
-        throw new Error('서버가 JSON 대신 HTML을 반환했습니다. API_BASE_URL/라우팅/시큐리티 설정을 확인하세요.');
+      const contentType = response.headers.get('content-type') || '';
+      const text = await response.text();   // ⬅️ 여기서 실제 응답 본문 읽기
+
+      // HTML이 오면 즉시 에러로 처리 (Spring Security, 라우팅 설정 오류 가능성)
+      if (text.trim().startsWith('<')) {
+        console.error('서버가 HTML을 반환했습니다. 응답 일부:', text.substring(0, 200));
+        throw new Error(
+          '서버가 JSON 대신 HTML을 반환했습니다. API_BASE_URL, 프록시, 시큐리티(로그인 리다이렉트) 설정을 확인하세요.'
+        );
       }
 
       // JSON이면 파싱
-      if (contentType.includes('application/json') || text?.trim().startsWith('{') || text?.trim().startsWith('[')) {
-        return JSON.parse(text);
+      if (
+        contentType.includes('application/json') ||
+        text.trim().startsWith('{') ||
+        text.trim().startsWith('[')
+      ) {
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          console.error('JSON 파싱 실패, 원본 응답:', text);
+          throw new Error('응답 JSON 파싱 중 오류가 발생했습니다.');
+        }
       }
 
-      // 그 외는 에러 (또는 필요하면 raw text 반환)
-      throw new Error('예상치 못한 응답 형식입니다.');
+      // 그 외 형식이면 raw text를 감싸서 반환 (필요시 디버그용)
+      return {
+        success: true,
+        data: text,
+      };
     }
 
-    // 기타 오류
+    // 여기까지 왔다는 건 ok도 아니고 위에서 따로 처리도 안 한 상태
     throw new Error(`요청 실패: ${response.status} ${response.statusText}`);
   }
 

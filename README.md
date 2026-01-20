@@ -1,9 +1,9 @@
-# temp
 
 ```
 sotemp
+├─ my_tables_data.sql
+├─ my_tables_ddl.sql
 ├─ pnpm buildspring.txt
-├─ README.md
 ├─ study
 │  ├─ auth서버 로그인창 접근 후 버튼클릭시 401에러.txt
 │  ├─ 토큰이 필요한 요청구분.txt
@@ -72,14 +72,8 @@ sotemp
 │  │  │        │  └─ additional-spring-configuration-metadata.json
 │  │  │        └─ static
 │  │  │           ├─ assets
-│  │  │           │  ├─ index-B0E3JloS.js
-│  │  │           │  ├─ index-B3viRszt.js
 │  │  │           │  ├─ index-BjhqJi6A.css
-│  │  │           │  ├─ index-CH9r6CTA.js
-│  │  │           │  ├─ index-D1yzNEM-.css
-│  │  │           │  ├─ index-DD8e6dqw.js
-│  │  │           │  ├─ index-DmHzP3Cf.js
-│  │  │           │  └─ index-xyxcybek.js
+│  │  │           │  └─ index-CMNwrNtk.js
 │  │  │           ├─ index.html
 │  │  │           └─ vite.svg
 │  │  └─ work
@@ -432,7 +426,6 @@ sotemp
 │  │  ├─ README.md
 │  │  ├─ src
 │  │  │  ├─ api
-│  │  │  │  ├─ http.js
 │  │  │  │  └─ notices.js
 │  │  │  ├─ App.css
 │  │  │  ├─ App.jsx
@@ -678,6 +671,7 @@ sotemp
 │  ├─ entities
 │  ├─ repositories
 │  └─ services
+├─ tree.md
 └─ 이슈발생사항
    └─ XSS보안이슈.txt
 
