@@ -23,7 +23,8 @@ spring:
       matching-strategy: ant_path_matcher
   web:
     resources:
-      add-mappings: false
+      #add-mappings: false
+      add-mappings: true
   multipart:
     max-file-size: 50MB
     max-request-size: 100MB

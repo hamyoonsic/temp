@@ -26,7 +26,8 @@ spring:
   web:
     resources:
       # 엔드포인트 리소스와 매핑 여부
-      add-mappings: false
+      #add-mappings: false
+      add-mappings: true
     servlet:
   multipart:
     max-file-size: 50MB

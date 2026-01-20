@@ -1,0 +1,260 @@
+WebSecurityConfig 쪽에서 필터를 어떻게 심어놨는지
+@Bean
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    return CoreSecurityConfigurerAdapter.init(http, (security) -> {
+        security.authorizeHttpRequests(request -> CoreSecurityConfigurerAdapter.Request
+                .init(request).requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+                .requestMatchers("/", "/index.html", "/assets/**", "/*.svg", "/*.ico").permitAll()
+                .anyRequest().access(accessChecker));
+
+        security.addFilterAt(tokenAuthenticationFilter(), BasicAuthenticationFilter.class);
+        ...
+        return security;
+    });
+}
+
+
+여기서 핵심 포인트:
+
+security.addFilterAt(tokenAuthenticationFilter(), BasicAuthenticationFilter.class);
+→ Spring Security 필터 체인에 TokenAuthenticationFilter를 꽂는다는 뜻
+→ 위치는 BasicAuthenticationFilter 자리에
+
+그리고 필터 본체를 이렇게 만들었지:
+
+@Bean
+public TokenAuthenticationFilter tokenAuthenticationFilter() {
+    TokenAuthenticationFilter filter =
+            new TokenAuthenticationFilter(new AntPathRequestMatcher("/**"));
+    filter.setAuthenticationManager(authenticationManager());
+    filter.setAuthenticationEntryPoint(authenticationEntryPoint);
+    filter.setGetToken((request, response) -> {
+        return ResponseToken.builder().accessToken(request.getHeader("Authorization")).build();
+    });
+    filter.setClearToken((request, response) -> {
+        HttpEnhancer.create(request, response)
+                .delCookie(AuthenticationTokenUtils.ACCESS_TOKEN_COOKIE_NAME);
+    });
+    return filter;
+}
+
+
+여기서 중요한 부분 두 개:
+
+new AntPathRequestMatcher("/**")
+→ 이 필터는 모든 요청 경로(/)** 에 대해 동작할 준비를 한다
+→ 즉, /api/..., /notices/..., /index.html 전부 필터를 통과
+
+setGetToken 부분
+
+filter.setGetToken((request, response) -> {
+    return ResponseToken.builder()
+            .accessToken(request.getHeader("Authorization"))
+            .build();
+});
+
+
+→ “토큰을 어디서 꺼내올지” 정의하는 부분
+→ 지금은 Authorization 헤더에서 토큰을 꺼냄
+→ 즉, “클라이언트가 매 요청마다 Authorization 헤더를 보내야 한다”는 구조
+
+여기까지만 봐도 네 말 맞음:
+
+✅ “요청 올 때마다 사용자측에서 보낸 토큰(Authorization 헤더)을 본다”
+라는 구조가 코드에 그대로 박혀 있음.
+
+2️⃣ TokenAuthenticationFilter 안에서 실제로 어떤 일이 일어나는지
+
+이제 core 모듈의 TokenAuthenticationFilter를 보자.
+
+① 어느 요청에 대해 동작하는지
+private boolean requiresAuthentication(HttpServletRequest request, HttpServletResponse response) {
+    return this.requiresAuthenticationRequestMatchers.stream()
+            .anyMatch(matcher -> matcher.matches(request));
+}
+
+
+생성자에서 넘긴 게 new AntPathRequestMatcher("/**")니까:
+
+public TokenAuthenticationFilter(RequestMatcher ...requiresAuthenticationRequestMatchers) {
+    this.requiresAuthenticationRequestMatchers = Arrays.asList(requiresAuthenticationRequestMatchers);
+}
+
+
+→ 모든 요청이 requiresAuthentication(...)에 대해 true
+→ 즉, 이 필터는 모든 요청마다 한 번씩 동작한다고 보면 됨.
+
+② doFilterInternal 흐름
+@Override
+protected void doFilterInternal(HttpServletRequest request,
+                                HttpServletResponse response,
+                                FilterChain filterChain)
+        throws ServletException, IOException {
+
+    if (requiresAuthentication(request, response)) {   // 1. 이 요청이 필터 대상인가? (/** → 항상 yes)
+        try {
+            if (ObjectUtils.isEmpty(SecurityContextHolder.getContext().getAuthentication())) { // 2. 아직 인증 안 됐으면
+                ResponseToken token = getToken.get(request, response);  // 3. 토큰 꺼내오기 (여기서 Authorization 헤더 읽음)
+                if (token.isNotBlank()) {                              // 4. 토큰이 비어있지 않으면
+                    SecurityContextHolder.getContext().setAuthentication(
+                        getAuthenticationManager().authenticate(new TokenAuthenticationToken(token))
+                    );
+                    ...
+                }
+            }
+        } catch (AuthenticationException e) {
+            SecurityContextHolder.clearContext();
+            clearToken.clear(request, response);
+            ...
+            if (!ignoreFailure) {
+                this.getAuthenticationEntryPoint().commence(request, response, e);
+                return;
+            }
+        }
+    }
+    filterChain.doFilter(request, response);   // 다음 필터로 진행
+}
+
+
+여기서 네 질문에 대한 “구체적인” 답이 나온다.
+
+3️⃣ “요청이 올 때마다 사용자 토큰 확인한다”를 코드로 설명하면
+
+조각을 이어보면:
+
+모든 요청이 필터를 탄다
+
+new AntPathRequestMatcher("/**")
+
+
+“이 요청, 인증 필요하냐?” → /swagger-ui/** 같은 건 Security에서 permitAll이라
+인가(access)에서 예외지만, 필터는 일단 실행은 됨.
+
+아직 SecurityContext에 인증 정보가 없으면:
+
+if (SecurityContextHolder.getContext().getAuthentication() == null) { ... }
+
+
+getToken.get(request, response) 호출
+→ 이게 아까 WebSecurityConfig에서 주입해 준 람다:
+
+filter.setGetToken((request, response) -> {
+    return ResponseToken.builder()
+            .accessToken(request.getHeader("Authorization"))
+            .build();
+});
+
+
+즉, 매 요청마다 Authorization 헤더를 읽어서 ResponseToken으로 감싼다.
+
+token.isNotBlank()면
+
+→ 토큰이 비어있지 않다고 판단되면
+
+getAuthenticationManager().authenticate(new TokenAuthenticationToken(token))
+
+
+여기서 TokenAuthenticationProvider가 실제 토큰 검증:
+
+토큰 파싱
+
+유효성 검증
+
+사용자 정보 조회
+
+권한(Role) 부여
+
+검증 성공하면:
+
+SecurityContextHolder.getContext().setAuthentication( ... );
+
+
+→ 이 요청 동안, 이후 컨트롤러까지
+“이 사용자는 인증됨” 상태가 됨.
+
+요걸 문장으로 번역하면:
+
+“모든 요청은 먼저 TokenAuthenticationFilter를 지나가고,
+아직 인증되지 않았으면 요청에서 토큰(Authorization 헤더)을 꺼내서
+유효한 토큰인지 검사한 뒤, 맞으면 인증 완료 상태로 만든 다음
+컨트롤러/핸들러로 넘긴다.”
+
+딱 네가 말한:
+
+“요청 올 때마다 사용자측의 토큰을 확인한다”
+
+를 코드로 풀어쓴 버전이야.
+
+4️⃣ 그럼 “프론트에 토큰을 안 주면 필터 못 탄다”는 말도 맞냐?
+
+이제 여기까지 오면 답이 보임.
+
+이 필터는 토큰을 request.getHeader("Authorization")에서만 찾는다.
+
+만약 프론트가:
+
+토큰을 안 들고 있거나
+
+Authorization 헤더에 아무것도 안 넣으면
+→ token.isNotBlank()가 false
+→ authenticate(...) 호출 안 함
+→ SecurityContext는 비어 있음
+
+그 다음에:
+
+security.authorizeHttpRequests(request -> CoreSecurityConfigurerAdapter.Request
+        .init(request).requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+        .requestMatchers("/", "/index.html", "/assets/**", "/*.svg", "/*.ico").permitAll()
+        .anyRequest().access(accessChecker));
+
+
+여기서 /api/** 같은 보호된 경로는 access(accessChecker)를 지나야 하는데,
+
+SecurityContext에 인증 객체가 없어도
+
+accessChecker가 “인증 안 된 사용자”에 대해 대부분 401/403을 던질 거라서
+
+결국 “정상 접근”을 하려면,
+매 요청마다 Authorization 헤더에 토큰을 실어 보내야 하는 구조가 되는 거 맞다 ✅
+
+5️⃣ 나중에 쿠키 기반 아키텍처로 바꾸면 바뀌는 지점
+
+참고로, 아까 말했던 “HttpOnly 쿠키 기반으로 바꾸는 경우”에는
+딱 이 부분만 바뀌게 돼:
+
+filter.setGetToken((request, response) -> {
+    // 지금은 헤더만 읽지만,
+    // 나중엔 쿠키에서도 토큰(or 세션ID)을 읽는 쪽으로 바꾸면 됨
+    String header = request.getHeader("Authorization");
+    String token = header;
+
+    // 예시: 쿠키에서 MY_AUTH라는 이름으로 꺼내오기
+    if (token == null && request.getCookies() != null) {
+        for (Cookie c : request.getCookies()) {
+            if ("MY_AUTH".equals(c.getName())) {
+                token = c.getValue();
+                break;
+            }
+        }
+    }
+
+    return ResponseToken.builder()
+            .accessToken(token)
+            .build();
+});
+
+
+이렇게 바꾸면:
+
+여전히 필터는 “요청 올 때마다 토큰을 확인”하지만
+
+그 토큰은 헤더가 아니라 쿠키에 담겨 오게 되는 거지.
+
+즉, 필터의 개념은 그대로고,
+“토큰을 어디에서 꺼낼 거냐만 바뀐다”가 포인트야.
+
+🔚 정리 한 줄로
+
+네가 말한 것처럼,
+이 두 파일을 보면 ‘모든 요청마다 클라이언트가 보낸 토큰(Authorization 헤더)을 읽어서 인증하는 구조’가 맞고,
+그 핵심은 WebSecurityConfig의 setGetToken + TokenAuthenticationFilter의 doFilterInternal 안에 있다.

@@ -1,0 +1,130 @@
+/sso-redirect 가 401 Unauthorized 나는 진짜 이유
+
+요게 지금 핵심이야.
+
+브라우저 정보:
+
+Request URL: http://172.20.80.224:5173/sso-redirect?code=...
+Status Code: 401 Unauthorized
+
+
+즉:
+
+SSO 서버가 code=... 달아서 우리 서버 /sso-redirect로 리다이렉트 해 줬는데
+
+그 /sso-redirect를 Spring Security가 “인증 안 됐네?” 하고 401로 튕김
+
+왜냐면, 지금 WebSecurityConfig가 이렇게 돼 있거든 👇
+
+.requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+.requestMatchers("/", "/index.html", "/assets/**", "/*.svg", "/*.ico").permitAll()
+.anyRequest().access(accessChecker);
+
+
+여기서 중요한 포인트:
+
+/sso-redirect 경로가 permitAll에 없음
+
+그래서 /sso-redirect?... 요청도 anyRequest().access(accessChecker)를 타게 됨
+
+그런데 이 순간은 아직 로그인 전이라 토큰 없음
+
+TokenAuthenticationFilter 입장에선 Authorization 헤더도 없음
+
+→ accessChecker가 “이 사람 인증 안 됐는데?” → 401
+
+즉, 구조를 문장으로 말하면:
+
+SSO가 우리 서비스에 code를 주려고 딱 들어왔는데,
+정작 우리 Spring Security가 “너 누구야?” 하면서 문 앞에서 내쫓는 상황 😂
+
+React의 SSORedirect.jsx까지 도달도 못 하고, Spring Security 관문에서 막히고 있는 거야.
+
+해결: /sso-redirect를 “익명 접근 허용 + SPA 포워딩” 으로 열어주기
+① Security에서 /sso-redirect를 permitAll로 추가
+
+WebSecurityConfig 수정:
+
+security.authorizeHttpRequests(request -> CoreSecurityConfigurerAdapter.Request
+        .init(request)
+        .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+        .requestMatchers(
+            "/", 
+            "/index.html", 
+            "/assets/**", 
+            "/*.svg", 
+            "/*.ico",
+            "/sso-redirect",      // ← 추가
+            "/sso-redirect/**"    // ← 패턴까지 열어두면 더 안전
+        ).permitAll()
+        .anyRequest().access(accessChecker)
+);
+
+
+이렇게 하면:
+
+/sso-redirect?code=... 요청은
+→ 토큰 없어도 접근 허용
+→ React index.html까지 도달 가능
+
+② IndexController에서도 /sso-redirect를 SPA 경로로 추가
+
+지금 IndexController는 대략 이렇게 생겼지?
+
+@Slf4j
+@Controller
+public class IndexController {
+
+    @GetMapping("/")
+    public String root() {
+         log.info(">>> [ROOT IndexController] SPA 요청 들어옴");
+        return "forward:/index.html";
+    }
+
+    @GetMapping({
+        "/notices/**",
+        "/dashboard/**", 
+        "/approval/**",
+        "/calendar/**"
+    })
+    public String spa() {
+        return "forward:/index.html";
+    }
+}
+
+
+여기에 /sso-redirect도 추가해 줘야 React 라우터가 이 컴포넌트를 실행할 수 있어 👇
+
+    @GetMapping({
+        "/notices/**",
+        "/dashboard/**", 
+        "/approval/**",
+        "/calendar/**",
+        "/sso-redirect/**"   // ← 추가
+    })
+    public String spa() {
+        return "forward:/index.html";
+    }
+
+
+이렇게 되면 전체 흐름이:
+
+사용자 → AUTH 서버 로그인
+
+AUTH 서버 → http://172.20.80.224:5173/sso-redirect?code=...로 리다이렉트
+
+Spring Security
+
+/sso-redirect는 permitAll이라 통과
+
+IndexController
+/sso-redirect 매핑 → forward:/index.html
+React index.html 로드
+React Router가 /sso-redirect → <SSORedirect /> 컴포넌트 렌더
+
+SSORedirect.jsx가 code를 읽고
+/v2/oauth/token 호출
+access_token 받음
+sessionStorage에 저장
+이후 API 접근 시 Authorization 헤더 붙이고 호출
+그 다음부터 /api/** 요청은 TokenAuthenticationFilter + accessChecker를 정상 통과

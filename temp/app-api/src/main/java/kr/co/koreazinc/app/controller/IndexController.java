@@ -24,16 +24,12 @@ public class IndexController {
 
     @GetMapping("/")
     public String root() {
+        log.info(">>> [ROOT IndexController] SPA 요청 들어옴");
         return "forward:/index.html";
     }
 
     // React Router 경로만 명시적으로
-    @GetMapping({
-        "/notices/**",
-        "/dashboard/**", 
-        "/approval/**",
-        "/calendar/**"
-    })
+    @GetMapping(value = {"/{path:[^\\.]*}", "/**/{path:[^\\.]*}"})
     public String spa() {
         return "forward:/index.html";
     }
