@@ -22,6 +22,13 @@ import java.util.stream.Collectors;
 /**
  * 공지 관리 Service
  * 위치: temp/app-api/src/main/java/kr/co/koreazinc/app/service/notice/NoticeService.java
+ * 
+ * ✅ 수정 내역:
+ * - DashboardStats DTO 필드명을 프론트엔드와 일치하도록 변경
+ * - pendingCount → pendingApprovalCount
+ * - approvedCount → scheduledSendCount
+ * - sentCount → completedSendCount
+ * - failedCount → failedSendCount
  */
 @Slf4j
 @Service
@@ -258,32 +265,35 @@ public class NoticeService {
     }
     
     /**
-     * 대시보드용 통계 조회
+     * ✅ 수정: 대시보드용 통계 조회 - 프론트엔드 필드명과 일치
      */
     @Transactional(readOnly = true)
     public DashboardStats getDashboardStats() {
+        // null 안전 처리 추가
+        Long pendingCount = noticeBaseRepository.countByNoticeStatus("PENDING");
+        Long approvedCount = noticeBaseRepository.countByNoticeStatus("APPROVED");
+        Long sentCount = noticeBaseRepository.countByNoticeStatus("SENT");
+        Long failedCount = noticeBaseRepository.countByNoticeStatus("FAILED");
+        
         return DashboardStats.builder()
-                .pendingCount(noticeBaseRepository.countByNoticeStatus("PENDING"))
-                .approvedCount(noticeBaseRepository.countByNoticeStatus("APPROVED"))
-                .rejectedCount(noticeBaseRepository.countByNoticeStatus("REJECTED"))
-                .sentCount(noticeBaseRepository.countByNoticeStatus("SENT"))
-                .failedCount(noticeBaseRepository.countByNoticeStatus("FAILED"))
+                .pendingApprovalCount(pendingCount != null ? pendingCount : 0L)
+                .scheduledSendCount(approvedCount != null ? approvedCount : 0L)
+                .completedSendCount(sentCount != null ? sentCount : 0L)
+                .failedSendCount(failedCount != null ? failedCount : 0L)
                 .build();
     }
     
     /**
-     * 대시보드 통계 DTO
+     * ✅ 수정: 대시보드 통계 DTO - 프론트엔드와 일치하는 필드명
      */
     @lombok.Data
     @lombok.Builder
     @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class DashboardStats {
-        private Long pendingCount;
-        private Long approvedCount;
-        private Long rejectedCount;
-        private Long sentCount;
-        private Long failedCount;
+        private Long pendingApprovalCount;  // PENDING 상태 (승인 대기)
+        private Long scheduledSendCount;    // APPROVED 상태 (발송 예정)
+        private Long completedSendCount;    // SENT 상태 (발송 완료)
+        private Long failedSendCount;       // FAILED 상태 (발송 실패)
     }
 }
-
