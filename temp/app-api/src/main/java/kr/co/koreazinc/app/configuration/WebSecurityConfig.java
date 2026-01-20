@@ -41,7 +41,7 @@ public class WebSecurityConfig {
             security.authorizeHttpRequests(request -> CoreSecurityConfigurerAdapter.Request
                     .init(request)
                     .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
-                    .requestMatchers("v1/api/**").authenticated()  // 추가
+                    .requestMatchers("/v1/api/**").authenticated()  // 추가
                     .anyRequest().permitAll()  // SPA 화면은 모두 허용
             );
                     //.anyRequest().access(accessChecker));

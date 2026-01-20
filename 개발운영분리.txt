@@ -1,0 +1,110 @@
+1️⃣ package.json 확인
+json{
+  "scripts": {
+    "dev": "vite",              // ← 개발 모드
+    "build": "vite build",      // ← 프로덕션 모드
+    "preview": "vite preview"
+  }
+}
+2️⃣ 명령어별 동작
+bash# 개발 모드
+pnpm run dev
+  ↓
+  vite 실행
+  ↓
+  - import.meta.env.DEV = true
+  - import.meta.env.PROD = false
+  - import.meta.env.MODE = 'development'
+  - vite.config.js의 server.proxy 활성화 ✅
+  - 파일을 메모리에서 제공
+  - Hot Reload 활성화
+
+# 프로덕션 빌드
+pnpm run build
+  ↓
+  vite build 실행
+  ↓
+  - import.meta.env.DEV = false
+  - import.meta.env.PROD = true
+  - import.meta.env.MODE = 'production'
+  - vite.config.js의 server 설정 무시 (빌드만 함)
+  - build.outDir에 파일 생성
+  - 최적화된 파일 생성
+
+🔍 vite.config.js 동작 방식
+javascriptexport default defineConfig({
+  plugins: [react()],
+  
+  // ✅ 이 부분은 'pnpm run dev' 할 때만 사용
+  server: {
+    port: 5173,
+    proxy: {
+      '/v1/api': {
+        target: 'http://172.20.80.224:8080',
+      },
+    },
+  },
+  
+  // ✅ 이 부분은 'pnpm run build' 할 때만 사용
+  build: {
+    outDir: '../app-api/src/main/resources/static',
+    emptyOutDir: true,
+  },
+})
+중요:
+
+server 블록 = 개발 모드 전용 (빌드할 땐 무시됨)
+build 블록 = 빌드 모드 전용 (dev 서버 띄울 땐 무시됨)
+
+
+💡 실제 테스트 해보기
+테스트 1: 개발 모드
+bashcd C:\sotemp\temp\react-app
+pnpm run dev
+브라우저 콘솔에서 확인:
+javascriptconsole.log(import.meta.env.DEV);   // true
+console.log(import.meta.env.PROD);  // false
+console.log(import.meta.env.MODE);  // "development"
+```
+
+**네트워크 탭 확인:**
+```
+요청: http://localhost:5173/v1/api/master/corporations
+실제 전달: http://172.20.80.224:8080/v1/api/master/corporations
+(프록시가 자동으로 전달함)
+
+테스트 2: 빌드
+bashcd C:\sotemp\temp\react-app
+pnpm run build
+```
+
+**결과:**
+```
+빌드 완료!
+파일 생성됨: C:\sotemp\temp\app-api\src\main\resources\static\
+  ├─ index.html
+  ├─ assets/
+  │  ├─ index-xxxxx.js
+  │  └─ index-xxxxx.css
+  └─ vite.svg
+이제 Spring만 실행:
+bashcd C:\sotemp\temp
+./gradlew :app-api:bootRun
+```
+
+**브라우저 접속:**
+```
+http://172.20.80.224:8080
+→ static/index.html 제공됨
+→ 프록시 없음 (같은 도메인이므로)
+
+🤔 그럼 .env 파일은 뭐야?
+.env 파일은 추가 설정이 필요할 때만 사용합니다 (선택사항):
+bash# .env.development (있어도 되고 없어도 됨)
+VITE_API_TIMEOUT=5000
+VITE_DEBUG_MODE=true
+
+# .env.production (있어도 되고 없어도 됨)
+VITE_API_TIMEOUT=30000
+VITE_DEBUG_MODE=false
+현재 프로젝트는 .env 파일 없어도 됩니다!

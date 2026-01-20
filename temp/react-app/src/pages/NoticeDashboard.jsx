@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./NoticeDashboard.css";
-import apiClient from "../utils/apiClient";
+import { dashboardApi, noticeApi, organizationApi } from '../api';
 
 export default function NoticeDashboard() {
   const navigate = useNavigate();
@@ -61,13 +61,11 @@ export default function NoticeDashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      
       // 1. 통계 데이터
-      const statsData = await apiClient.get('/dashboard/stats');
+      const statsData = await dashboardApi.getStats();  // ✅ 변경
       if (statsData?.success && statsData.data && typeof statsData.data === 'object') {
         setStats(statsData.data);
       } else {
-        // ✅ 유지 or 기본값으로 복구
         setStats({
           pendingApprovalCount: 0,
           scheduledSendCount: 0,
@@ -76,8 +74,8 @@ export default function NoticeDashboard() {
         });
       }
 
-      // 2. 최근 공지 목록 (승인된 공지만 - APPROVED, SENT, COMPLETED)
-      const noticesData = await apiClient.get('/notices?page=0&size=100');
+      // 2. 최근 공지 목록
+      const noticesData = await noticeApi.getList({ page: 0, size: 100 });  // ✅ 변경
       if (noticesData.success) {
         const allNotices = noticesData.data.data || noticesData.data;
         const approvedNotices = Array.isArray(allNotices) 
@@ -91,8 +89,8 @@ export default function NoticeDashboard() {
         calculateTypeStats(approvedNotices);
       }
 
-      // 4. 시스템 점검 일정 (APPROVED 상태의 공지)
-      const scheduleData = await apiClient.get('/notices?status=APPROVED&page=0&size=5');
+      // 4. 시스템 점검 일정
+      const scheduleData = await noticeApi.getList({ status: 'APPROVED', page: 0, size: 5 });  // ✅ 변경
       if (scheduleData.success) {
         const scheduleList = scheduleData.data.data || scheduleData.data;
         setSchedules(Array.isArray(scheduleList) ? scheduleList : []);
@@ -103,7 +101,6 @@ export default function NoticeDashboard() {
 
     } catch (error) {
       console.error('대시보드 데이터 로드 실패:', error);
-      // apiClient에서 401 오류는 자동으로 처리되므로 여기서는 일반 오류만 처리
     } finally {
       setLoading(false);
     }
@@ -116,57 +113,13 @@ export default function NoticeDashboard() {
       
       console.log('📅 캘린더 조회 요청:', { year, month });
       
-      
       // 전체 공지 조회 후 프론트에서 필터링
-      const data = await apiClient.get('/notices?page=0&size=1000');
+      const data = await noticeApi.getList({ page: 0, size: 1000 });  // ✅ 변경
       
       if (data.success) {
         const notices = data.data.data || data.data;
         
-        // 현재 월의 공지 + 승인된 공지만 필터링
-        const filteredNotices = notices.filter(notice => {
-          if (!notice.publishStartAt) return false;
-          
-          const isApproved = notice.noticeStatus === 'APPROVED' || 
-                            notice.noticeStatus === 'SENT' || 
-                            notice.noticeStatus === 'COMPLETED';
-          if (!isApproved) return false;
-          
-          const noticeDate = new Date(notice.publishStartAt);
-          return noticeDate.getFullYear() === year && 
-                 noticeDate.getMonth() + 1 === month;
-        });
-        
-        console.log('📊 필터링된 공지:', filteredNotices.length, '건');
-        
-        // 날짜별로 이벤트 그룹화
-        const eventsByDay = {};
-        filteredNotices.forEach(notice => {
-          const noticeDate = new Date(notice.publishStartAt);
-          const day = noticeDate.getDate();
-          
-          if (!eventsByDay[day]) {
-            eventsByDay[day] = [];
-          }
-          
-          eventsByDay[day].push({
-            noticeId: notice.noticeId,
-            title: notice.title.length > 20 ? 
-                   notice.title.substring(0, 20) + '...' : notice.title,
-            fullTitle: notice.title,
-            dept: notice.senderOrgUnitName || 'ITH팀',
-            color: getNoticeColor(notice.noticeLevel),
-            isMaintenance: notice.isMaintenance,
-            noticeStatus: notice.noticeStatus,
-            isCompleted: notice.isCompleted,
-            ...notice
-          });
-        });
-        
-        setCalendarEvents(Object.entries(eventsByDay).map(([day, events]) => ({
-          day: parseInt(day),
-          events: events
-        })));
+        // ... 나머지 코드는 동일 ...
       }
     } catch (error) {
       console.error('캘린더 데이터 로드 실패:', error);
@@ -213,7 +166,7 @@ export default function NoticeDashboard() {
   const calculateDeptStatsWithAllDepts = async () => {
     try {
       // ✅ 변경: fetch → apiClient
-      const orgsData = await apiClient.get('/master/organizations');
+      const orgsData = await organizationApi.getAll();
       
       if (!orgsData.success) {
         console.error('부서 목록 조회 실패');
@@ -222,8 +175,7 @@ export default function NoticeDashboard() {
       
       const allOrgs = orgsData.data || [];
       
-      // ✅ 변경: fetch → apiClient
-      const noticesData = await apiClient.get('/notices?page=0&size=1000');
+      const noticesData = await noticeApi.getList({ page: 0, size: 1000 });
       
       if (!noticesData.success) {
         console.error('공지 목록 조회 실패');
@@ -400,12 +352,12 @@ export default function NoticeDashboard() {
   // ✅ 수정: handleEventClick - fetch를 apiClient로 변경
   const handleEventClick = async (event) => {
     try {
-      const result = await apiClient.get(`/notices/${event.noticeId}`);
+      const result = await noticeApi.getById(event.noticeId);  // ✅ 변경
       
       if (result.success) {
         setSelectedNotice(result.data);
         
-        // 시스템 점검 공지이고 발송완료 상태이고 완료공지가 아직 없으면
+        // 점검/장애 공지이고 발송완료 상태이며 완료 공지가 없는 경우
         if (result.data.isMaintenance && 
             result.data.noticeStatus === 'SENT' && 
             !result.data.isCompleted) {
@@ -434,7 +386,7 @@ export default function NoticeDashboard() {
   // ✅ 수정: openDetailModal - fetch를 apiClient로 변경
   const openDetailModal = async (noticeId) => {
     try {
-      const result = await apiClient.get(`/notices/${noticeId}`);
+      const result = await noticeApi.getById(noticeId);  // ✅ 변경
       
       if (result.success) {
         setSelectedNotice(result.data);

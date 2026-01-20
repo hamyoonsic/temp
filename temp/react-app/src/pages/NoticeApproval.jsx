@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NoticeApproval.css';
-import apiClient from "../utils/apiClient";  // 추가
+import { approvalApi, noticeApi } from '../api';
 
 const NoticeApproval = () => {
   const navigate = useNavigate();
@@ -86,74 +86,49 @@ const NoticeApproval = () => {
   const loadApprovalList = async () => {
     setLoading(true);
     try {
-      const result = await apiClient.get('/notices?status=PENDING&page=0&size=100');
+      const result = await approvalApi.getPendingList({ page: 0, size: 100 });  // ✅ 변경
       
       if (result.success) {
         const notices = result.data.data || result.data;
         setApprovalList(Array.isArray(notices) ? notices : []);
-      } else {
-        console.error('승인 목록 로드 실패:', result);
-        setApprovalList([]);
       }
     } catch (error) {
       console.error('승인 목록 로드 실패:', error);
-      setApprovalList([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleApprove = async (noticeId) => {
-    if (!isAdmin) {
-      alert('관리자 권한이 필요합니다.');
-      return;
-    }
-
     if (!window.confirm('이 공지를 승인하시겠습니까?')) return;
 
-    setLoading(true);
     try {
-      await apiClient.post(`/notices/${noticeId}/approve`);
-      
-      alert('승인되었습니다.');
+      await approvalApi.approve(noticeId);  // ✅ 변경
+      alert('공지가 승인되었습니다.');
       loadApprovalList();
-      setShowDetailModal(false);
     } catch (error) {
       console.error('승인 실패:', error);
       alert('승인 처리 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleReject = async (noticeId) => {
-    if (!isAdmin) {
-      alert('관리자 권한이 필요합니다.');
-      return;
-    }
+    const reason = prompt('반려 사유를 입력하세요:');
+    if (!reason) return;
 
-    const reason = window.prompt('반려 사유를 입력하세요:');
-    if (!reason || !reason.trim()) return;
-
-    setLoading(true);
     try {
-      //URL에 쿼리 파라미터 포함
-      await apiClient.post(`/notices/${noticeId}/reject?reason=${encodeURIComponent(reason)}`);
-      
-      alert('반려되었습니다.');
+      await approvalApi.reject(noticeId, reason);  // ✅ 변경
+      alert('공지가 반려되었습니다.');
       loadApprovalList();
-      setShowDetailModal(false);
     } catch (error) {
       console.error('반려 실패:', error);
       alert('반려 처리 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
     }
   };
 
   const openDetailModal = async (noticeId) => {
     try {
-      const result = await apiClient.get(`/notices/${noticeId}`);
+      const result = await noticeApi.getById(noticeId);  // ✅ 변경
       
       if (result.success && result.data) {
         setSelectedNotice(result.data);

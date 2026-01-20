@@ -1,6 +1,6 @@
 // NoticeHistory.jsx
 import React, { useState, useEffect } from 'react';
-import apiClient from "../utils/apiClient";
+import { noticeApi, corporationApi } from '../api';
 import './NoticeHistory.css';
 
 const NoticeHistory = () => {
@@ -57,7 +57,7 @@ const NoticeHistory = () => {
   // ✅ 수정: fetch → apiClient
   const loadCorporations = async () => {
     try {
-      const result = await apiClient.get('/master/corporations');
+      const result = await corporationApi.getAll();  // ✅ 변경
       
       if (result.success) {
         setCorporations(result.data || []);
@@ -70,15 +70,16 @@ const NoticeHistory = () => {
   // ✅ 수정: fetch → apiClient
   const loadHistoryList = async (currentFilters = filters) => {
     try {
-      const params = new URLSearchParams();
-      params.append('sort', 'createdAt,DESC');
+      const params = {
+        sort: 'createdAt,DESC'
+      };
       
-      if (currentFilters.corpId) params.append('corpId', currentFilters.corpId);
-      if (currentFilters.startDate) params.append('startDate', formatDateInput(currentFilters.startDate));
-      if (currentFilters.endDate) params.append('endDate', formatDateInput(currentFilters.endDate));
-      if (currentFilters.searchTerm) params.append('search', currentFilters.searchTerm);
+      if (currentFilters.corpId) params.corpId = currentFilters.corpId;
+      if (currentFilters.startDate) params.startDate = formatDateInput(currentFilters.startDate);
+      if (currentFilters.endDate) params.endDate = formatDateInput(currentFilters.endDate);
+      if (currentFilters.searchTerm) params.search = currentFilters.searchTerm;
       
-      const result = await apiClient.get(`/notices?${params.toString()}`);
+      const result = await noticeApi.getList(params);  // ✅ 변경
       
       if (result.success && result.data) {
         const notices = result.data.data || result.data;
@@ -96,7 +97,7 @@ const NoticeHistory = () => {
   // ✅ 수정: fetch → apiClient
   const openDetailModal = async (noticeId) => {
     try {
-      const result = await apiClient.get(`/notices/${noticeId}`);
+      const result = await noticeApi.getById(noticeId);  // ✅ 변경
       
       if (result.success && result.data) {
         setSelectedNotice(result.data);
@@ -127,7 +128,7 @@ const NoticeHistory = () => {
 
     setLoading(true);
     try {
-      await apiClient.post(`/notices/${noticeId}/retry`);
+      await noticeApi.retry(noticeId);  // ✅ 변경
       
       alert('재발송 요청이 완료되었습니다.');
       loadHistoryList();

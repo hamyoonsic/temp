@@ -1,10 +1,9 @@
 // NoticeRegistration.jsx - 완료 공지 등록 기능 추가
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import apiClient from "../utils/apiClient";
-import { noticeApi } from '../api/notices';
-import { apiFetch } from '../config/api';
 import './NoticeRegistration.css';
+
+import { corporationApi, organizationApi, serviceApi, noticeApi } from '../api';
 
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
@@ -224,30 +223,32 @@ const NoticeRegistration = () => {
   };
 
   const loadMasterData = async () => {
-    setLoading(true);
-    try {
-      const [corpData, orgData, serviceData] = await Promise.all([
-        apiClient.get('/master/corporations'),
-        apiClient.get('/master/organizations'),
-        apiClient.get('/master/services')
-      ]);
+  setLoading(true);
+  try {
+    const [corpData, orgData, serviceData] = await Promise.all([
+      corporationApi.getAll(),    // ✅ 변경
+      organizationApi.getAll(),   // ✅ 변경
+      serviceApi.getAll()         // ✅ 변경
+    ]);
 
-      if (corpData.success) {
-        setCorporations(corpData.data || []);
-      }
-      
-      if (orgData.success) {
-        setOrganizations(orgData.data || []);
-    setAllOrganizations(orgData.data || []);
-      }
-      
-      if (serviceData.success) {
-        setServices(serviceData.data || []);
-      }
-    } catch (error) {
-      console.error('마스터 데이터 로드 실패:', error);
+    if (corpData.success) {
+      setCorporations(corpData.data || []);
     }
-  };
+    
+    if (orgData.success) {
+      setOrganizations(orgData.data || []);
+      setAllOrganizations(orgData.data || []);
+    }
+    
+    if (serviceData.success) {
+      setServices(serviceData.data || []);
+    }
+  } catch (error) {
+    console.error('마스터 데이터 로드 실패:', error);
+  } finally {
+    setLoading(false);  // ✅ 추가: 로딩 상태 해제
+  }
+};
 
   // 마스터 데이터 로드 완료 후 targets 복원
   useEffect(() => {
@@ -405,93 +406,70 @@ const NoticeRegistration = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  // ... 유효성 검증 코드는 그대로 ...
+
+  setLoading(true);
+  try {
+    console.log('📤 현재 사용자 정보:', userInfo);
     
-    if (!formData.noticeTitle.trim()) {
-      alert('공지 제목을 입력하세요.');
-      return;
-    }
-    if (!formData.noticeContent.trim()) {
-      alert('공지 내용을 입력하세요.');
-      return;
-    }
-    if (formData.receiverCompanies.length === 0 && formData.receiverDepts.length === 0) {
-      alert('수신 대상(법인 또는 부서)을 선택하세요.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      console.log('📤 현재 사용자 정보:', userInfo);
-      
-      // 완료 공지인 경우 isMaintenance = false, parentNoticeId 추가
-      const isMaintenance = isCompletionNotice 
-        ? false 
-        : (formData.noticeType.includes('점검') || formData.noticeType.includes('장애'));
-      
-      const requestData = {
-        title: formData.noticeTitle,
-        content: formData.noticeContent,
-        noticeLevel: formData.priority,
-        affectedServiceId: formData.affectedServices[0]?.serviceId || null,
-        publishStartAt: `${formData.sendDate}T${formData.sendTime}:00`,
-        publishEndAt: null,
-        isMaintenance: isMaintenance,
-        mailSubject: formData.noticeTitle,
-        senderOrgUnitName: userInfo.orgUnitName,
-        createdBy: userInfo.userId,
-        
-        // ✅ 완료 공지인 경우 parentNoticeId 추가
-        parentNoticeId: isCompletionNotice ? originalNotice.noticeId : null,
-        
-        targets: [
-          ...formData.receiverCompanies.map(c => ({
-            targetType: 'CORP',
-            targetKey: c.corpId.toString(),
-            targetName: c.corpName
-          })),
-          ...formData.receiverDepts.map(d => ({
-            targetType: 'ORG_UNIT',
-            targetKey: d.orgUnitId.toString(),
-            targetName: d.orgUnitName
-          }))
-        ],
-        tags: formData.tags,
-        sendPlan: {
-          sendMode: formData.sendTimeType === '즉시 발송' ? 'IMMEDIATE' : 'SCHEDULED',
-          scheduledSendAt: `${formData.sendDate}T${formData.sendTime}:00`,
-          allowBundle: formData.sendTimeType !== '즉시 발송'
-        },
-        outlookCalendar: formData.outlookSchedule === '등록함' ? {
-          register: true,
-          eventDate: `${formData.outlookDate}T${formData.outlookTime}:00`
-        } : null
-      };
-
-      console.log('🚀 공지 등록 요청 (사용자 정보 확인):', {
-        senderOrgUnitName: requestData.senderOrgUnitName,
-        createdBy: requestData.createdBy,
-        userInfo: userInfo,
-        fullRequest: requestData
-      });
-
-
-      console.log('🚀 공지 등록 요청:', requestData);
-
-      // 새 코드: apiClient 사용
-      //const result = await apiClient.post('/notices', requestData);
-      const result = await noticeApi.createNotice(requestData)
+    const isMaintenance = isCompletionNotice 
+      ? false 
+      : (formData.noticeType.includes('점검') || formData.noticeType.includes('장애'));
     
-      console.log('✅ 등록 성공:', result);
-      navigate('/notices/history');
+    const requestData = {
+      title: formData.noticeTitle,
+      content: formData.noticeContent,
+      noticeLevel: formData.priority,
+      affectedServiceId: formData.affectedServices[0]?.serviceId || null,
+      publishStartAt: `${formData.sendDate}T${formData.sendTime}:00`,
+      publishEndAt: null,
+      isMaintenance: isMaintenance,
+      mailSubject: formData.noticeTitle,
+      senderOrgUnitName: userInfo.orgUnitName,
+      createdBy: userInfo.userId,
+      parentNoticeId: isCompletionNotice ? originalNotice.noticeId : null,
       
-    } catch (error) {
-      console.error('공지 등록 실패:', error);
-      alert('공지 등록 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
+      targets: [
+        ...formData.receiverCompanies.map(c => ({
+          targetType: 'CORP',
+          targetKey: c.corpId.toString(),
+          targetName: c.corpName
+        })),
+        ...formData.receiverDepts.map(d => ({
+          targetType: 'ORG_UNIT',
+          targetKey: d.orgUnitId.toString(),
+          targetName: d.orgUnitName
+        }))
+      ],
+      tags: formData.tags,
+      sendPlan: {
+        sendMode: formData.sendTimeType === '즉시 발송' ? 'IMMEDIATE' : 'SCHEDULED',
+        scheduledSendAt: `${formData.sendDate}T${formData.sendTime}:00`,
+        allowBundle: formData.sendTimeType !== '즉시 발송'
+      },
+      outlookCalendar: formData.outlookSchedule === '등록함' ? {
+        register: true,
+        eventDate: `${formData.outlookDate}T${formData.outlookTime}:00`
+      } : null
+    };
+
+    console.log('🚀 공지 등록 요청:', requestData);
+
+    // ✅ 변경: noticeApi.createNotice → noticeApi.create
+    const result = await noticeApi.create(requestData);
+  
+    console.log('✅ 등록 성공:', result);
+    navigate('/notices/history');
+    
+  } catch (error) {
+    console.error('공지 등록 실패:', error);
+    alert('공지 등록 중 오류가 발생했습니다.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCancel = () => {
     if (window.confirm('작성 중인 내용이 삭제됩니다. 취소하시겠습니까?')) {
