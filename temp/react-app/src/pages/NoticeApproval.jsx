@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NoticeApproval.css';
+import apiClient from "../utils/apiClient";  // 추가
 
 const NoticeApproval = () => {
   const navigate = useNavigate();
@@ -21,14 +22,20 @@ const NoticeApproval = () => {
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
-  
-
   useEffect(() => {
     checkAdminPermission();
     loadApprovalList();
   }, []);
+
+  // 모달 오픈 시 바디 스크롤 방지
+  useEffect(() => {
+    if (showDetailModal) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => document.body.classList.remove('modal-open');
+  }, [showDetailModal]);
 
   const checkAdminPermission = () => {
     try {
@@ -79,11 +86,9 @@ const NoticeApproval = () => {
   const loadApprovalList = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/notices?status=PENDING`);
-      const result = await response.json();
+      const result = await apiClient.get('/notices?status=PENDING&page=0&size=100');
       
-      // API 응답 구조 확인: result.data.data (페이징 구조)
-      if (result.success && result.data) {
+      if (result.success) {
         const notices = result.data.data || result.data;
         setApprovalList(Array.isArray(notices) ? notices : []);
       } else {
@@ -108,20 +113,11 @@ const NoticeApproval = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/notices/${noticeId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        alert('승인되었습니다.');
-        loadApprovalList();
-        setShowDetailModal(false);
-      } else {
-        alert('승인 처리에 실패했습니다.');
-      }
+      await apiClient.post(`/notices/${noticeId}/approve`);
+      
+      alert('승인되었습니다.');
+      loadApprovalList();
+      setShowDetailModal(false);
     } catch (error) {
       console.error('승인 실패:', error);
       alert('승인 처리 중 오류가 발생했습니다.');
@@ -141,20 +137,12 @@ const NoticeApproval = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/notices/${noticeId}/reject?reason=${encodeURIComponent(reason)}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        alert('반려되었습니다.');
-        loadApprovalList();
-        setShowDetailModal(false);
-      } else {
-        alert('반려 처리에 실패했습니다.');
-      }
+      //URL에 쿼리 파라미터 포함
+      await apiClient.post(`/notices/${noticeId}/reject?reason=${encodeURIComponent(reason)}`);
+      
+      alert('반려되었습니다.');
+      loadApprovalList();
+      setShowDetailModal(false);
     } catch (error) {
       console.error('반려 실패:', error);
       alert('반려 처리 중 오류가 발생했습니다.');
@@ -165,8 +153,7 @@ const NoticeApproval = () => {
 
   const openDetailModal = async (noticeId) => {
     try {
-      const response = await fetch(`${BASE_URL}/api/notices/${noticeId}`);
-      const result = await response.json();
+      const result = await apiClient.get(`/notices/${noticeId}`);
       
       if (result.success && result.data) {
         setSelectedNotice(result.data);

@@ -1,0 +1,27 @@
+// temp/react-app/src/config/apiConfig.js
+
+/**
+ * API 설정 중앙 관리
+ * - API 버전 변경 시 이 파일만 수정하면 전체 프로젝트에 반영됩니다
+ */
+
+// API 버전 (v1, v2, v3 등)
+export const API_VERSION = 'v1';
+
+// API Base URL
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5173';
+
+// 전체 API 엔드포인트 (버전 포함)
+export const API_ENDPOINT = `${API_BASE_URL}/${API_VERSION}/api`;
+
+// 개발 환경 확인
+export const IS_DEV = import.meta.env.DEV;
+
+// 설정 정보 출력 (개발 환경에서만)
+if (IS_DEV) {
+  console.log('🔧 API Configuration:', {
+    version: API_VERSION,
+    baseUrl: API_BASE_URL,
+    endpoint: API_ENDPOINT,
+  });
+}

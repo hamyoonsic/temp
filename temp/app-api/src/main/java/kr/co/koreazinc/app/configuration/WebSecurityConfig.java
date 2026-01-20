@@ -39,9 +39,12 @@ public class WebSecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return CoreSecurityConfigurerAdapter.init(http, (security) -> {
             security.authorizeHttpRequests(request -> CoreSecurityConfigurerAdapter.Request
-                    .init(request).requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
-                    .requestMatchers("/", "/index.html", "/assets/**", "/*.svg", "/*.ico", "/sso-redirect").permitAll()  // 추가
-                    .anyRequest().access(accessChecker));
+                    .init(request)
+                    .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
+                    .requestMatchers("v1/api/**").authenticated()  // 추가
+                    .anyRequest().permitAll()  // SPA 화면은 모두 허용
+            );
+                    //.anyRequest().access(accessChecker));
 
             security.addFilterAt(tokenAuthenticationFilter(), BasicAuthenticationFilter.class);
 
@@ -62,7 +65,8 @@ public class WebSecurityConfig {
     @Bean
     public TokenAuthenticationFilter tokenAuthenticationFilter() {
         TokenAuthenticationFilter filter =
-                new TokenAuthenticationFilter(new AntPathRequestMatcher("/**"));
+                //new TokenAuthenticationFilter(new AntPathRequestMatcher("/**"));
+                new TokenAuthenticationFilter(new AntPathRequestMatcher("/v1/api/**"));
         filter.setAuthenticationManager(authenticationManager());
         filter.setAuthenticationEntryPoint(authenticationEntryPoint);
         filter.setGetToken((request, response) -> {

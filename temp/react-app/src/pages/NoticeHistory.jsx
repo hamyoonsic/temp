@@ -1,5 +1,6 @@
+// NoticeHistory.jsx
 import React, { useState, useEffect } from 'react';
-import { API_BASE_URL } from '../config/api';
+import apiClient from "../utils/apiClient";
 import './NoticeHistory.css';
 
 const NoticeHistory = () => {
@@ -17,10 +18,21 @@ const NoticeHistory = () => {
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  // Initial data load
   useEffect(() => {
     loadCorporations();
     loadHistoryList();
   }, []);
+
+  // 모달 오픈 시 바디 스크롤 방지
+  useEffect(() => {
+    if (showDetailModal) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => document.body.classList.remove('modal-open');
+  }, [showDetailModal]);
 
   // ✅ 날짜 포맷 변환 함수 (8자리 또는 하이픈 형식 모두 지원)
   const formatDateInput = (value) => {
@@ -42,10 +54,11 @@ const NoticeHistory = () => {
     return value;
   };
 
+  // ✅ 수정: fetch → apiClient
   const loadCorporations = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/corporations`);
-      const result = await response.json();
+      const result = await apiClient.get('/master/corporations');
+      
       if (result.success) {
         setCorporations(result.data || []);
       }
@@ -54,36 +67,36 @@ const NoticeHistory = () => {
     }
   };
 
+  // ✅ 수정: fetch → apiClient
   const loadHistoryList = async (currentFilters = filters) => {
-  try {
-    const params = new URLSearchParams();
-    params.append('sort', 'createdAt,DESC');
-    
-    if (currentFilters.corpId) params.append('corpId', currentFilters.corpId);
-    if (currentFilters.startDate) params.append('startDate', formatDateInput(currentFilters.startDate));
-    if (currentFilters.endDate) params.append('endDate', formatDateInput(currentFilters.endDate));
-    if (currentFilters.searchTerm) params.append('search', currentFilters.searchTerm);
-    
-    const response = await fetch(`${API_BASE_URL}/api/notices?${params.toString()}`);
-    const result = await response.json();
-    
-    if (result.success && result.data) {
-      const notices = result.data.data || result.data;
-      setHistoryList(Array.isArray(notices) ? notices : []);
-    } else {
-      console.error('데이터 로드 실패:', result);
+    try {
+      const params = new URLSearchParams();
+      params.append('sort', 'createdAt,DESC');
+      
+      if (currentFilters.corpId) params.append('corpId', currentFilters.corpId);
+      if (currentFilters.startDate) params.append('startDate', formatDateInput(currentFilters.startDate));
+      if (currentFilters.endDate) params.append('endDate', formatDateInput(currentFilters.endDate));
+      if (currentFilters.searchTerm) params.append('search', currentFilters.searchTerm);
+      
+      const result = await apiClient.get(`/notices?${params.toString()}`);
+      
+      if (result.success && result.data) {
+        const notices = result.data.data || result.data;
+        setHistoryList(Array.isArray(notices) ? notices : []);
+      } else {
+        console.error('데이터 로드 실패:', result);
+        setHistoryList([]);
+      }
+    } catch (error) {
+      console.error('발송 이력 로드 실패:', error);
       setHistoryList([]);
     }
-  } catch (error) {
-    console.error('발송 이력 로드 실패:', error);
-    setHistoryList([]);
-  }
-};
+  };
 
+  // ✅ 수정: fetch → apiClient
   const openDetailModal = async (noticeId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notices/${noticeId}`);
-      const result = await response.json();
+      const result = await apiClient.get(`/notices/${noticeId}`);
       
       if (result.success && result.data) {
         setSelectedNotice(result.data);
@@ -108,21 +121,16 @@ const NoticeHistory = () => {
     return statusMap[status] || { text: status, class: 'default', color: '#94a3b8' };
   };
 
+  // ✅ 수정: fetch → apiClient
   const handleRetry = async (noticeId) => {
     if (!window.confirm('이 공지를 재발송하시겠습니까?')) return;
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notices/${noticeId}/retry`, {
-        method: 'POST'
-      });
+      await apiClient.post(`/notices/${noticeId}/retry`);
       
-      if (response.ok) {
-        alert('재발송 요청이 완료되었습니다.');
-        loadHistoryList();
-      } else {
-        alert('재발송 요청에 실패했습니다.');
-      }
+      alert('재발송 요청이 완료되었습니다.');
+      loadHistoryList();
     } catch (error) {
       console.error('재발송 실패:', error);
       alert('재발송 요청 중 오류가 발생했습니다.');
@@ -137,11 +145,11 @@ const NoticeHistory = () => {
 
   // ✅ 초기화 후 즉시 검색
   const handleReset = () => {
-  const resetFilters = {
-    corpId: '',
-    startDate: '',
-    endDate: '',
-    searchTerm: ''
+    const resetFilters = {
+      corpId: '',
+      startDate: '',
+      endDate: '',
+      searchTerm: ''
     };
     setFilters(resetFilters);
     setTimeout(() => loadHistoryList(resetFilters), 50);

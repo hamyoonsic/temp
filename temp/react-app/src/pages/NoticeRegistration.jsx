@@ -1,6 +1,8 @@
 // NoticeRegistration.jsx - 완료 공지 등록 기능 추가
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import apiClient from "../utils/apiClient";
+import { apiFetch } from '../config/api';
 import './NoticeRegistration.css';
 
 import { CKEditor } from '@ckeditor/ckeditor5-react';
@@ -21,11 +23,10 @@ const editorConfiguration = {
   language: 'ko'
 };
 
-import { API_BASE_URL, apiFetch } from '../config/api';
-
 const NoticeRegistration = () => {
-  const location = useLocation();
   const navigate = useNavigate();
+  const { id } = useParams();
+  const location = useLocation();
   
   const [services, setServices] = useState([]);
   const [corporations, setCorporations] = useState([]);
@@ -71,16 +72,15 @@ const NoticeRegistration = () => {
 
   const [tagInput, setTagInput] = useState('');
 
+  // 모달 오픈 시 바디 스크롤 방지
   useEffect(() => {
-    if (showServiceModal || showCorpModal || showOrgModal) {
-      document.body.style.overflow = 'hidden';
+    if (showDetailModal) {
+      document.body.classList.add('modal-open');
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.classList.remove('modal-open');
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [showServiceModal, showCorpModal, showOrgModal]);
+    return () => document.body.classList.remove('modal-open');
+  }, [showDetailModal]);
 
   useEffect(() => {
     loadMasterData();
@@ -221,29 +221,25 @@ const NoticeRegistration = () => {
   const loadMasterData = async () => {
     setLoading(true);
     try {
-      
-      // 토큰 가져오기
-      const token = sessionStorage.getItem('access_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      const servicesRes = await fetch(`${API_BASE_URL}/api/services`, { headers });
-      const servicesData = await servicesRes.json();
-      setServices(servicesData.data || []);
+      const [corpData, orgData, serviceData] = await Promise.all([
+        apiClient.get('/master/corporations'),
+        apiClient.get('/master/organizations'),
+        apiClient.get('/master/services')
+      ]);
 
-      const corpsRes = await fetch(`${API_BASE_URL}/api/corporations`, { headers });
-      const corpsData = await corpsRes.json();
-      setCorporations(corpsData.data || []);
-
-      const orgsRes = await fetch(`${BASE_URL}/api/organizations`, { headers });
-      const orgsData = await orgsRes.json();
-      setAllOrganizations(orgsData.data || []);
-      setOrganizations(orgsData.data || []);
+      if (corpData.success) {
+        setCompanies(corpData.data || []);
+      }
       
+      if (orgData.success) {
+        setDepartments(orgData.data || []);
+      }
+      
+      if (serviceData.success) {
+        setServices(serviceData.data || []);
+      }
     } catch (error) {
       console.error('마스터 데이터 로드 실패:', error);
-      alert(`데이터를 불러오는데 실패했습니다.: ${error.message}`);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -473,24 +469,15 @@ const NoticeRegistration = () => {
         fullRequest: requestData
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/notices`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionStorage.getItem('access_token')}` // ✅ 토큰 추가
-        },
-        body: JSON.stringify(requestData)
-      });
 
-      if (response.ok) {
-        const result = await response.json();
-        
-        console.log('✅ 등록 성공:', result);
-        navigate('/notices/history');
-      } else {
-        const error = await response.json();
-        alert(`등록 실패: ${error.message || '알 수 없는 오류'}`);
-      }
+      console.log('🚀 공지 등록 요청:', requestData);
+
+      // 새 코드: apiClient 사용
+      const result = await apiClient.post('/notices', requestData);
+    
+      console.log('✅ 등록 성공:', result);
+      navigate('/notices/history');
+      
     } catch (error) {
       console.error('공지 등록 실패:', error);
       alert('공지 등록 중 오류가 발생했습니다.');

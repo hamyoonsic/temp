@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./NoticeDashboard.css";
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+import apiClient from "../utils/apiClient";
 
 export default function NoticeDashboard() {
   const navigate = useNavigate();
@@ -41,30 +40,38 @@ export default function NoticeDashboard() {
     loadDashboardData();
   }, [navigate]);
 
+  // 캘린더 데이터 로드
   useEffect(() => {
     loadCalendarData();
   }, [currentDate]);
 
+  // 모달 오픈 시 바디 스크롤 방지
+  useEffect(() => {
+    if (showDetailModal || showCompletionModal) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [showDetailModal, showCompletionModal]);
+
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // ✅ 토큰 가져오기
-      const token = sessionStorage.getItem('access_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
       // 1. 통계 데이터
-      const statsRes = await fetch(`${BASE_URL}/api/dashboard/stats`, { headers });
-      const statsData = await statsRes.json();
+      const statsData = await apiClient.get('/dashboard/stats');
       if (statsData.success) {
         setStats(statsData.data);
       }
 
       // 2. 최근 공지 목록 (승인된 공지만 - APPROVED, SENT, COMPLETED)
-      const noticesRes = await fetch(`${BASE_URL}/api/notices?page=0&size=100`, { headers });
-      const noticesData = await noticesRes.json();
+      const noticesData = await apiClient.get('/notices?page=0&size=100');
       if (noticesData.success) {
         const allNotices = noticesData.data.data || noticesData.data;
-        // 승인된 공지만 필터링 (PENDING, REJECTED 제외)
         const approvedNotices = Array.isArray(allNotices) 
           ? allNotices.filter(n => 
               n.noticeStatus === 'APPROVED' || 
@@ -73,24 +80,22 @@ export default function NoticeDashboard() {
             ).slice(0, 10)
           : [];
         setRecentNotices(approvedNotices);
-        
-        // 3. 공지 유형 통계 (승인된 공지만)
         calculateTypeStats(approvedNotices);
       }
 
       // 4. 시스템 점검 일정 (APPROVED 상태의 공지)
-      const scheduleRes = await fetch(`${BASE_URL}/api/notices?status=APPROVED&page=0&size=5`, { headers });
-      const scheduleData = await scheduleRes.json();
+      const scheduleData = await apiClient.get('/notices?status=APPROVED&page=0&size=5');
       if (scheduleData.success) {
         const scheduleList = scheduleData.data.data || scheduleData.data;
         setSchedules(Array.isArray(scheduleList) ? scheduleList : []);
       }
       
-      // 5. 부서별 통계 (전체 부서 기준 - 승인된 공지만)
+      // 5. 부서별 통계
       await calculateDeptStatsWithAllDepts();
 
     } catch (error) {
       console.error('대시보드 데이터 로드 실패:', error);
+      // apiClient에서 401 오류는 자동으로 처리되므로 여기서는 일반 오류만 처리
     } finally {
       setLoading(false);
     }
@@ -103,13 +108,9 @@ export default function NoticeDashboard() {
       
       console.log('📅 캘린더 조회 요청:', { year, month });
       
-      // ✅ 토큰 가져오기
-      const token = sessionStorage.getItem('access_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
       
       // 전체 공지 조회 후 프론트에서 필터링
-      const res = await fetch(`${BASE_URL}/api/notices?page=0&size=1000`, { headers });
-      const data = await res.json();
+      const data = await apiClient.get('/notices?page=0&size=1000');
       
       if (data.success) {
         const notices = data.data.data || data.data;
@@ -118,13 +119,11 @@ export default function NoticeDashboard() {
         const filteredNotices = notices.filter(notice => {
           if (!notice.publishStartAt) return false;
           
-          // 승인 상태 체크
           const isApproved = notice.noticeStatus === 'APPROVED' || 
                             notice.noticeStatus === 'SENT' || 
                             notice.noticeStatus === 'COMPLETED';
           if (!isApproved) return false;
           
-          // 날짜 체크
           const noticeDate = new Date(notice.publishStartAt);
           return noticeDate.getFullYear() === year && 
                  noticeDate.getMonth() + 1 === month;
@@ -144,10 +143,11 @@ export default function NoticeDashboard() {
           
           eventsByDay[day].push({
             noticeId: notice.noticeId,
-            title: notice.title.length > 20 ? notice.title.substring(0, 20) + '...' : notice.title,
+            title: notice.title.length > 20 ? 
+                   notice.title.substring(0, 20) + '...' : notice.title,
             fullTitle: notice.title,
             dept: notice.senderOrgUnitName || 'ITH팀',
-            color: getPriorityColor(notice.noticeLevel),
+            color: getNoticeColor(notice.noticeLevel),
             isMaintenance: notice.isMaintenance,
             noticeStatus: notice.noticeStatus,
             isCompleted: notice.isCompleted,
@@ -157,7 +157,7 @@ export default function NoticeDashboard() {
         
         setCalendarEvents(Object.entries(eventsByDay).map(([day, events]) => ({
           day: parseInt(day),
-          events
+          events: events
         })));
       }
     } catch (error) {
@@ -201,16 +201,11 @@ export default function NoticeDashboard() {
     setDeptStats(stats);
   };
 
-  // ✅ 추가: 전체 부서 기준 통계
+  // ✅ 수정: calculateDeptStatsWithAllDepts - fetch를 apiClient로 변경
   const calculateDeptStatsWithAllDepts = async () => {
     try {
-      // ✅ 토큰 가져오기
-      const token = sessionStorage.getItem('access_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      // 1. 전체 부서 목록 조회
-      const orgsRes = await fetch(`${BASE_URL}/api/organizations`, { headers });
-      const orgsData = await orgsRes.json();
+      // ✅ 변경: fetch → apiClient
+      const orgsData = await apiClient.get('/master/organizations');
       
       if (!orgsData.success) {
         console.error('부서 목록 조회 실패');
@@ -219,9 +214,8 @@ export default function NoticeDashboard() {
       
       const allOrgs = orgsData.data || [];
       
-      // 2. 전체 공지 조회 (승인된 공지만)
-      const noticesRes = await fetch(`${BASE_URL}/api/notices?page=0&size=1000`, { headers });
-      const noticesData = await noticesRes.json();
+      // ✅ 변경: fetch → apiClient
+      const noticesData = await apiClient.get('/notices?page=0&size=1000');
       
       if (!noticesData.success) {
         console.error('공지 목록 조회 실패');
@@ -303,6 +297,10 @@ export default function NoticeDashboard() {
       'L1': '#93c5fd'
     };
     return colors[level] || '#6ee7b7';
+  };
+
+  const getNoticeColor = (level) => {
+    return getPriorityColor(level);
   };
 
   const getStatusColor = (status) => {
@@ -391,22 +389,26 @@ export default function NoticeDashboard() {
     setShowListModal(true);
   };
 
-  // ✅ 수정: 이벤트 클릭 핸들러 - 시스템 점검이면 완료 공지 등록 옵션 제공
+  // ✅ 수정: handleEventClick - fetch를 apiClient로 변경
   const handleEventClick = async (event) => {
-    const response = await fetch(`${BASE_URL}/api/notices/${event.noticeId}`);
-    const result = await response.json();
-    if (result.success) {
-      setSelectedNotice(result.data);
+    try {
+      const result = await apiClient.get(`/notices/${event.noticeId}`);
       
-      // 시스템 점검 공지이고 발송완료 상태이고 완료공지가 아직 없으면
-      if (result.data.isMaintenance && 
-          result.data.noticeStatus === 'SENT' && 
-          !result.data.isCompleted) {
-        setSelectedMaintenanceNotice(result.data);
-        setShowCompletionModal(true);
-      } else {
-        setShowDetailModal(true);
+      if (result.success) {
+        setSelectedNotice(result.data);
+        
+        // 시스템 점검 공지이고 발송완료 상태이고 완료공지가 아직 없으면
+        if (result.data.isMaintenance && 
+            result.data.noticeStatus === 'SENT' && 
+            !result.data.isCompleted) {
+          setSelectedMaintenanceNotice(result.data);
+          setShowCompletionModal(true);
+        } else {
+          setShowDetailModal(true);
+        }
       }
+    } catch (error) {
+      console.error('공지 상세 조회 실패:', error);
     }
   };
 
@@ -421,13 +423,17 @@ export default function NoticeDashboard() {
     setShowCompletionModal(false);
   };
 
-  // 상세 모달
+  // ✅ 수정: openDetailModal - fetch를 apiClient로 변경
   const openDetailModal = async (noticeId) => {
-    const response = await fetch(`${BASE_URL}/api/notices/${noticeId}`);
-    const result = await response.json();
-    if (result.success) {
-      setSelectedNotice(result.data);
-      setShowDetailModal(true);
+    try {
+      const result = await apiClient.get(`/notices/${noticeId}`);
+      
+      if (result.success) {
+        setSelectedNotice(result.data);
+        setShowDetailModal(true);
+      }
+    } catch (error) {
+      console.error('공지 상세 조회 실패:', error);
     }
   };
 
