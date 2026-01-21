@@ -1,21 +1,22 @@
-// NoticeApproval.jsx
+// react-app/src/pages/NoticeApproval.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NoticeApproval.css';
 import { approvalApi, noticeApi } from '../api';
+import { useAdmin } from '../contexts/AdminContext';
+import AdminDelegationModal from '../components/AdminDelegationModal';
 
 const NoticeApproval = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [approvalList, setApprovalList] = useState([]);
-  const [corporations, setCorporations] = useState([]);
-  const [organizations, setOrganizations] = useState([]);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [showDelegationModal, setShowDelegationModal] = useState(false);
+  
+  // ✅ AdminContext에서 관리자 상태 가져오기
+  const { isAdmin, isDelegatedAdmin, userInfo } = useAdmin();
   
   const [filters, setFilters] = useState({
     status: 'PENDING',
-    corpId: '',
-    orgUnitId: '',
     searchTerm: ''
   });
 
@@ -23,70 +24,23 @@ const NoticeApproval = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
-    checkAdminPermission();
     loadApprovalList();
   }, []);
 
   // 모달 오픈 시 바디 스크롤 방지
   useEffect(() => {
-    if (showDetailModal) {
+    if (showDetailModal || showDelegationModal) {
       document.body.classList.add('modal-open');
     } else {
       document.body.classList.remove('modal-open');
     }
     return () => document.body.classList.remove('modal-open');
-  }, [showDetailModal]);
-
-  const checkAdminPermission = () => {
-    try {
-      // 1차: userData에서 확인
-      const userDataStr = sessionStorage.getItem('userData');
-      
-      // 2차: user_me에서 확인 (SSORedirect에서 저장)
-      const userMeStr = sessionStorage.getItem('user_me');
-      
-      let userData = null;
-      
-      if (userDataStr) {
-        userData = JSON.parse(userDataStr);
-      } else if (userMeStr) {
-        userData = JSON.parse(userMeStr);
-      } else {
-        console.error('로그인 정보 없음 - sessionStorage:', {
-          userData: userDataStr,
-          user_me: userMeStr,
-          allKeys: Object.keys(sessionStorage)
-        });
-        alert('로그인 정보를 찾을 수 없습니다.');
-        navigate('/login');
-        return;
-      }
-      
-      console.log('관리자 권한 체크 - 사용자 정보:', userData);
-      
-      // license 배열에서 VIEW-ADMIN 권한 확인
-      const hasAdminLicense = userData.license?.some(
-        lic => lic.appId === 'VIEW-ADMIN' || lic.licCd === 'ADMIN'
-      );
-      
-      setIsAdmin(hasAdminLicense);
-      
-      if (!hasAdminLicense) {
-        alert('관리자 권한이 없습니다. 공지 등록 화면으로 이동합니다.');
-        navigate('/notices/new');
-      }
-    } catch (error) {
-      console.error('권한 확인 실패:', error);
-      setIsAdmin(false);
-      alert('권한 확인 중 오류가 발생했습니다.');
-      navigate('/login');
-    }
-  };
+  }, [showDetailModal, showDelegationModal]);
 
   const loadApprovalList = async () => {
     setLoading(true);
     try {
-      const result = await approvalApi.getPendingList({ page: 0, size: 100 });  // ✅ 변경
+      const result = await approvalApi.getPendingList({ page: 0, size: 100 });
       
       if (result.success) {
         const notices = result.data.data || result.data;
@@ -100,10 +54,15 @@ const NoticeApproval = () => {
   };
 
   const handleApprove = async (noticeId) => {
+    if (!isAdmin) {
+      alert('승인 권한이 없습니다. (HR150138 권한 필요)');
+      return;
+    }
+
     if (!window.confirm('이 공지를 승인하시겠습니까?')) return;
 
     try {
-      await approvalApi.approve(noticeId);  // ✅ 변경
+      await approvalApi.approve(noticeId);
       alert('공지가 승인되었습니다.');
       loadApprovalList();
     } catch (error) {
@@ -113,11 +72,16 @@ const NoticeApproval = () => {
   };
 
   const handleReject = async (noticeId) => {
+    if (!isAdmin) {
+      alert('반려 권한이 없습니다. (HR150138 권한 필요)');
+      return;
+    }
+
     const reason = prompt('반려 사유를 입력하세요:');
     if (!reason) return;
 
     try {
-      await approvalApi.reject(noticeId, reason);  // ✅ 변경
+      await approvalApi.reject(noticeId, reason);
       alert('공지가 반려되었습니다.');
       loadApprovalList();
     } catch (error) {
@@ -128,7 +92,7 @@ const NoticeApproval = () => {
 
   const openDetailModal = async (noticeId) => {
     try {
-      const result = await noticeApi.getById(noticeId);  // ✅ 변경
+      const result = await noticeApi.getById(noticeId);
       
       if (result.success && result.data) {
         setSelectedNotice(result.data);
@@ -161,14 +125,32 @@ const NoticeApproval = () => {
             <h1 className="page-title">공지 발송 결재</h1>
             <p className="page-description">공지 발송 승인 요청 목록을 확인하고 결재를 진행합니다</p>
           </div>
-          {isAdmin && (
-            <div className="admin-badge">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              관리자 권한
-            </div>
-          )}
+          
+          <div className="header-right">
+            {/* ✅ 로그인 정보 없음 경고 */}
+            {!userInfo && (
+              <div className="error-badge">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span>로그인 정보 없음</span>
+              </div>
+            )}
+            
+            {/* ✅ 관리자 위임 버튼 - HR150138 권한자만 표시 */}
+            {userInfo && userInfo.job?.[0]?.ttlCd === 'HR150138' && (
+              <div 
+                className="admin-badge clickable"
+                onClick={() => setShowDelegationModal(true)}
+                title="관리자 권한 위임 설정"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span>관리자 위임</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {loading && (
@@ -213,8 +195,7 @@ const NoticeApproval = () => {
             <table className="approval-table">
               <thead>
                 <tr>
-                  <th>수신법인</th>
-                  <th>수신부서</th>
+                  <th>공지ID</th>
                   <th>공지제목</th>
                   <th>중요도</th>
                   <th>발신부서</th>
@@ -251,22 +232,26 @@ const NoticeApproval = () => {
                       <td>{item.createdBy}</td>
                       <td>{formatDateTime(item.createdAt)}</td>
                       <td>
-                        {isAdmin && (
-                          <div className="action-buttons">
-                            <button 
-                              className="btn-approve"
-                              onClick={() => handleApprove(item.noticeId)}
-                            >
-                              승인
-                            </button>
-                            <button 
-                              className="btn-reject"
-                              onClick={() => handleReject(item.noticeId)}
-                            >
-                              반려
-                            </button>
-                          </div>
-                        )}
+                        <div className="action-buttons">
+                          {/* ✅ 승인 버튼 - 권한에 따라 활성화/비활성화 */}
+                          <button 
+                            className={`btn-approve ${!isAdmin ? 'disabled' : ''}`}
+                            onClick={() => handleApprove(item.noticeId)}
+                            disabled={!isAdmin}
+                            title={!isAdmin ? '승인 권한이 없습니다 (HR150138 권한 필요)' : ''}
+                          >
+                            승인
+                          </button>
+                          {/* ✅ 반려 버튼 - 권한에 따라 활성화/비활성화 */}
+                          <button 
+                            className={`btn-reject ${!isAdmin ? 'disabled' : ''}`}
+                            onClick={() => handleReject(item.noticeId)}
+                            disabled={!isAdmin}
+                            title={!isAdmin ? '반려 권한이 없습니다 (HR150138 권한 필요)' : ''}
+                          >
+                            반려
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -335,28 +320,16 @@ const NoticeApproval = () => {
                 </div>
                 <div className="detail-item full-width">
                   <span className="detail-label">공지내용</span>
-                  <div className="detail-value content-box" dangerouslySetInnerHTML={{ __html: selectedNotice.content }} />
+                  <div className="detail-value content-box" dangerouslySetInnerHTML={{__html: selectedNotice.content}}></div>
                 </div>
-                {selectedNotice.tags && selectedNotice.tags.length > 0 && (
-                  <div className="detail-item full-width">
-                    <span className="detail-label">해시태그</span>
-                    <div className="detail-value">
-                      <div className="tags-display">
-                        {selectedNotice.tags.map((tag, idx) => (
-                          <span key={idx} className="tag-item">{tag.tagValue}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {selectedNotice.targets && selectedNotice.targets.length > 0 && (
                 <div className="detail-section">
                   <h4>수신 대상</h4>
                   <div className="targets-list">
-                    {selectedNotice.targets.map((target, idx) => (
-                      <div key={idx} className="target-item">
+                    {selectedNotice.targets.map((target, index) => (
+                      <div key={index} className="target-item">
                         <span className="target-type">{target.targetType === 'CORP' ? '법인' : '부서'}</span>
                         <span className="target-name">{target.targetName}</span>
                       </div>
@@ -386,6 +359,16 @@ const NoticeApproval = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ✅ 권한 위임 모달 */}
+      {userInfo && (
+        <AdminDelegationModal
+          isOpen={showDelegationModal}
+          onClose={() => setShowDelegationModal(false)}
+          currentUserId={userInfo.userId}
+          currentUserName={userInfo.userNm}
+        />
       )}
     </div>
   );

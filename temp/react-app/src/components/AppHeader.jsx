@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { AUTH_BASE, CLIENT_ID } from "../auth/authConfig";
 import { clearSession, getUserMe } from "../auth/session";
+import { useAdmin } from '../contexts/AdminContext';
 import "./AppHeader.css";
 
 export default function AppHeader() {
@@ -10,6 +11,9 @@ export default function AppHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // ✅ AdminContext에서 관리자 상태 가져오기
+  const { isAdmin, isDelegatedAdmin } = useAdmin();
 
   const displayName = me?.userKoNm || me?.userNm || me?.userId || "";
   const deptName = me?.deptNm || "";
@@ -102,7 +106,18 @@ export default function AppHeader() {
               {displayName.charAt(0) || "U"}
             </div>
             <div className="user-details">
-              <span className="user-name">{displayName}</span>
+              <div className="user-name-row">
+                <span className="user-name">{displayName}</span>
+                {/* ✅ 관리자 배지 - AdminContext에서 가져온 상태 사용 */}
+                {isAdmin && (
+                  <span className="admin-badge-small" title={isDelegatedAdmin ? '대리 관리자' : '관리자'}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    {isDelegatedAdmin ? '대리' : '관리자'}
+                  </span>
+                )}
+              </div>
               {deptName && <span className="user-dept">{deptName}</span>}
             </div>
           </div>

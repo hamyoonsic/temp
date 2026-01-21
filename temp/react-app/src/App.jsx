@@ -8,6 +8,7 @@ import NoticeApproval from './pages/NoticeApproval';
 import NoticeHistory from './pages/NoticeHistory';
 import AppLayout from "./layouts/AppLayout";
 import RequireAuth from "./routes/RequireAuth";
+import { AdminProvider } from "./contexts/AdminContext";
 
 export default function App() {
   return (
@@ -18,9 +19,13 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/sso-redirect" element={<SSORedirect />} />
 
-      {/* 보호 영역(헤더 포함) */}
+      {/* 보호 영역(헤더 포함) - AdminProvider로 감싸기 */}
       <Route element={<RequireAuth />}>
-        <Route element={<AppLayout />}>
+        <Route element={
+          <AdminProvider>
+            <AppLayout />
+          </AdminProvider>
+        }>
           <Route path="/NoticeDashboard" element={<NoticeDashboard />} />
           <Route path="/notices/new" element={<NoticeRegistration />} />
           <Route path="/notices/edit/:id" element={<NoticeRegistration />} />

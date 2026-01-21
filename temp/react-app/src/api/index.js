@@ -17,3 +17,7 @@ export { serviceApi } from './master/serviceApi';
 export { noticeApi } from './notice/noticeApi';
 export { approvalApi } from './notice/approvalApi';
 export { dashboardApi } from './notice/dashboardApi';
+
+// 관리자 API
+export { adminDelegationApi } from './admin/adminDelegationApi';
+export { adminUsersApi } from './admin/adminUsersApi';

@@ -18,9 +18,35 @@ class ApiClient {
       ...customHeaders,
     };
 
+    // ✅ 1. Authorization 토큰 자동 추가
     const token = getAccessToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // ✅ 2. X-User-Id, X-User-Name 헤더 자동 추가
+    try {
+      // userData 또는 user_me에서 사용자 정보 가져오기
+      const userDataStr = sessionStorage.getItem('userData') || sessionStorage.getItem('user_me');
+      
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        
+        // X-User-Id (영문/숫자만 있으므로 그대로 추가)
+        if (userData.userId) {
+          headers['X-User-Id'] = userData.userId;
+        }
+        
+        // ✅ X-User-Name (한글 포함 가능 → Base64 인코딩)
+        if (userData.userNm || userData.userKoNm) {
+          const userName = userData.userNm || userData.userKoNm;
+          // Base64 인코딩하여 한글 문제 해결
+          headers['X-User-Name'] = btoa(unescape(encodeURIComponent(userName)));
+        }
+      }
+    } catch (error) {
+      console.warn('사용자 정보 헤더 추가 실패:', error);
+      // 에러가 나도 요청은 계속 진행
     }
 
     return headers;

@@ -1,0 +1,1 @@
+String contains non ISO-8859-1 code pointHTTP 헤더에 한글을 넣어서 발생한 오류입니다!X-User-Name 헤더에 한글 이름(예: "박세인")을 그대로 넣었는데, HTTP 헤더는 ISO-8859-1 인코딩만 지원하기 때문에 한글을 직접 넣을 수 없습니다.
