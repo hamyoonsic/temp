@@ -6,6 +6,8 @@ import kr.co.koreazinc.temp.model.entity.notice.*;
 import kr.co.koreazinc.temp.repository.notice.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -38,6 +40,7 @@ public class NoticeService {
     private final NoticeBaseRepository noticeBaseRepository;
     private final NoticeTargetRepository noticeTargetRepository;
     private final ServiceMasterRepository serviceMasterRepository;
+
     
     /**
      * 공지 등록
