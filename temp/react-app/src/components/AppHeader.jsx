@@ -57,8 +57,7 @@ export default function AppHeader() {
     {
       path: '/NoticeDashboard',
       label: 'Dashboards',
-      icon: '',
-      badge: 3
+      icon: ''
     }
   ];
 
@@ -108,7 +107,7 @@ export default function AppHeader() {
             <div className="user-details">
               <div className="user-name-row">
                 <span className="user-name">{displayName}</span>
-                {/* ✅ 관리자 배지 - AdminContext에서 가져온 상태 사용 */}
+                {/* 관리자 배지 - AdminContext에서 가져온 상태 사용 */}
                 {isAdmin && (
                   <span className="admin-badge-small" title={isDelegatedAdmin ? '대리 관리자' : '관리자'}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">

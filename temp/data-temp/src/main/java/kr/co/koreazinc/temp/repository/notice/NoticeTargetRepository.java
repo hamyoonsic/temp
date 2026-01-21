@@ -18,6 +18,10 @@ public interface NoticeTargetRepository extends JpaRepository<NoticeTarget, Long
     
     // 공지 ID와 대상 타입으로 조회
     List<NoticeTarget> findByNoticeIdAndTargetType(Long noticeId, String targetType);
+
+    List<NoticeTarget> findByTargetTypeAndTargetKeyIn(String targetType, List<String> targetKeys);
+
+    List<NoticeTarget> findByNoticeIdIn(List<Long> noticeIds);
     
     // 공지 ID로 대상 삭제
     void deleteByNoticeId(Long noticeId);

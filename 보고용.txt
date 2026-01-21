@@ -1,0 +1,16 @@
+현재 Notice 시스템은 뷰 레이어를 React SPA로 구성했고,
+spring-core에 포함된 Thymeleaf는 에러 페이지 렌더링 정도만 사용합니다...
+
+
+“싱글 페이지 애플리케이션” → 말 그대로 HTML 페이지는 단 하나.
+
+브라우저가 서버에게 “/dashboard” 요청을 보냄
+
+서버는 무조건 index.html 딱 한 장을 내려줌
+
+React가 로드됨
+
+React Router가 보고:
+“아, 지금 주소가 /dashboard네? 그럼 Dashboard 화면 컴포넌트 보여줘야지”
+
+화면이 전체 리로드 없이 부드럽게 바뀜

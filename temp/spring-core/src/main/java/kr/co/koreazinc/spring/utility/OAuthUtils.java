@@ -26,7 +26,6 @@ import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 
 import kr.co.koreazinc.spring.exception.TokenIssuanceException;
-import kr.co.koreazinc.spring.util.OAuth;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
@@ -36,7 +35,8 @@ public class OAuthUtils {
 
     public String issuedToken(String tokenUrl, String clientId, String clientSecret, String scope) throws TokenIssuanceException {
         try {
-            OAuth responesDto = WebClient.create().post()
+            @SuppressWarnings("unchecked")
+            Map<String, Object> responseBody = WebClient.create().post()
                 .uri(tokenUrl)
                 .accept(MediaType.APPLICATION_JSON)
                 .body(fromFormData("grant_type", "client_credentials")
@@ -44,13 +44,23 @@ public class OAuthUtils {
                             .with("client_secret", clientSecret)
                             .with("scope", scope))
                 .exchangeToMono(response->{
-                    return response.bodyToMono(OAuth.class);
+                    return response.bodyToMono(Map.class);
                 }).block();
-            if (responesDto.isError()) {
-                log.error("OAuthUtils - issuedToken: Error Url = " + responesDto.getError());
+            if (responseBody == null) {
+                log.error("OAuthUtils - issuedToken: Empty response");
                 throw new TokenIssuanceException();
             }
-            return responesDto.getAccessToken();
+            Object error = responseBody.get("error");
+            if (error != null && !String.valueOf(error).isBlank()) {
+                log.error("OAuthUtils - issuedToken: Error Url = " + error);
+                throw new TokenIssuanceException();
+            }
+            Object accessToken = responseBody.get("access_token");
+            if (accessToken == null || String.valueOf(accessToken).isBlank()) {
+                log.error("OAuthUtils - issuedToken: Missing access_token");
+                throw new TokenIssuanceException();
+            }
+            return String.valueOf(accessToken);
         } catch (Exception e) {
             log.error("OAuthUtils - issuedToken: " + e.getMessage());
             throw new TokenIssuanceException();

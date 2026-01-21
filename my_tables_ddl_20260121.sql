@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict s9BAF5tmy9DubZw26hqoNMRvBF745c8lTrMPC6slyq9djk6bR0J8gSkuZJNnCuD
+\restrict 5w0Y7YWZWQBSEzFtgycbtK1hnG4tpehmpv4ByFXwLZZ1n5HifRBmH8z1Xu0bdsA
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 15.15
@@ -522,8 +522,12 @@ CREATE TABLE public.notice_attachment (
     attachment_id bigint NOT NULL,
     notice_id bigint NOT NULL,
     file_name character varying(255) NOT NULL,
-    size_bytes bigint NOT NULL,
-    storage_key character varying(300) NOT NULL
+    file_original_name character varying(255) NOT NULL,
+    file_path text NOT NULL,
+    file_size bigint NOT NULL,
+    file_type character varying(100),
+    uploaded_by character varying(50) NOT NULL,
+    uploaded_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
 
@@ -533,14 +537,14 @@ ALTER TABLE public.notice_attachment OWNER TO postgres;
 -- Name: TABLE notice_attachment; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON TABLE public.notice_attachment IS '공지 첨부 파일 메타데이터';
+COMMENT ON TABLE public.notice_attachment IS '공지 첨부파일';
 
 
 --
 -- Name: COLUMN notice_attachment.attachment_id; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN public.notice_attachment.attachment_id IS '첨부 파일 고유 식별자(PK)';
+COMMENT ON COLUMN public.notice_attachment.attachment_id IS '첨부파일 고유 식별자(PK)';
 
 
 --
@@ -554,21 +558,49 @@ COMMENT ON COLUMN public.notice_attachment.notice_id IS '공지 ID(FK)';
 -- Name: COLUMN notice_attachment.file_name; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN public.notice_attachment.file_name IS '파일명';
+COMMENT ON COLUMN public.notice_attachment.file_name IS '저장된 파일명 (UUID 등)';
 
 
 --
--- Name: COLUMN notice_attachment.size_bytes; Type: COMMENT; Schema: public; Owner: postgres
+-- Name: COLUMN notice_attachment.file_original_name; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN public.notice_attachment.size_bytes IS '파일 크기(Byte)';
+COMMENT ON COLUMN public.notice_attachment.file_original_name IS '원본 파일명';
 
 
 --
--- Name: COLUMN notice_attachment.storage_key; Type: COMMENT; Schema: public; Owner: postgres
+-- Name: COLUMN notice_attachment.file_path; Type: COMMENT; Schema: public; Owner: postgres
 --
 
-COMMENT ON COLUMN public.notice_attachment.storage_key IS '저장소 경로/키';
+COMMENT ON COLUMN public.notice_attachment.file_path IS '파일 저장 경로';
+
+
+--
+-- Name: COLUMN notice_attachment.file_size; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.notice_attachment.file_size IS '파일 크기(bytes)';
+
+
+--
+-- Name: COLUMN notice_attachment.file_type; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.notice_attachment.file_type IS '파일 MIME 타입';
+
+
+--
+-- Name: COLUMN notice_attachment.uploaded_by; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.notice_attachment.uploaded_by IS '업로드한 사용자 ID';
+
+
+--
+-- Name: COLUMN notice_attachment.uploaded_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.notice_attachment.uploaded_at IS '업로드 일시';
 
 
 --
@@ -616,6 +648,9 @@ CREATE TABLE public.notice_base (
     updated_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_by character varying(50) NOT NULL,
     parent_notice_id bigint,
+    calendar_register boolean DEFAULT false NOT NULL,
+    calendar_event_at timestamp without time zone,
+    sender_email character varying(150),
     CONSTRAINT notice_level_check CHECK (((notice_level)::text = ANY ((ARRAY['L1'::character varying, 'L2'::character varying, 'L3'::character varying])::text[])))
 );
 
@@ -760,6 +795,27 @@ COMMENT ON COLUMN public.notice_base.updated_by IS '수정자';
 --
 
 COMMENT ON COLUMN public.notice_base.parent_notice_id IS '원본 공지 ID (완료 공지인 경우 원본 점검 공지를 참조)';
+
+
+--
+-- Name: COLUMN notice_base.calendar_register; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.notice_base.calendar_register IS '캘린더 등록 여부';
+
+
+--
+-- Name: COLUMN notice_base.calendar_event_at; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.notice_base.calendar_event_at IS '캘린더 이벤트 일시';
+
+
+--
+-- Name: COLUMN notice_base.sender_email; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.notice_base.sender_email IS '발신자 이메일';
 
 
 --
@@ -2103,11 +2159,11 @@ ALTER TABLE ONLY public.notice_approval
 
 
 --
--- Name: notice_attachment fk_notice_attachment; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: notice_attachment fk_notice_attachment_notice; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.notice_attachment
-    ADD CONSTRAINT fk_notice_attachment FOREIGN KEY (notice_id) REFERENCES public.notice_base(notice_id) ON DELETE CASCADE;
+    ADD CONSTRAINT fk_notice_attachment_notice FOREIGN KEY (notice_id) REFERENCES public.notice_base(notice_id) ON DELETE CASCADE;
 
 
 --
@@ -2218,5 +2274,5 @@ ALTER TABLE ONLY public.user_master
 -- PostgreSQL database dump complete
 --
 
-\unrestrict s9BAF5tmy9DubZw26hqoNMRvBF745c8lTrMPC6slyq9djk6bR0J8gSkuZJNnCuD
+\unrestrict 5w0Y7YWZWQBSEzFtgycbtK1hnG4tpehmpv4ByFXwLZZ1n5HifRBmH8z1Xu0bdsA
 

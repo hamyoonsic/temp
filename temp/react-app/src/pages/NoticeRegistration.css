@@ -1,4 +1,4 @@
-/* NoticeRegistration.css with CKEditor 5 and Completion Notice Banner */
+/* NoticeRegistration.css - 개선된 디자인 */
 
 /* CKEditor 커스터마이징 */
 .ck-editor__editable {
@@ -124,7 +124,6 @@
   font-weight: 500;
 }
 
-/* 기존 CSS는 Document 8과 동일하게 유지 */
 * {
   box-sizing: border-box;
 }
@@ -304,6 +303,7 @@
   cursor: pointer;
 }
 
+/* ✅ 개선: input-with-icon */
 .input-with-icon {
   position: relative;
   display: flex;
@@ -322,6 +322,7 @@
   pointer-events: none;
 }
 
+/* ✅ 개선: input-group - 간격 추가 */
 .input-group {
   display: flex;
   gap: 12px;
@@ -339,6 +340,83 @@
   color: #64748b;
   margin: 8px 0 0 0;
   line-height: 1.5;
+}
+
+.corp-send-toggle {
+  margin-top: 10px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.toggle-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #1e40af;
+}
+
+.toggle-label input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ✅ 추가: 선택된 항목 표시 영역 */
+.selected-items-display {
+  margin-top: 12px;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  min-height: 50px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.selected-items-display:empty::before {
+  content: '선택된 항목이 없습니다';
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.selected-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.selected-tag-remove {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: opacity 0.2s;
+  border-radius: 50%;
+}
+
+.selected-tag-remove:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .tag-input-container {
@@ -462,7 +540,18 @@
   cursor: not-allowed;
 }
 
-/* 모달 */
+/* ✅ 모달 스크롤 방지 - 최우선 적용 */
+body.modal-open,
+body[style*="position: fixed"] {
+  overflow: hidden !important;
+}
+
+/* ✅ 스크롤바 너비 보정 (레이아웃 shift 방지) */
+body[style*="padding-right"] {
+  box-sizing: border-box;
+}
+
+/* ✅ 개선: 모달 디자인 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -475,7 +564,14 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  overflow-y: auto;
+  padding: 20px;
+  overflow-y: auto; /* ✅ 오버레이 자체는 스크롤 가능 */
+  overscroll-behavior: contain; /* ✅ 스크롤 전파 차단 */
+}
+
+/* ✅ 모달 오버레이 wheel 이벤트 차단 방지 */
+.modal-overlay {
+  overscroll-behavior: contain; /* ✅ 스크롤이 부모로 전파되지 않도록 */
 }
 
 .modal-content {
@@ -484,9 +580,11 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-width: 600px;
   width: 90%;
-  max-height: 80vh;
+  max-height: 90vh; /* ✅ 90vh로 변경 */
   display: flex;
   flex-direction: column;
+  margin: auto; /* ✅ 중앙 정렬 */
+  position: relative; /* ✅ 추가 */
 }
 
 .modal-header {
@@ -495,6 +593,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -517,6 +616,7 @@
   justify-content: center;
   border-radius: 6px;
   transition: all 0.2s;
+  line-height: 1;
 }
 
 .modal-header button:hover {
@@ -527,7 +627,27 @@
 .modal-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden; /* ✅ 가로 스크롤 방지 */
   padding: 20px 24px;
+  min-height: 0; /* ✅ flex 컨테이너 내에서 스크롤 가능하게 */
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .modal-footer {
@@ -535,11 +655,16 @@
   border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
+  background: #fafbfc; /* ✅ 배경색 추가 */
+  border-radius: 0 0 16px 16px; /* ✅ 하단 모서리 둥글게 */
 }
 
+/* ✅ 개선: 선택 리스트 */
 .selection-list {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
 .selection-item {
@@ -552,12 +677,12 @@
   cursor: pointer;
   transition: all 0.2s;
   background: white;
-  margin-bottom: 8px;
 }
 
 .selection-item:hover {
   border-color: #1e40af;
   background: #f8fafc;
+  transform: translateX(4px);
 }
 
 .selection-item.selected {
@@ -577,14 +702,15 @@
   flex: 1;
   font-weight: 500;
   color: #1e293b;
+  font-size: 14px;
 }
 
 .selection-category,
 .selection-code,
 .selection-corp {
-  font-size: 13px;
+  font-size: 12px;
   color: #64748b;
-  padding: 2px 8px;
+  padding: 4px 8px;
   background: #f1f5f9;
   border-radius: 4px;
 }
@@ -596,23 +722,19 @@
   font-size: 14px;
 }
 
-.loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
+.loading-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  min-height: 400px;
+  gap: 16px;
 }
 
-.spinner-circle {
+.loading-spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
+  border: 4px solid rgba(59, 130, 246, 0.2);
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -639,81 +761,8 @@
   .ck-editor__editable {
     min-height: 300px !important;
   }
-
-  /* 모달 스크롤 방지 */
-body.modal-open {
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  height: 100%;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  max-width: 800px;
-  width: 100%;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  margin: auto;
-}
-
-.modal-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.modal-body {
-  padding: 24px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.modal-footer {
-  padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.modal-body::-webkit-scrollbar {
-  width: 8px;
-}
-
-.modal-body::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.modal-body::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
-}
-
-.modal-body::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
+  
+  .modal-content {
+    max-width: 95%;
+  }
 }

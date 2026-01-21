@@ -63,6 +63,7 @@ public class NoticeController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) NoticeBase.NoticeLevel noticeLevel,
             @RequestParam(required = false) Long serviceId,
+            @RequestParam(required = false) Long corpId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) String search,
@@ -74,7 +75,7 @@ public class NoticeController {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         
         Page<NoticeResponseDto> noticePage = noticeService.getNotices(
-                status, noticeLevel, serviceId, startDate, endDate, search, pageable
+                status, noticeLevel, serviceId, corpId, startDate, endDate, search, pageable
         );
         
         Map<String, Object> response = new HashMap<>();

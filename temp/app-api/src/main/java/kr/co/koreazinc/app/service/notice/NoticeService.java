@@ -17,8 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -40,6 +45,11 @@ public class NoticeService {
     private final NoticeBaseRepository noticeBaseRepository;
     private final NoticeTargetRepository noticeTargetRepository;
     private final ServiceMasterRepository serviceMasterRepository;
+    private final OrganizationMasterRepository organizationMasterRepository;
+    private final CorporationMasterRepository corporationMasterRepository;
+    private final NoticeSendPlanRepository noticeSendPlanRepository;
+    private final NoticeMailService noticeMailService;
+    private final OutlookCalendarService outlookCalendarService;
 
     
     /**
@@ -50,22 +60,29 @@ public class NoticeService {
         log.info("Creating notice: {} by {}", dto.getTitle(), userId);
         
         // 1. NoticeBase 생성
-        NoticeBase notice = NoticeBase.builder()
+        NoticeBase.NoticeBaseBuilder noticeBuilder = NoticeBase.builder()
                 .title(dto.getTitle())
                 .content(dto.getContent())
                 .noticeLevel(dto.getNoticeLevel())
-                .noticeStatus("PENDING")  // 초기 상태: 승인 대기
+                .noticeStatus("PENDING")  // ?????? ?????: ????? ?????
                 .affectedServiceId(dto.getAffectedServiceId())
                 .senderOrgUnitId(dto.getSenderOrgUnitId())
                 .senderOrgUnitName(dto.getSenderOrgUnitName())
+                .senderEmail(dto.getSenderEmail())
                 .publishStartAt(dto.getPublishStartAt())
                 .publishEndAt(dto.getPublishEndAt())
                 .isMaintenance(dto.getIsMaintenance() != null ? dto.getIsMaintenance() : false)
                 .isCompleted(false)
                 .mailSubject(dto.getMailSubject())
                 .createdBy(userId)
-                .updatedBy(userId)
-                .build();
+                .updatedBy(userId);
+
+        if (dto.getOutlookCalendar() != null && Boolean.TRUE.equals(dto.getOutlookCalendar().getRegister())) {
+            noticeBuilder.calendarRegister(true);
+            noticeBuilder.calendarEventAt(dto.getOutlookCalendar().getEventDate());
+        }
+
+        NoticeBase notice = noticeBuilder.build();
         
         NoticeBase savedNotice = noticeBaseRepository.save(notice);
         
@@ -82,6 +99,34 @@ public class NoticeService {
             
             noticeTargetRepository.saveAll(targets);
         }
+
+        // 3. ?????? ?????? ????
+        if (dto.getSendPlan() != null) {
+            NoticeRegistrationDto.SendPlanDto sendPlanDto = dto.getSendPlan();
+            String sendMode = sendPlanDto.getSendMode() != null
+                    ? sendPlanDto.getSendMode()
+                    : NoticeSendPlan.SendMode.SCHEDULED;
+
+            LocalDateTime scheduledAt = sendPlanDto.getScheduledSendAt();
+            if (NoticeSendPlan.SendMode.IMMEDIATE.equals(sendMode)) {
+                scheduledAt = LocalDateTime.now();
+            }
+
+            String bundleKey = null;
+            if (scheduledAt != null && Boolean.TRUE.equals(sendPlanDto.getAllowBundle())) {
+                bundleKey = scheduledAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm"));
+            }
+
+            NoticeSendPlan sendPlan = NoticeSendPlan.builder()
+                    .noticeId(savedNotice.getNoticeId())
+                    .sendMode(sendMode)
+                    .scheduledSendAt(scheduledAt)
+                    .allowBundle(sendPlanDto.getAllowBundle() != null ? sendPlanDto.getAllowBundle() : true)
+                    .bundleKey(bundleKey)
+                    .build();
+
+            noticeSendPlanRepository.save(sendPlan);
+        }
         
         log.info("Notice created successfully. ID: {}", savedNotice.getNoticeId());
         return savedNotice.getNoticeId();
@@ -95,11 +140,50 @@ public class NoticeService {
             String status,
             NoticeBase.NoticeLevel noticeLevel,
             Long serviceId,
+            Long corpId,
             LocalDate startDate,
             LocalDate endDate,
             String search,
             Pageable pageable) {
         
+        List<Long> corpNoticeIds = null;
+        if (corpId != null) {
+            List<String> targetKeys = new ArrayList<>();
+            targetKeys.add(String.valueOf(corpId));
+
+            List<OrganizationMaster> orgs =
+                organizationMasterRepository.findByCorpIdAndIsActiveTrueOrderByDisplayOrder(corpId);
+            for (OrganizationMaster org : orgs) {
+                if (org.getOrgUnitId() != null) {
+                    targetKeys.add(String.valueOf(org.getOrgUnitId()));
+                }
+                if (org.getOrgUnitCode() != null && !org.getOrgUnitCode().isBlank()) {
+                    targetKeys.add(org.getOrgUnitCode());
+                }
+            }
+
+            if (!targetKeys.isEmpty()) {
+                Set<Long> noticeIdSet = new HashSet<>();
+                List<NoticeTarget> corpTargets =
+                    noticeTargetRepository.findByTargetTypeAndTargetKeyIn("CORP", targetKeys);
+                for (NoticeTarget target : corpTargets) {
+                    noticeIdSet.add(target.getNoticeId());
+                }
+
+                List<NoticeTarget> orgTargets =
+                    noticeTargetRepository.findByTargetTypeAndTargetKeyIn("ORG_UNIT", targetKeys);
+                for (NoticeTarget target : orgTargets) {
+                    noticeIdSet.add(target.getNoticeId());
+                }
+
+                if (noticeIdSet.isEmpty()) {
+                    return Page.empty(pageable);
+                }
+                corpNoticeIds = new ArrayList<>(noticeIdSet);
+            }
+        }
+
+        final List<Long> corpNoticeIdsFinal = corpNoticeIds;
         Specification<NoticeBase> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             
@@ -114,6 +198,10 @@ public class NoticeService {
             }
             
             // 서비스 필터
+            if (corpNoticeIdsFinal != null) {
+                predicates.add(root.get("noticeId").in(corpNoticeIdsFinal));
+            }
+
             if (serviceId != null) {
                 predicates.add(cb.equal(root.get("affectedServiceId"), serviceId));
             }
@@ -144,7 +232,36 @@ public class NoticeService {
         };
         
         Page<NoticeBase> noticePage = noticeBaseRepository.findAll(spec, pageable);
-        return noticePage.map(this::convertToResponseDto);
+        List<NoticeBase> notices = noticePage.getContent();
+        if (notices.isEmpty()) {
+            return noticePage.map(this::convertToResponseDto);
+        }
+
+        List<Long> noticeIds = notices.stream()
+                .map(NoticeBase::getNoticeId)
+                .collect(Collectors.toList());
+
+        Map<Long, List<NoticeResponseDto.TargetDto>> targetsByNoticeId = new HashMap<>();
+        List<NoticeTarget> targets = noticeTargetRepository.findByNoticeIdIn(noticeIds);
+        for (NoticeTarget target : targets) {
+            NoticeResponseDto.TargetDto targetDto = NoticeResponseDto.TargetDto.builder()
+                    .targetId(target.getTargetId())
+                    .targetType(target.getTargetType())
+                    .targetKey(target.getTargetKey())
+                    .targetName(target.getTargetName())
+                    .build();
+            targetsByNoticeId
+                    .computeIfAbsent(target.getNoticeId(), key -> new ArrayList<>())
+                    .add(targetDto);
+        }
+
+        return noticePage.map(notice -> {
+            NoticeResponseDto dto = convertToResponseDto(notice);
+            List<NoticeResponseDto.TargetDto> noticeTargets =
+                    targetsByNoticeId.getOrDefault(notice.getNoticeId(), new ArrayList<>());
+            dto.setTargets(noticeTargets);
+            return dto;
+        });
     }
     
     /**
@@ -178,7 +295,22 @@ public class NoticeService {
         notice.setUpdatedBy(approver);
         
         noticeBaseRepository.save(notice);
-        
+
+        // ?? ? ?? ?? ???
+        noticeSendPlanRepository.findByNoticeId(noticeId).ifPresent(plan -> {
+            if (NoticeSendPlan.SendMode.IMMEDIATE.equals(plan.getSendMode())) {
+                noticeMailService.sendNoticeEmail(noticeId);
+                noticeSendPlanRepository.delete(plan);
+            }
+        });
+
+        // ?? ? ??? ?? ???
+        if (Boolean.TRUE.equals(notice.getCalendarRegister()) && notice.getCalendarEventAt() != null) {
+            LocalDateTime eventStartAt = notice.getCalendarEventAt();
+            LocalDateTime eventEndAt = eventStartAt.plusHours(1);
+            outlookCalendarService.createCalendarEvent(noticeId, eventStartAt, eventEndAt);
+        }
+
         log.info("Notice approved successfully. ID: {}", noticeId);
     }
     
@@ -199,6 +331,7 @@ public class NoticeService {
         
         // 상태를 REJECTED로 변경
         notice.setNoticeStatus("REJECTED");
+        notice.setRejectReason(reason);
         notice.setUpdatedBy(rejector);
         
         noticeBaseRepository.save(notice);
@@ -225,6 +358,7 @@ public class NoticeService {
                 .isCompleted(notice.getIsCompleted())
                 .completedAt(notice.getCompletedAt())
                 .mailSubject(notice.getMailSubject())
+                .rejectReason(notice.getRejectReason())
                 .createdAt(notice.getCreatedAt())
                 .createdBy(notice.getCreatedBy())
                 .updatedAt(notice.getUpdatedAt())
@@ -256,12 +390,47 @@ public class NoticeService {
         // 대상 정보 추가
         List<NoticeTarget> targets = noticeTargetRepository.findByNoticeId(notice.getNoticeId());
         dto.setTargets(targets.stream()
-                .map(target -> NoticeResponseDto.TargetDto.builder()
-                        .targetId(target.getTargetId())
-                        .targetType(target.getTargetType())
-                        .targetKey(target.getTargetKey())
-                        .targetName(target.getTargetName())
-                        .build())
+                .map(target -> {
+                    String targetName = target.getTargetName();
+
+                    if ("ORG_UNIT".equals(target.getTargetType())) {
+                        OrganizationMaster org = null;
+                        if (target.getTargetKey() != null) {
+                            try {
+                                Long orgUnitId = Long.parseLong(target.getTargetKey());
+                                org = organizationMasterRepository.findById(orgUnitId).orElse(null);
+                            } catch (NumberFormatException ignored) {
+                                org = organizationMasterRepository.findByOrgUnitCode(target.getTargetKey()).orElse(null);
+                            }
+                        }
+
+                        if (org != null) {
+                            String orgName = org.getOrgUnitName();
+                            String corpName = corporationMasterRepository.findById(org.getCorpId())
+                                    .map(CorporationMaster::getCorpName)
+                                    .orElse(null);
+                            targetName = corpName != null ? corpName + " / " + orgName : orgName;
+                        }
+                    } else if ("CORP".equals(target.getTargetType())
+                            && (targetName == null || targetName.isBlank())
+                            && target.getTargetKey() != null) {
+                        try {
+                            Long corpId = Long.parseLong(target.getTargetKey());
+                            targetName = corporationMasterRepository.findById(corpId)
+                                    .map(CorporationMaster::getCorpName)
+                                    .orElse(targetName);
+                        } catch (NumberFormatException ignored) {
+                            // keep original targetName
+                        }
+                    }
+
+                    return NoticeResponseDto.TargetDto.builder()
+                            .targetId(target.getTargetId())
+                            .targetType(target.getTargetType())
+                            .targetKey(target.getTargetKey())
+                            .targetName(targetName)
+                            .build();
+                })
                 .collect(Collectors.toList()));
         
         return dto;

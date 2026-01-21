@@ -6,6 +6,14 @@ import { useAdmin } from '../contexts/AdminContext';
 import './AdminDelegationModal.css';
 
 const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName }) => {
+  const nowDateTime = new Date().toISOString().slice(0, 16);
+  const maxDateTime = '2099-12-31T23:59';
+
+  const isValidDateTimeInput = (value) => {
+    if (!value) return true;
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value);
+  };
+
   const { refreshPermission } = useAdmin();
   const [loading, setLoading] = useState(false);
   const [adminUsers, setAdminUsers] = useState([]);
@@ -215,7 +223,18 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
                     type="datetime-local"
                     className="form-input"
                     value={formData.startDate}
-                    onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                    min={nowDateTime}
+                    max={maxDateTime}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      if (!isValidDateTimeInput(nextValue)) {
+                        return;
+                      }
+                      if (nextValue && nextValue < nowDateTime) {
+                        return;
+                      }
+                      setFormData({...formData, startDate: nextValue});
+                    }}
                     required
                   />
                 </div>
@@ -228,7 +247,19 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
                     type="datetime-local"
                     className="form-input"
                     value={formData.endDate}
-                    onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                    min={formData.startDate || nowDateTime}
+                    max={maxDateTime}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      if (!isValidDateTimeInput(nextValue)) {
+                        return;
+                      }
+                      const minValue = formData.startDate || nowDateTime;
+                      if (nextValue && nextValue < minValue) {
+                        return;
+                      }
+                      setFormData({...formData, endDate: nextValue});
+                    }}
                     required
                   />
                 </div>

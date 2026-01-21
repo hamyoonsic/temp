@@ -45,6 +45,7 @@ public class NoticeResponseDto {
     
     // 메일 정보
     private String mailSubject;
+    private String rejectReason;
     
     // 생성/수정 정보
     private LocalDateTime createdAt;

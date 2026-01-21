@@ -11,3 +11,7 @@ api요청시 spring-core의 resources하위 custom-spring-core-local.yaml 반드
 기존에 만든 코드를 수정하여 공통처럼 통합하거나 기존에 몰랐던 부분을 spring-core로 대체할 경우 기존 소스는 헷갈리지 않도록 수정이나 삭제할 것
 
 필요없는 파일이 절대 있어서는 안됨
+
+문제 해결에만 급급해서 중복된 메서드나 api요청이 있어서는 안된다.
+
+

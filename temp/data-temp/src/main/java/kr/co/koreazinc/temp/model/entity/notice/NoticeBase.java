@@ -48,6 +48,9 @@ public class NoticeBase {
     
     @Column(name = "sender_org_unit_name", length = 100)
     private String senderOrgUnitName;
+
+    @Column(name = "sender_email", length = 150)
+    private String senderEmail;
     
     @Column(name = "publish_start_at")
     private LocalDateTime publishStartAt;
@@ -68,6 +71,16 @@ public class NoticeBase {
     
     @Column(name = "mail_subject", length = 300)
     private String mailSubject;
+
+    @Column(name = "reject_reason", length = 500)
+    private String rejectReason;
+
+    @Column(name = "calendar_register", nullable = false)
+    @Builder.Default
+    private Boolean calendarRegister = false;
+
+    @Column(name = "calendar_event_at")
+    private LocalDateTime calendarEventAt;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

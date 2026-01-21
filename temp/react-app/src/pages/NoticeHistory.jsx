@@ -1,15 +1,55 @@
 // NoticeHistory.jsx
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { noticeApi, corporationApi } from '../api';
 import './NoticeHistory.css';
 
+// ✅ 모달 스크롤 제어 함수
+const openModal = () => {
+  const scrollY = window.scrollY;
+  const scrollX = window.scrollX;
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = `-${scrollX}px`;
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.style.overflow = 'hidden';
+  if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+  document.body.setAttribute('data-scroll-y', scrollY.toString());
+  document.body.setAttribute('data-scroll-x', scrollX.toString());
+};
+
+const closeModal = () => {
+  const scrollYAttr = document.body.getAttribute('data-scroll-y');
+  const scrollXAttr = document.body.getAttribute('data-scroll-x');
+  if (scrollYAttr === null || scrollXAttr === null) {
+    return;
+  }
+  const scrollY = parseInt(scrollYAttr || '0');
+  const scrollX = parseInt(scrollXAttr || '0');
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  requestAnimationFrame(() => window.scrollTo(scrollX, scrollY));
+  document.body.removeAttribute('data-scroll-y');
+  document.body.removeAttribute('data-scroll-x');
+};
+
 const NoticeHistory = () => {
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [historyList, setHistoryList] = useState([]);
   const [corporations, setCorporations] = useState([]);
-  
+
+  const defaultStatus = location.state?.status || '';
   const [filters, setFilters] = useState({
     corpId: '',
+    status: defaultStatus,
     startDate: '',
     endDate: '',
     searchTerm: ''
@@ -18,47 +58,54 @@ const NoticeHistory = () => {
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // Initial data load
+  const maxDate = '2099-12-31';
+
   useEffect(() => {
     loadCorporations();
-    loadHistoryList();
+    loadHistoryList(filters);
   }, []);
 
-  // 모달 오픈 시 바디 스크롤 방지
+  // ✅ 모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
   useEffect(() => {
     if (showDetailModal) {
-      document.body.classList.add('modal-open');
+      openModal();
     } else {
-      document.body.classList.remove('modal-open');
+      closeModal();
     }
-    return () => document.body.classList.remove('modal-open');
+    return () => closeModal();
   }, [showDetailModal]);
 
-  // ✅ 날짜 포맷 변환 함수 (8자리 또는 하이픈 형식 모두 지원)
   const formatDateInput = (value) => {
     if (!value) return '';
-    
-    // 숫자만 추출
     const numbers = value.replace(/\D/g, '');
-    
-    // 8자리 숫자인 경우: 20250205 → 2025-02-05
     if (numbers.length === 8) {
       return `${numbers.substring(0, 4)}-${numbers.substring(4, 6)}-${numbers.substring(6, 8)}`;
     }
-    
-    // 이미 형식화된 경우 그대로 반환
     if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
       return value;
     }
-    
     return value;
   };
 
-  // ✅ 수정: fetch → apiClient
+  const isValidDateInput = (value) => {
+    if (!value) return true;
+    return /^\d{4}-\d{2}-\d{2}$/.test(value);
+  };
+
+  const handleDateFilterChange = (field, value) => {
+    if (!isValidDateInput(value)) {
+      return;
+    }
+    const newFilters = { ...filters, [field]: value };
+    setFilters(newFilters);
+    if (value) {
+      setTimeout(() => loadHistoryList(newFilters), 100);
+    }
+  };
+
   const loadCorporations = async () => {
     try {
-      const result = await corporationApi.getAll();  // ✅ 변경
-      
+      const result = await corporationApi.getAll();
       if (result.success) {
         setCorporations(result.data || []);
       }
@@ -67,7 +114,6 @@ const NoticeHistory = () => {
     }
   };
 
-  // ✅ 수정: fetch → apiClient
   const loadHistoryList = async (currentFilters = filters) => {
     try {
       const params = {
@@ -75,11 +121,12 @@ const NoticeHistory = () => {
       };
       
       if (currentFilters.corpId) params.corpId = currentFilters.corpId;
+      if (currentFilters.status) params.status = currentFilters.status;
       if (currentFilters.startDate) params.startDate = formatDateInput(currentFilters.startDate);
       if (currentFilters.endDate) params.endDate = formatDateInput(currentFilters.endDate);
       if (currentFilters.searchTerm) params.search = currentFilters.searchTerm;
       
-      const result = await noticeApi.getList(params);  // ✅ 변경
+      const result = await noticeApi.getList(params);
       
       if (result.success && result.data) {
         const notices = result.data.data || result.data;
@@ -94,10 +141,9 @@ const NoticeHistory = () => {
     }
   };
 
-  // ✅ 수정: fetch → apiClient
   const openDetailModal = async (noticeId) => {
     try {
-      const result = await noticeApi.getById(noticeId);  // ✅ 변경
+      const result = await noticeApi.getById(noticeId);
       
       if (result.success && result.data) {
         setSelectedNotice(result.data);
@@ -122,16 +168,14 @@ const NoticeHistory = () => {
     return statusMap[status] || { text: status, class: 'default', color: '#94a3b8' };
   };
 
-  // ✅ 수정: fetch → apiClient
   const handleRetry = async (noticeId) => {
     if (!window.confirm('이 공지를 재발송하시겠습니까?')) return;
 
     setLoading(true);
     try {
-      await noticeApi.retry(noticeId);  // ✅ 변경
-      
+      await noticeApi.retry(noticeId);
       alert('재발송 요청이 완료되었습니다.');
-      loadHistoryList();
+      loadHistoryList(filters);
     } catch (error) {
       console.error('재발송 실패:', error);
       alert('재발송 요청 중 오류가 발생했습니다.');
@@ -141,13 +185,13 @@ const NoticeHistory = () => {
   };
 
   const handleSearch = () => {
-    loadHistoryList();
+    loadHistoryList(filters);
   };
 
-  // ✅ 초기화 후 즉시 검색
   const handleReset = () => {
     const resetFilters = {
       corpId: '',
+      status: defaultStatus,
       startDate: '',
       endDate: '',
       searchTerm: ''
@@ -181,6 +225,19 @@ const NoticeHistory = () => {
     };
   };
 
+  if (loading) {
+    return (
+      <div className="notice-history-page">
+        <div className="notice-history-container">
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>데이터 로딩 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="notice-history-page">
       <div className="notice-history-container">
@@ -189,16 +246,6 @@ const NoticeHistory = () => {
           <p className="page-description">공지 발송 이력을 조회하고 관리합니다</p>
         </div>
 
-        {loading && (
-          <div className="loading-overlay">
-            <div className="loading-spinner">
-              <div className="spinner-circle"></div>
-              <div className="loading-text">로딩 중...</div>
-            </div>
-          </div>
-        )}
-
-        {/* 필터 영역 */}
         <div className="filter-section">
           <div className="filter-row">
             <div className="filter-group">
@@ -222,34 +269,45 @@ const NoticeHistory = () => {
             </div>
 
             <div className="filter-group">
+              <label>승인 상태</label>
+              <select
+                value={filters.status}
+                onChange={(e) => {
+                  const newFilters = { ...filters, status: e.target.value };
+                  setFilters(newFilters);
+                  setTimeout(() => loadHistoryList(newFilters), 100);
+                }}
+                className="filter-select"
+              >
+                <option value="">전체</option>
+                <option value="PENDING">승인 대기</option>
+                <option value="APPROVED">승인 완료</option>
+                <option value="SENT">발송 완료</option>
+                <option value="FAILED">발송 실패</option>
+                <option value="REJECTED">발송 반려</option>
+                <option value="COMPLETED">완료</option>
+              </select>
+            </div>
+
+            <div className="filter-group">
               <label>검색기간</label>
               <div className="date-range">
                 <input 
                   type="date"
                   value={filters.startDate}
-                  onChange={(e) => {
-                    const newFilters = {...filters, startDate: e.target.value};
-                    setFilters(newFilters);
-                    if (e.target.value) {
-                      setTimeout(() => loadHistoryList(newFilters), 100);
-                    }
-                  }}
+                  max={maxDate}
+                  onChange={(e) => handleDateFilterChange('startDate', e.target.value)}
                   className="filter-input"
-                  placeholder="시작일"
+                  placeholder="???"
                 />
                 <span>~</span>
                 <input 
                   type="date"
                   value={filters.endDate}
-                  onChange={(e) => {
-                    const newFilters = {...filters, endDate: e.target.value};
-                    setFilters(newFilters);
-                    if (e.target.value) {
-                      setTimeout(() => loadHistoryList(newFilters), 100);
-                    }
-                  }}
+                  max={maxDate}
+                  onChange={(e) => handleDateFilterChange('endDate', e.target.value)}
                   className="filter-input"
-                  placeholder="종료일"
+                  placeholder="???"
                 />
               </div>
             </div>
@@ -277,7 +335,6 @@ const NoticeHistory = () => {
           </div>
         </div>
 
-        {/* 발송 로그 테이블 */}
         <div className="history-list-section">
           <div className="section-header-row">
             <h2 className="section-title">공지 발송 로그</h2>
@@ -367,7 +424,6 @@ const NoticeHistory = () => {
         </div>
       </div>
 
-      {/* 상세보기 모달 */}
       {showDetailModal && selectedNotice && (
         <div className="modal-overlay" onClick={() => setShowDetailModal(false)}>
           <div className="modal-content history-detail-modal" onClick={(e) => e.stopPropagation()}>
@@ -460,6 +516,16 @@ const NoticeHistory = () => {
                   </div>
                 )}
               </div>
+
+              {selectedNotice.noticeStatus === 'REJECTED' && selectedNotice.rejectReason && (
+                <div className="detail-section">
+                  <h4>반려 사유</h4>
+                  <div className="detail-item full-width">
+                    <span className="detail-label">사유</span>
+                    <div className="detail-value">{selectedNotice.rejectReason}</div>
+                  </div>
+                </div>
+              )}
 
               {selectedNotice.targets && selectedNotice.targets.length > 0 && (
                 <div className="detail-section">

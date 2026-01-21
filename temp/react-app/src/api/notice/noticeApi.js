@@ -8,8 +8,6 @@ import apiClient from '../../utils/apiClient';
 export const noticeApi = {
   /**
    * 공지 등록
-   * @param {Object} data - 공지 데이터
-   * @returns {Promise} 등록된 공지 정보
    */
   create: (data) => {
     return apiClient.post('/notices', data);
@@ -17,8 +15,6 @@ export const noticeApi = {
 
   /**
    * 공지 목록 조회
-   * @param {Object} params - 조회 파라미터 (page, size, status, corpId 등)
-   * @returns {Promise} 공지 목록
    */
   getList: (params = {}) => {
     const queryString = new URLSearchParams(params).toString();
@@ -28,8 +24,6 @@ export const noticeApi = {
 
   /**
    * 공지 상세 조회
-   * @param {number} noticeId - 공지 ID
-   * @returns {Promise} 공지 상세 정보
    */
   getById: (noticeId) => {
     return apiClient.get(`/notices/${noticeId}`);
@@ -37,9 +31,6 @@ export const noticeApi = {
 
   /**
    * 공지 수정
-   * @param {number} noticeId - 공지 ID
-   * @param {Object} data - 수정할 데이터
-   * @returns {Promise} 수정된 공지 정보
    */
   update: (noticeId, data) => {
     return apiClient.put(`/notices/${noticeId}`, data);
@@ -47,8 +38,6 @@ export const noticeApi = {
 
   /**
    * 공지 삭제
-   * @param {number} noticeId - 공지 ID
-   * @returns {Promise} 삭제 결과
    */
   delete: (noticeId) => {
     return apiClient.delete(`/notices/${noticeId}`);
@@ -56,10 +45,65 @@ export const noticeApi = {
 
   /**
    * 공지 재발송
-   * @param {number} noticeId - 공지 ID
-   * @returns {Promise} 재발송 결과
    */
   retry: (noticeId) => {
     return apiClient.post(`/notices/${noticeId}/retry`);
   },
+  
+  /**
+   * 첨부파일 업로드 (단일)
+   */
+  uploadAttachment: (noticeId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post(`/notices/${noticeId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  
+  /**
+   * 첨부파일 업로드 (여러 개)
+   */
+  uploadAttachments: (noticeId, formData) => {
+    return apiClient.post(`/notices/${noticeId}/attachments/bulk`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  
+  /**
+   * 첨부파일 목록 조회
+   */
+  getAttachments: (noticeId) => {
+    return apiClient.get(`/notices/${noticeId}/attachments`);
+  },
+  
+  /**
+   * 첨부파일 다운로드
+   */
+  downloadAttachment: (attachmentId) => {
+    return apiClient.get(`/notices/attachments/${attachmentId}/download`, {
+      responseType: 'blob'
+    });
+  },
+  
+  /**
+   * 첨부파일 삭제
+   */
+  deleteAttachment: (attachmentId) => {
+    return apiClient.delete(`/notices/attachments/${attachmentId}`);
+  },
+  
+  /**
+   * 재발송 통계
+   */
+  getResendStatistics: (params) => {
+    return apiClient.get('/notices/resend-statistics', { params });
+  },
+  
+  /**
+   * 재발송 가능 여부
+   */
+  canResend: (noticeId) => {
+    return apiClient.get(`/notices/${noticeId}/can-resend`);
+  }
 };

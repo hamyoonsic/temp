@@ -1,5 +1,17 @@
 /* NoticeDashboard.css - Modern & Soft Colors */
 
+body[style*="position: fixed"] {
+  overflow: hidden !important;
+}
+
+body[style*="padding-right"] {
+  box-sizing: border-box;
+}
+
+.modal-overlay {
+  overscroll-behavior: contain;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -649,6 +661,29 @@ body {
   gap: 10px;
 }
 
+.recent-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.btn-more {
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-more:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
 .notice-item {
   display: flex;
   gap: 16px;
@@ -725,6 +760,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  height: 100%;
+  justify-content: flex-end;
 }
 
 .bar-column {

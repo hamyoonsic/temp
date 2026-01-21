@@ -6,6 +6,42 @@ import { approvalApi, noticeApi } from '../api';
 import { useAdmin } from '../contexts/AdminContext';
 import AdminDelegationModal from '../components/AdminDelegationModal';
 
+// ✅ 모달 스크롤 제어 함수
+const openModal = () => {
+  const scrollY = window.scrollY;
+  const scrollX = window.scrollX;
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = `-${scrollX}px`;
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.style.overflow = 'hidden';
+  if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+  document.body.setAttribute('data-scroll-y', scrollY.toString());
+  document.body.setAttribute('data-scroll-x', scrollX.toString());
+};
+
+const closeModal = () => {
+  const scrollYAttr = document.body.getAttribute('data-scroll-y');
+  const scrollXAttr = document.body.getAttribute('data-scroll-x');
+  if (scrollYAttr === null || scrollXAttr === null) {
+    return;
+  }
+  const scrollY = parseInt(scrollYAttr || '0');
+  const scrollX = parseInt(scrollXAttr || '0');
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  requestAnimationFrame(() => window.scrollTo(scrollX, scrollY));
+  document.body.removeAttribute('data-scroll-y');
+  document.body.removeAttribute('data-scroll-x');
+};
+
 const NoticeApproval = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -27,14 +63,14 @@ const NoticeApproval = () => {
     loadApprovalList();
   }, []);
 
-  // 모달 오픈 시 바디 스크롤 방지
+  // ✅ 모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
   useEffect(() => {
     if (showDetailModal || showDelegationModal) {
-      document.body.classList.add('modal-open');
+      openModal();
     } else {
-      document.body.classList.remove('modal-open');
+      closeModal();
     }
-    return () => document.body.classList.remove('modal-open');
+    return () => closeModal();
   }, [showDetailModal, showDelegationModal]);
 
   const loadApprovalList = async () => {
@@ -117,6 +153,19 @@ const NoticeApproval = () => {
     return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   };
 
+  if (loading) {
+    return (
+      <div className="notice-approval-page">
+        <div className="notice-approval-container">
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>데이터 로딩 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="notice-approval-page">
       <div className="notice-approval-container">
@@ -152,15 +201,6 @@ const NoticeApproval = () => {
             )}
           </div>
         </div>
-
-        {loading && (
-          <div className="loading-overlay">
-            <div className="loading-spinner">
-              <div className="spinner-circle"></div>
-              <div className="loading-text">로딩 중...</div>
-            </div>
-          </div>
-        )}
 
         {/* 필터 영역 */}
         <div className="filter-section">
@@ -323,6 +363,16 @@ const NoticeApproval = () => {
                   <div className="detail-value content-box" dangerouslySetInnerHTML={{__html: selectedNotice.content}}></div>
                 </div>
               </div>
+
+              {selectedNotice.noticeStatus === 'REJECTED' && selectedNotice.rejectReason && (
+                <div className="detail-section">
+                  <h4>반려 사유</h4>
+                  <div className="detail-item full-width">
+                    <span className="detail-label">사유</span>
+                    <div className="detail-value">{selectedNotice.rejectReason}</div>
+                  </div>
+                </div>
+              )}
 
               {selectedNotice.targets && selectedNotice.targets.length > 0 && (
                 <div className="detail-section">

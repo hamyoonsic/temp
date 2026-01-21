@@ -8,6 +8,52 @@ import { corporationApi, organizationApi, serviceApi, noticeApi } from '../api';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
 
+// 개선된 모달 스크롤 제어 (스크롤 위치 완벽 유지)
+const openModal = () => {
+  const scrollY = window.scrollY;
+  const scrollX = window.scrollX;
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = `-${scrollX}px`;
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.style.overflow = 'hidden';
+  
+  if (scrollbarWidth > 0) {
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+  }
+  
+  document.body.setAttribute('data-scroll-y', scrollY.toString());
+  document.body.setAttribute('data-scroll-x', scrollX.toString());
+};
+
+const closeModal = () => {
+  const scrollYAttr = document.body.getAttribute('data-scroll-y');
+  const scrollXAttr = document.body.getAttribute('data-scroll-x');
+  if (scrollYAttr === null || scrollXAttr === null) {
+    return;
+  }
+  const scrollY = parseInt(scrollYAttr || '0');
+  const scrollX = parseInt(scrollXAttr || '0');
+  
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  
+  requestAnimationFrame(() => {
+    window.scrollTo(scrollX, scrollY);
+  });
+  
+  document.body.removeAttribute('data-scroll-y');
+  document.body.removeAttribute('data-scroll-x');
+};
+
 const editorConfiguration = {
   toolbar: [
     'heading', '|',
@@ -41,6 +87,7 @@ const NoticeRegistration = () => {
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [showCorpModal, setShowCorpModal] = useState(false);
   const [showOrgModal, setShowOrgModal] = useState(false);
+  const [sendToCorpAll, setSendToCorpAll] = useState(false);
 
   // 완료 공지 관련 상태
   const [isCompletionNotice, setIsCompletionNotice] = useState(false);
@@ -71,18 +118,46 @@ const NoticeRegistration = () => {
   });
 
   const [tagInput, setTagInput] = useState('');
+  const todayDate = new Date().toISOString().split('T')[0];
+  const nowTime = new Date().toTimeString().slice(0, 5);
+  const maxDate = '2099-12-31';
 
-  // 모달 오픈 시 바디 스크롤 방지
+  const isValidDateInput = (value) => {
+    if (!value) return true;
+    return /^\d{4}-\d{2}-\d{2}$/.test(value);
+  };
+
+  const handleDateInputChange = (field, value) => {
+    if (!isValidDateInput(value)) {
+      return;
+    }
+    handleInputChange(field, value);
+  };
+
+  const handleTimeInputChange = (field, value, dateValue) => {
+    if (!value) {
+      handleInputChange(field, value);
+      return;
+    }
+    if (dateValue === todayDate && value < nowTime) {
+      return;
+    }
+    handleInputChange(field, value);
+  };
+
+  // ✅ 모달 스크롤 제어
   useEffect(() => {
     const isAnyModalOpen = showServiceModal || showCorpModal || showOrgModal;
 
     if (isAnyModalOpen) {
-      document.body.classList.add('modal-open');
+      openModal();
     } else {
-      document.body.classList.remove('modal-open');
+      closeModal();
     }
 
-    return () => document.body.classList.remove('modal-open');
+    return () => {
+      closeModal();
+    };
   }, [showServiceModal, showCorpModal, showOrgModal]);
 
 
@@ -97,6 +172,12 @@ const NoticeRegistration = () => {
       initializeCompletionForm(location.state.originalNotice);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    if (formData.receiverCompanies.length === 0) {
+      setSendToCorpAll(false);
+    }
+  }, [formData.receiverCompanies.length]);
 
   // ✅ 완료 공지 폼 초기화
   const initializeCompletionForm = async (original) => {
@@ -408,7 +489,26 @@ const NoticeRegistration = () => {
   const handleSubmit = async (e) => {
   e.preventDefault();
   
-  // ... 유효성 검증 코드는 그대로 ...
+  // 유효성 검증
+  if (!formData.noticeTitle.trim()) {
+    alert('제목을 입력하세요.');
+    return;
+  }
+  
+  if (!formData.noticeContent.trim()) {
+    alert('내용을 입력하세요.');
+    return;
+  }
+  
+  if (formData.affectedServices.length === 0) {
+    alert('영향받는 서비스를 선택하세요.');
+    return;
+  }
+  
+  if (formData.receiverCompanies.length === 0 && formData.receiverDepts.length === 0) {
+    alert('수신 대상(법인 또는 부서)을 선택하세요.');
+    return;
+  }
 
   setLoading(true);
   try {
@@ -418,6 +518,24 @@ const NoticeRegistration = () => {
       ? false 
       : (formData.noticeType.includes('점검') || formData.noticeType.includes('장애'));
     
+    const userDataStr = sessionStorage.getItem('userData') || sessionStorage.getItem('user_me');
+    const userEmail = userDataStr ? JSON.parse(userDataStr).email : null;
+
+    const hasDeptTargets = formData.receiverDepts.length > 0;
+    const shouldSendToCorps = !hasDeptTargets || sendToCorpAll;
+    const corpTargets = shouldSendToCorps
+      ? formData.receiverCompanies.map(c => ({
+          targetType: 'CORP',
+          targetKey: c.corpId.toString(),
+          targetName: c.corpName
+        }))
+      : [];
+    const deptTargets = formData.receiverDepts.map(d => ({
+      targetType: 'ORG_UNIT',
+      targetKey: d.orgUnitId.toString(),
+      targetName: d.orgUnitName
+    }));
+
     const requestData = {
       title: formData.noticeTitle,
       content: formData.noticeContent,
@@ -428,21 +546,11 @@ const NoticeRegistration = () => {
       isMaintenance: isMaintenance,
       mailSubject: formData.noticeTitle,
       senderOrgUnitName: userInfo.orgUnitName,
+      senderEmail: userEmail,
       createdBy: userInfo.userId,
       parentNoticeId: isCompletionNotice ? originalNotice.noticeId : null,
       
-      targets: [
-        ...formData.receiverCompanies.map(c => ({
-          targetType: 'CORP',
-          targetKey: c.corpId.toString(),
-          targetName: c.corpName
-        })),
-        ...formData.receiverDepts.map(d => ({
-          targetType: 'ORG_UNIT',
-          targetKey: d.orgUnitId.toString(),
-          targetName: d.orgUnitName
-        }))
-      ],
+      targets: [...corpTargets, ...deptTargets],
       tags: formData.tags,
       sendPlan: {
         sendMode: formData.sendTimeType === '즉시 발송' ? 'IMMEDIATE' : 'SCHEDULED',
@@ -457,7 +565,6 @@ const NoticeRegistration = () => {
 
     console.log('🚀 공지 등록 요청:', requestData);
 
-    // ✅ 변경: noticeApi.createNotice → noticeApi.create
     const result = await noticeApi.create(requestData);
   
     console.log('✅ 등록 성공:', result);
@@ -476,6 +583,19 @@ const NoticeRegistration = () => {
       navigate(-1);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="notice-registration-page">
+        <div className="notice-registration-container">
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>데이터 로딩 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="notice-registration-page">
@@ -505,12 +625,6 @@ const NoticeRegistration = () => {
               </ul>
               <p className="banner-hint">💡 완료 내용만 작성하시면 됩니다!</p>
             </div>
-          </div>
-        )}
-
-        {loading && (
-          <div className="loading-overlay">
-            <div className="spinner-circle"></div>
           </div>
         )}
 
@@ -564,8 +678,8 @@ const NoticeRegistration = () => {
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">영향을 받는 서비스 (다중 선택 가능)</label>
+                  <div className="form-group full-width">
+                    <label className="form-label">영향을 받는 서비스 <span className="required">*</span></label>
                     <div 
                       className="input-with-icon" 
                       onClick={() => !isCompletionNotice && setShowServiceModal(true)}
@@ -574,22 +688,38 @@ const NoticeRegistration = () => {
                       <input
                         type="text"
                         className={`form-input ${isCompletionNotice ? 'disabled' : ''}`}
-                        value={formData.affectedServices.map(s => s.serviceName).join(', ')}
+                        value="클릭하여 서비스 선택"
                         readOnly
                         placeholder="서비스를 선택하세요"
                         disabled={isCompletionNotice}
                       />
                       <span className="input-icon">🔍</span>
                     </div>
+                    
+                    {/* 선택된 서비스 표시 */}
                     {formData.affectedServices.length > 0 && (
-                      <p className="form-hint">
-                        {formData.affectedServices.length}개 서비스 선택됨
-                        {isCompletionNotice && ' (원본 공지와 동일)'}
-                      </p>
+                      <div className="selected-items-display">
+                        {formData.affectedServices.map((service, index) => (
+                          <div key={index} className="selected-tag">
+                            <span>{service.serviceName}</span>
+                            {!isCompletionNotice && (
+                              <button
+                                type="button"
+                                className="selected-tag-remove"
+                                onClick={() => {
+                                  const newIds = selectedServiceIds.filter(id => id !== service.serviceId);
+                                  setSelectedServiceIds(newIds);
+                                  updateAffectedServices(newIds);
+                                }}
+                              >×</button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
 
-                  <div className="form-group">
+                  <div className="form-group full-width">
                     <label className="form-label">
                       발신부서 <span className="required">*</span>
                     </label>
@@ -628,18 +758,48 @@ const NoticeRegistration = () => {
                       <input
                         type="text"
                         className="form-input"
-                        value={formData.receiverCompanies.map(c => c.corpName).join(', ')}
+                        value="클릭하여 법인 선택"
                         readOnly
                         placeholder="법인을 선택하세요"
                       />
                       <span className="input-icon">🔍</span>
                     </div>
+                    
+                    {/* 선택된 법인 표시 */}
                     {formData.receiverCompanies.length > 0 && (
-                      <p className="form-hint">
-                        {formData.receiverCompanies.length}개 법인 선택됨
-                        {isCompletionNotice && ' (원본 공지와 동일)'}
-                      </p>
+                      <div className="selected-items-display">
+                        {formData.receiverCompanies.map((company, index) => (
+                          <div key={index} className="selected-tag">
+                            <span>{company.corpName}</span>
+                            <button
+                              type="button"
+                              className="selected-tag-remove"
+                              onClick={() => {
+                                const newIds = selectedCorpIds.filter(id => id !== company.corpId);
+                                setSelectedCorpIds(newIds);
+                                updateReceiverCompanies(newIds);
+                                filterOrganizationsByCorps(newIds);
+                              }}
+                            >×</button>
+                          </div>
+                        ))}
+                      </div>
                     )}
+
+                    <div className="corp-send-toggle">
+                      <label className="toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={sendToCorpAll}
+                          onChange={(e) => setSendToCorpAll(e.target.checked)}
+                          disabled={formData.receiverCompanies.length === 0}
+                        />
+                        법인 전체로 발송
+                      </label>
+                      <p className="form-hint">
+                        부서를 선택하면 기본적으로 부서만 발송됩니다. 법인 전체 발송이 필요하면 체크하세요.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="form-group">
@@ -652,18 +812,33 @@ const NoticeRegistration = () => {
                       <input
                         type="text"
                         className="form-input"
-                        value={formData.receiverDepts.map(d => d.orgUnitName).join(', ')}
+                        value="클릭하여 부서 선택"
                         readOnly
                         placeholder="부서를 선택하세요"
                       />
                       <span className="input-icon">🔍</span>
                     </div>
+                    
+                    {/* 선택된 부서 표시 */}
                     {formData.receiverDepts.length > 0 && (
-                      <p className="form-hint">
-                        {formData.receiverDepts.length}개 부서 선택됨
-                        {isCompletionNotice && ' (원본 공지와 동일)'}
-                      </p>
+                      <div className="selected-items-display">
+                        {formData.receiverDepts.map((dept, index) => (
+                          <div key={index} className="selected-tag">
+                            <span>{dept.orgUnitName}</span>
+                            <button
+                              type="button"
+                              className="selected-tag-remove"
+                              onClick={() => {
+                                const newIds = selectedOrgIds.filter(id => id !== dept.orgUnitId);
+                                setSelectedOrgIds(newIds);
+                                updateReceiverDepts(newIds);
+                              }}
+                            >×</button>
+                          </div>
+                        ))}
+                      </div>
                     )}
+                    
                     {selectedCorpIds.length > 0 && (
                       <p className="form-hint filter-active">
                         🔍 선택한 법인의 부서만 표시됩니다
@@ -766,7 +941,9 @@ const NoticeRegistration = () => {
                       type="date"
                       className="form-input"
                       value={formData.sendDate}
-                      onChange={(e) => handleInputChange('sendDate', e.target.value)}
+                      min={todayDate}
+                      max={maxDate}
+                      onChange={(e) => handleDateInputChange('sendDate', e.target.value)}
                     />
                     <select
                       className="form-select"
@@ -781,7 +958,8 @@ const NoticeRegistration = () => {
                       type="time"
                       className="form-input"
                       value={formData.sendTime}
-                      onChange={(e) => handleInputChange('sendTime', e.target.value)}
+                      min={formData.sendDate === todayDate ? nowTime : undefined}
+                      onChange={(e) => handleTimeInputChange('sendTime', e.target.value, formData.sendDate)}
                     />
                   </div>
                 </div>
@@ -801,14 +979,17 @@ const NoticeRegistration = () => {
                       type="date"
                       className="form-input"
                       value={formData.outlookDate}
-                      onChange={(e) => handleInputChange('outlookDate', e.target.value)}
+                      min={todayDate}
+                      max={maxDate}
+                      onChange={(e) => handleDateInputChange('outlookDate', e.target.value)}
                       disabled={formData.outlookSchedule === '등록안함'}
                     />
                     <input
                       type="time"
                       className="form-input"
                       value={formData.outlookTime}
-                      onChange={(e) => handleInputChange('outlookTime', e.target.value)}
+                      min={formData.outlookDate === todayDate ? nowTime : undefined}
+                      onChange={(e) => handleTimeInputChange('outlookTime', e.target.value, formData.outlookDate)}
                       disabled={formData.outlookSchedule === '등록안함'}
                     />
                   </div>

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict tHxd9zFXhY10fQRchlpW8Kt1nwjPvTFSRnpddYYWaDyqQg7ohC1pmiCsZn8ARez
+\restrict D5zwdQsQF9NoQugIgBy33ZOaJptm7W5uVf92E8NkUv8AqvqqlqXANCLNf3MLRIG
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 15.15
@@ -67,13 +67,16 @@ COPY public.service_master (service_id, service_code, service_name, service_cate
 -- Data for Name: notice_base; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.notice_base (notice_id, title, content, notice_level, notice_status, affected_service_id, sender_org_unit_id, sender_org_unit_name, publish_start_at, publish_end_at, is_maintenance, is_completed, completed_at, mail_subject, created_at, created_by, updated_at, updated_by, parent_notice_id) FROM stdin;
-1	고려아연 ERP 시스템 점검 안내	고려아연 ERP 시스템 점검으로 인하여 22일(수) 18:00시 부터 시스템 사용이 불가합니다.\r\n업무에 참고하여 주시기 바랍니다.\r\n\r\n문의 : 서린정보기술 ITH3팀 박경민 수석 (2656)	L2	APPROVED	1	ITH3	서린정보기술 ITH3팀	2025-10-22 08:00:00	2025-10-22 19:00:00	t	f	\N	[점검] 고려아연 ERP 시스템 점검 안내	2026-01-12 14:40:12.59047	park001	2026-01-12 14:40:12.59047	park001	\N
-2	윈도우 보안 패치 작업 안내	윈도우 보안 패치 적용을 위해 전사 PC 재부팅이 필요합니다.\r\n금일 18:00 이후 자동 재부팅 예정이오니 작업 중인 파일은 미리 저장해주시기 바랍니다.\r\n\r\n문의 : 서린정보기술 ITH3팀 전종하 책임 (2657)	L1	SENT	\N	ITH3	서린정보기술 ITH3팀	2025-10-15 08:00:00	2025-10-15 19:00:00	f	t	\N	[보안] 윈도우 보안 패치 작업 안내	2026-01-12 14:40:12.59047	jeon001	2026-01-12 14:40:12.59047	jeon001	\N
-3	고려아연 연결회계 시스템 장애 발생 안내	고려아연 연결회계 시스템에 장애가 발생하여 현재 접속이 불가합니다.\r\n복구 작업 진행 중이며, 완료 시 별도 안내드리겠습니다.\r\n\r\n문의 : 서린정보기술 ITH1팀 신호용 책임 (2655)	L3	COMPLETED	5	ITH1	서린정보기술 ITH1팀	2025-10-10 14:30:00	2025-10-10 16:00:00	t	t	2025-10-10 15:45:00	[긴급장애] 고려아연 연결회계 시스템 장애 발생	2026-01-12 14:40:12.59047	shin001	2026-01-12 14:40:12.59047	shin001	\N
-4	테스트 공지	<p>테스트 내용</p>	L2	REJECTED	1	park001	서린정보기술 ITH3팀	2026-01-14 11:25:06.203301	\N	t	f	\N	테스트 메일 제목	2026-01-14 11:25:06.203301	park001	2026-01-14 11:25:38.021578	admin001	\N
-5	2월 15일 긴급 서버 점검	<p>2월 15일 긴급 서버 점검 안내 입니다.</p>	L2	APPROVED	1	park001	서린정보기술 ITH3팀	2026-01-16 08:30:00	\N	t	f	\N	2월 15일 긴급 서버 점검	2026-01-15 15:34:29.027067	park001	2026-01-15 15:34:44.8702	admin001	\N
-6	보안 관련 긴급 공지	<p>보안 관련 긴급 공지 입니다.</p><p>&nbsp;</p><p>점검 전까지 서비스 이용 불가능 합니다.</p>	L3	APPROVED	1	park001	서린정보기술 ITH3팀	2026-01-22 08:30:00	\N	t	f	\N	보안 관련 긴급 공지	2026-01-16 14:31:28.480052	park001	2026-01-21 08:39:45.128665	admin	\N
+COPY public.notice_base (notice_id, title, content, notice_level, notice_status, affected_service_id, sender_org_unit_id, sender_org_unit_name, publish_start_at, publish_end_at, is_maintenance, is_completed, completed_at, mail_subject, created_at, created_by, updated_at, updated_by, parent_notice_id, calendar_register, calendar_event_at, sender_email) FROM stdin;
+1	고려아연 ERP 시스템 점검 안내	고려아연 ERP 시스템 점검으로 인하여 22일(수) 18:00시 부터 시스템 사용이 불가합니다.\r\n업무에 참고하여 주시기 바랍니다.\r\n\r\n문의 : 서린정보기술 ITH3팀 박경민 수석 (2656)	L2	APPROVED	1	ITH3	서린정보기술 ITH3팀	2025-10-22 08:00:00	2025-10-22 19:00:00	t	f	\N	[점검] 고려아연 ERP 시스템 점검 안내	2026-01-12 14:40:12.59047	park001	2026-01-12 14:40:12.59047	park001	\N	f	\N	\N
+2	윈도우 보안 패치 작업 안내	윈도우 보안 패치 적용을 위해 전사 PC 재부팅이 필요합니다.\r\n금일 18:00 이후 자동 재부팅 예정이오니 작업 중인 파일은 미리 저장해주시기 바랍니다.\r\n\r\n문의 : 서린정보기술 ITH3팀 전종하 책임 (2657)	L1	SENT	\N	ITH3	서린정보기술 ITH3팀	2025-10-15 08:00:00	2025-10-15 19:00:00	f	t	\N	[보안] 윈도우 보안 패치 작업 안내	2026-01-12 14:40:12.59047	jeon001	2026-01-12 14:40:12.59047	jeon001	\N	f	\N	\N
+3	고려아연 연결회계 시스템 장애 발생 안내	고려아연 연결회계 시스템에 장애가 발생하여 현재 접속이 불가합니다.\r\n복구 작업 진행 중이며, 완료 시 별도 안내드리겠습니다.\r\n\r\n문의 : 서린정보기술 ITH1팀 신호용 책임 (2655)	L3	COMPLETED	5	ITH1	서린정보기술 ITH1팀	2025-10-10 14:30:00	2025-10-10 16:00:00	t	t	2025-10-10 15:45:00	[긴급장애] 고려아연 연결회계 시스템 장애 발생	2026-01-12 14:40:12.59047	shin001	2026-01-12 14:40:12.59047	shin001	\N	f	\N	\N
+4	테스트 공지	<p>테스트 내용</p>	L2	REJECTED	1	park001	서린정보기술 ITH3팀	2026-01-14 11:25:06.203301	\N	t	f	\N	테스트 메일 제목	2026-01-14 11:25:06.203301	park001	2026-01-14 11:25:38.021578	admin001	\N	f	\N	\N
+6	보안 관련 긴급 공지	<p>보안 관련 긴급 공지 입니다.</p><p>&nbsp;</p><p>점검 전까지 서비스 이용 불가능 합니다.</p>	L3	APPROVED	1	park001	서린정보기술 ITH3팀	2026-01-22 08:30:00	\N	t	f	\N	보안 관련 긴급 공지	2026-01-16 14:31:28.480052	park001	2026-01-21 08:39:45.128665	admin	\N	f	\N	\N
+7	공지관리 시스템 테스트 메일 발송 안내	<p>공지관리 시스템 테스트 메일 발송입니다.</p>	L2	APPROVED	1	\N	IT개발팀	2026-01-21 08:30:00	\N	f	f	\N	공지관리 시스템 테스트 메일 발송 안내	2026-01-21 17:41:33.210343	hamyoonsic	2026-01-21 17:41:54.56807	admin	\N	f	\N	\N
+5	2월 15일 긴급 서버 점검	<p>2월 15일 긴급 서버 점검 안내 입니다.</p>	L2	SENT	1	park001	서린정보기술 ITH3팀	2026-01-16 08:30:00	\N	t	f	\N	2월 15일 긴급 서버 점검	2026-01-15 15:34:29.027067	park001	2026-01-21 18:02:00.995095	admin001	\N	f	\N	\N
+8	공지관리 시스템 테스트 메일 발송 안내	<p>공지관리 시스템 테스트 메일 발송 안내</p>	L2	APPROVED	1	\N	IT개발팀	2026-01-21 08:30:00	\N	t	f	\N	공지관리 시스템 테스트 메일 발송 안내	2026-01-21 18:03:33.569609	hamyoonsic	2026-01-21 18:05:35.24486	admin	\N	f	\N	\N
+9	원료팀 ERP 서버점검 공지	<p>원료가 부족합니다. 점검합니다.</p>	L2	SENT	1	\N	IT개발팀	2026-01-21 08:30:00	\N	t	f	\N	원료팀 ERP 서버점검 공지	2026-01-21 18:17:14.413218	hamyoonsic	2026-01-21 18:17:51.464187	admin	\N	f	\N	hamyoonsic@koreazinc.co.kr
 \.
 
 
@@ -89,7 +92,7 @@ COPY public.notice_approval (approval_id, notice_id, approval_status, approver_u
 -- Data for Name: notice_attachment; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.notice_attachment (attachment_id, notice_id, file_name, size_bytes, storage_key) FROM stdin;
+COPY public.notice_attachment (attachment_id, notice_id, file_name, file_original_name, file_path, file_size, file_type, uploaded_by, uploaded_at) FROM stdin;
 \.
 
 
@@ -106,6 +109,9 @@ COPY public.notice_calendar_event (calendar_event_id, notice_id, resource_mailbo
 --
 
 COPY public.notice_delivery_log (delivery_id, notice_id, channel, delivery_status, sent_at, attempt_count, last_error, provider_message_id, idempotency_key) FROM stdin;
+1	5	OUTLOOK_MAIL	SENT	2026-01-21 18:02:00.829894	1	\N	\N	notice_5_202601211802
+2	8	OUTLOOK_MAIL	FAILED	\N	1	발신자 이메일을 찾을 수 없습니다	\N	notice_8_202601211805
+3	9	OUTLOOK_MAIL	SENT	2026-01-21 18:17:51.363339	1	\N	\N	notice_9_202601211817
 \.
 
 
@@ -144,6 +150,7 @@ kim001	김철수	Kim Chul-su	kim.cs@company.com	4	1	과장	t	\N	2026-01-12 14:40
 lee001	이영희	Lee Young-hee	lee.yh@company.com	5	1	대리	t	\N	2026-01-12 14:40:12.59047	2026-01-12 14:40:12.59047
 hong001	홍길동	Hong Gil-dong	hong.gd@company.com	10	1	차장	t	\N	2026-01-12 14:40:12.59047	2026-01-12 14:40:12.59047
 choi001	최민준	Choi Min-jun	choi.mj@company.com	11	1	과장	t	\N	2026-01-12 14:40:12.59047	2026-01-12 14:40:12.59047
+hamyoonsic	함윤식	KaiHam	hamyoonsic@sorin.co.kr	7	1	선임	t	\N	2026-01-12 14:40:12.59047	2026-01-12 14:40:12.59047
 \.
 
 
@@ -159,6 +166,23 @@ COPY public.notice_recipient (recipient_id, notice_id, user_id, sent_at, read_at
 5	2	shin001	2025-10-15 08:30:00	2025-10-15 08:45:00	t	2026-01-12 14:40:12.59047
 6	2	jeon001	2025-10-15 08:30:00	2025-10-15 10:20:00	t	2026-01-12 14:40:12.59047
 7	2	kim001	2025-10-15 08:30:00	\N	f	2026-01-12 14:40:12.59047
+8	5	lee001	2026-01-21 18:02:00.83589	\N	f	2026-01-21 18:02:00.91985
+9	5	shin001	2026-01-21 18:02:00.83589	\N	f	2026-01-21 18:02:00.941428
+10	5	hong001	2026-01-21 18:02:00.83589	\N	f	2026-01-21 18:02:00.950457
+11	5	park001	2026-01-21 18:02:00.83589	\N	f	2026-01-21 18:02:00.955452
+12	5	jeon001	2026-01-21 18:02:00.83589	\N	f	2026-01-21 18:02:00.962006
+13	5	kim001	2026-01-21 18:02:00.83589	\N	f	2026-01-21 18:02:00.969006
+14	5	choi001	2026-01-21 18:02:00.83589	\N	f	2026-01-21 18:02:00.974518
+15	5	an001	2026-01-21 18:02:00.83589	\N	f	2026-01-21 18:02:00.980559
+16	9	lee001	2026-01-21 18:17:51.364341	\N	f	2026-01-21 18:17:51.414693
+17	9	hamyoonsic	2026-01-21 18:17:51.364341	\N	f	2026-01-21 18:17:51.419691
+18	9	shin001	2026-01-21 18:17:51.364341	\N	f	2026-01-21 18:17:51.425242
+19	9	hong001	2026-01-21 18:17:51.364341	\N	f	2026-01-21 18:17:51.42824
+20	9	park001	2026-01-21 18:17:51.364341	\N	f	2026-01-21 18:17:51.431255
+21	9	jeon001	2026-01-21 18:17:51.364341	\N	f	2026-01-21 18:17:51.435244
+22	9	kim001	2026-01-21 18:17:51.364341	\N	f	2026-01-21 18:17:51.437755
+23	9	choi001	2026-01-21 18:17:51.364341	\N	f	2026-01-21 18:17:51.443626
+24	9	an001	2026-01-21 18:17:51.364341	\N	f	2026-01-21 18:17:51.446641
 \.
 
 
@@ -167,7 +191,6 @@ COPY public.notice_recipient (recipient_id, notice_id, user_id, sent_at, read_at
 --
 
 COPY public.notice_send_plan (send_plan_id, notice_id, send_mode, scheduled_send_at, bundle_key, allow_bundle) FROM stdin;
-1	5	SCHEDULED	2026-01-16 08:30:00	\N	t
 2	6	SCHEDULED	2026-01-22 08:30:00	\N	t
 \.
 
@@ -207,6 +230,12 @@ COPY public.notice_target (target_id, notice_id, target_type, target_key, target
 12	6	ORG_UNIT	7	원료 1팀
 13	6	ORG_UNIT	8	원료 2팀
 14	6	ORG_UNIT	9	원료 3팀
+15	7	CORP	1	고려아연
+16	7	ORG_UNIT	10	아연영업팀
+17	8	CORP	1	고려아연
+18	8	ORG_UNIT	1	서린정보기술 ITH1팀
+19	9	CORP	1	고려아연
+20	9	ORG_UNIT	7	원료 1팀
 \.
 
 
@@ -249,7 +278,7 @@ SELECT pg_catalog.setval('public.notice_attachment_attachment_id_seq', 1, false)
 -- Name: notice_base_notice_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.notice_base_notice_id_seq', 6, true);
+SELECT pg_catalog.setval('public.notice_base_notice_id_seq', 9, true);
 
 
 --
@@ -263,21 +292,21 @@ SELECT pg_catalog.setval('public.notice_calendar_event_calendar_event_id_seq', 1
 -- Name: notice_delivery_log_delivery_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.notice_delivery_log_delivery_id_seq', 1, false);
+SELECT pg_catalog.setval('public.notice_delivery_log_delivery_id_seq', 3, true);
 
 
 --
 -- Name: notice_recipient_recipient_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.notice_recipient_recipient_id_seq', 7, true);
+SELECT pg_catalog.setval('public.notice_recipient_recipient_id_seq', 24, true);
 
 
 --
 -- Name: notice_send_plan_send_plan_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.notice_send_plan_send_plan_id_seq', 2, true);
+SELECT pg_catalog.setval('public.notice_send_plan_send_plan_id_seq', 4, true);
 
 
 --
@@ -291,7 +320,7 @@ SELECT pg_catalog.setval('public.notice_tag_tag_id_seq', 8, true);
 -- Name: notice_target_target_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.notice_target_target_id_seq', 14, true);
+SELECT pg_catalog.setval('public.notice_target_target_id_seq', 20, true);
 
 
 --
@@ -312,5 +341,5 @@ SELECT pg_catalog.setval('public.service_master_service_id_seq', 6, true);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict tHxd9zFXhY10fQRchlpW8Kt1nwjPvTFSRnpddYYWaDyqQg7ohC1pmiCsZn8ARez
+\unrestrict D5zwdQsQF9NoQugIgBy33ZOaJptm7W5uVf92E8NkUv8AqvqqlqXANCLNf3MLRIG
 

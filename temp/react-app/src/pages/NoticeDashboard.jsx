@@ -4,6 +4,42 @@ import { useNavigate } from "react-router-dom";
 import "./NoticeDashboard.css";
 import { dashboardApi, noticeApi, organizationApi } from '../api';
 
+// ✅ 모달 스크롤 제어 함수
+const openModal = () => {
+  const scrollY = window.scrollY;
+  const scrollX = window.scrollX;
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = `-${scrollX}px`;
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.body.style.overflow = 'hidden';
+  if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+  document.body.setAttribute('data-scroll-y', scrollY.toString());
+  document.body.setAttribute('data-scroll-x', scrollX.toString());
+};
+
+const closeModal = () => {
+  const scrollYAttr = document.body.getAttribute('data-scroll-y');
+  const scrollXAttr = document.body.getAttribute('data-scroll-x');
+  if (scrollYAttr === null || scrollXAttr === null) {
+    return;
+  }
+  const scrollY = parseInt(scrollYAttr || '0');
+  const scrollX = parseInt(scrollXAttr || '0');
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+  requestAnimationFrame(() => window.scrollTo(scrollX, scrollY));
+  document.body.removeAttribute('data-scroll-y');
+  document.body.removeAttribute('data-scroll-x');
+};
+
 export default function NoticeDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -15,12 +51,10 @@ export default function NoticeDashboard() {
   const [modalNotices, setModalNotices] = useState([]);
   const [modalTitle, setModalTitle] = useState('');
   
-  // ✅ 추가: 뷰 모드 및 완료 공지 관련 상태
-  const [viewMode, setViewMode] = useState('monthly'); // 'monthly', 'weekly', 'daily'
+  const [viewMode, setViewMode] = useState('monthly');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [selectedMaintenanceNotice, setSelectedMaintenanceNotice] = useState(null);
   
-  // 실제 DB 데이터
   const [stats, setStats] = useState({
     pendingApprovalCount: 0,
     scheduledSendCount: 0,
@@ -40,29 +74,24 @@ export default function NoticeDashboard() {
     loadDashboardData();
   }, [navigate]);
 
-  // 캘린더 데이터 로드
   useEffect(() => {
     loadCalendarData();
   }, [currentDate]);
 
-  // 모달 오픈 시 바디 스크롤 방지
+  // ✅ 모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
   useEffect(() => {
     if (showDetailModal || showCompletionModal) {
-      document.body.classList.add('modal-open');
+      openModal();
     } else {
-      document.body.classList.remove('modal-open');
+      closeModal();
     }
-    
-    return () => {
-      document.body.classList.remove('modal-open');
-    };
+    return () => closeModal();
   }, [showDetailModal, showCompletionModal]);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // 1. 통계 데이터
-      const statsData = await dashboardApi.getStats();  // ✅ 변경
+      const statsData = await dashboardApi.getStats();
       if (statsData?.success && statsData.data && typeof statsData.data === 'object') {
         setStats(statsData.data);
       } else {
@@ -74,8 +103,7 @@ export default function NoticeDashboard() {
         });
       }
 
-      // 2. 최근 공지 목록
-      const noticesData = await noticeApi.getList({ page: 0, size: 100 });  // ✅ 변경
+      const noticesData = await noticeApi.getList({ page: 0, size: 100 });
       if (noticesData.success) {
         const allNotices = noticesData.data.data || noticesData.data;
         const approvedNotices = Array.isArray(allNotices) 
@@ -89,14 +117,12 @@ export default function NoticeDashboard() {
         calculateTypeStats(approvedNotices);
       }
 
-      // 4. 시스템 점검 일정
-      const scheduleData = await noticeApi.getList({ status: 'APPROVED', page: 0, size: 5 });  // ✅ 변경
+      const scheduleData = await noticeApi.getList({ status: 'APPROVED', page: 0, size: 5 });
       if (scheduleData.success) {
         const scheduleList = scheduleData.data.data || scheduleData.data;
         setSchedules(Array.isArray(scheduleList) ? scheduleList : []);
       }
       
-      // 5. 부서별 통계
       await calculateDeptStatsWithAllDepts();
 
     } catch (error) {
@@ -108,21 +134,42 @@ export default function NoticeDashboard() {
 
   const loadCalendarData = async () => {
     try {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth() + 1;
-      
-      console.log('📅 캘린더 조회 요청:', { year, month });
-      
-      // 전체 공지 조회 후 프론트에서 필터링
-      const data = await noticeApi.getList({ page: 0, size: 1000 });  // ✅ 변경
+      const data = await noticeApi.getList({ page: 0, size: 1000 });
       
       if (data.success) {
         const notices = data.data.data || data.data;
-        
-        // ... 나머지 코드는 동일 ...
+        const eventsByDate = {};
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth();
+
+        (Array.isArray(notices) ? notices : []).forEach((notice) => {
+          const baseDate = notice.publishStartAt || notice.createdAt;
+          if (!baseDate) return;
+          const date = new Date(baseDate);
+          if (date.getFullYear() != currentYear || date.getMonth() != currentMonth) {
+            return;
+          }
+
+          const day = date.getDate();
+          const dateKey = formatDateKey(date);
+          if (!eventsByDate[dateKey]) {
+            eventsByDate[dateKey] = { day, dateKey, events: [] };
+          }
+
+          eventsByDate[dateKey].events.push({
+            noticeId: notice.noticeId,
+            title: notice.title,
+            dept: notice.senderOrgUnitName || '-',
+            level: notice.noticeLevel,
+            color: getPriorityColor(notice.noticeLevel),
+            dateKey
+          });
+        });
+
+        setCalendarEvents(Object.values(eventsByDate).sort((a, b) => a.day - b.day));
       }
     } catch (error) {
-      console.error('캘린더 데이터 로드 실패:', error);
+      console.error('??? ??? ?? ??:', error);
     }
   };
 
@@ -146,93 +193,87 @@ export default function NoticeDashboard() {
     setTypeStats(stats);
   };
 
-  const calculateDeptStats = (notices) => {
-    const deptCounts = {};
-    
-    notices.forEach(notice => {
-      const dept = notice.senderOrgUnitName || '미분류';
-      deptCounts[dept] = (deptCounts[dept] || 0) + 1;
-    });
-
-    const stats = Object.entries(deptCounts)
-      .map(([dept, count]) => ({ dept, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 9);
-
-    setDeptStats(stats);
-  };
-
-  // ✅ 수정: calculateDeptStatsWithAllDepts - fetch를 apiClient로 변경
   const calculateDeptStatsWithAllDepts = async () => {
     try {
-      // ✅ 변경: fetch → apiClient
       const orgsData = await organizationApi.getAll();
       
       if (!orgsData.success) {
-        console.error('부서 목록 조회 실패');
+        console.error('???? ?? ??');
         return;
       }
       
       const allOrgs = orgsData.data || [];
-      
       const noticesData = await noticeApi.getList({ page: 0, size: 1000 });
       
       if (!noticesData.success) {
-        console.error('공지 목록 조회 실패');
+        console.error('?? ?? ?? ??');
         return;
       }
       
       const allNotices = noticesData.data.data || noticesData.data || [];
-      
-      // 승인된 공지만 필터링
       const approvedNotices = allNotices.filter(n => 
         n.noticeStatus === 'APPROVED' || 
         n.noticeStatus === 'SENT' || 
         n.noticeStatus === 'COMPLETED'
       );
       
-      // 3. 각 부서별 공지 수신 카운트
       const deptCounts = {};
-      
-      // 모든 부서를 0으로 초기화
+      const orgIdToName = {};
+      const orgKeyToId = new Map();
       allOrgs.forEach(org => {
-        deptCounts[org.orgUnitName] = 0;
+        const orgId = org.orgUnitId;
+        deptCounts[orgId] = 0;
+        orgIdToName[orgId] = org.orgUnitName;
+        if (orgId !== null && orgId !== undefined) {
+          orgKeyToId.set(String(orgId), orgId);
+        }
+        if (org.orgUnitCode) {
+          orgKeyToId.set(String(org.orgUnitCode), orgId);
+        }
+        if (org.orgUnitName) {
+          orgKeyToId.set(String(org.orgUnitName), orgId);
+        }
       });
       
-      // 공지의 targets를 분석하여 부서별 카운트
       approvedNotices.forEach(notice => {
         if (notice.targets && Array.isArray(notice.targets)) {
           notice.targets.forEach(target => {
-            // ORG_UNIT 타입인 경우에만 카운트
-            if (target.targetType === 'ORG_UNIT' && target.targetName) {
-              if (deptCounts.hasOwnProperty(target.targetName)) {
-                deptCounts[target.targetName]++;
+            if (target.targetType === 'ORG_UNIT') {
+              const candidates = [target.targetKey, target.targetName]
+                .filter((value) => value !== null && value !== undefined)
+                .map((value) => String(value).trim())
+                .filter((value) => value.length > 0);
+              for (const key of candidates) {
+                const orgUnitId = orgKeyToId.get(key);
+                if (orgUnitId !== undefined && Object.prototype.hasOwnProperty.call(deptCounts, orgUnitId)) {
+                  deptCounts[orgUnitId]++;
+                  break;
+                }
               }
             }
           });
         }
       });
       
-      // 4. 상위 14개 부서만 표시 (데이터에 부서가 14개)
       const stats = Object.entries(deptCounts)
-        .map(([dept, count]) => ({ dept, count }))
+        .map(([orgUnitId, count]) => ({
+          dept: orgIdToName[orgUnitId] || '-',
+          count
+        }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 14);
       
       setDeptStats(stats);
-      
-      console.log('📊 부서별 통계 (승인된 공지만):', stats);
-      
     } catch (error) {
-      console.error('부서별 통계 계산 실패:', error);
+      console.error('??? ?? ?? ??:', error);
     }
   };
 
   const getPriorityColor = (level) => {
     const colors = {
-      'L3': '#EF4444', // 긴급 - 빨강
-      'L2': '#F59E0B', // 중간 - 주황
-      'L1': '#06B6D4'  // 낮음 - 파랑
+      'L3': '#EF4444',
+      'L2': '#F59E0B',
+      'L1': '#06B6D4'
     };
     return colors[level] || '#10B981';
   };
@@ -257,10 +298,6 @@ export default function NoticeDashboard() {
       'L1': '#93c5fd'
     };
     return colors[level] || '#6ee7b7';
-  };
-
-  const getNoticeColor = (level) => {
-    return getPriorityColor(level);
   };
 
   const getStatusColor = (status) => {
@@ -305,6 +342,13 @@ export default function NoticeDashboard() {
     return `${year}.${month}.${day} ${hours}:${minutes}`;
   };
 
+  const formatDateKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const changeMonth = (delta) => {
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() + delta);
@@ -341,7 +385,6 @@ export default function NoticeDashboard() {
     return new Date(year, month, 1).getDay();
   };
 
-  // 통계카드 클릭 핸들러
   const handleStatClick = (status) => {
     const statusNotices = recentNotices.filter(n => n.noticeStatus === status);
     setModalNotices(statusNotices);
@@ -349,15 +392,13 @@ export default function NoticeDashboard() {
     setShowListModal(true);
   };
 
-  // ✅ 수정: handleEventClick - fetch를 apiClient로 변경
   const handleEventClick = async (event) => {
     try {
-      const result = await noticeApi.getById(event.noticeId);  // ✅ 변경
+      const result = await noticeApi.getById(event.noticeId);
       
       if (result.success) {
         setSelectedNotice(result.data);
         
-        // 점검/장애 공지이고 발송완료 상태이며 완료 공지가 없는 경우
         if (result.data.isMaintenance && 
             result.data.noticeStatus === 'SENT' && 
             !result.data.isCompleted) {
@@ -372,7 +413,96 @@ export default function NoticeDashboard() {
     }
   };
 
-  // ✅ 추가: 완료 공지 등록 핸들러
+  const getEventsForDate = (date) => {
+    const dateKey = formatDateKey(date);
+    const dayEntry = calendarEvents.find((entry) => entry.dateKey === dateKey);
+    return dayEntry ? dayEntry.events : [];
+  };
+
+  const renderWeeklyView = () => {
+    const startOfWeek = new Date(currentDate);
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+
+    const weekDates = [...Array(7)].map((_, idx) => {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + idx);
+      return date;
+    });
+
+    return (
+      <div className="weekly-view">
+        <div className="week-grid">
+          {weekDates.map((date, idx) => {
+            const events = getEventsForDate(date);
+            const isSunday = idx == 0;
+            const isSaturday = idx == 6;
+
+            return (
+              <div key={formatDateKey(date)} className="week-day-column">
+                <div className="week-day-header">
+                  <div className={`week-day-name ${isSunday ? 'sunday' : isSaturday ? 'saturday' : ''}`}>
+                    {['일', '월', '화', '수', '목', '금', '토'][idx]}
+                  </div>
+                  <div className="week-day-number">{date.getDate()}</div>
+                </div>
+                <div className="week-events-container">
+                  {events.length === 0 ? (
+                    <div className="empty-message">일정 없음</div>
+                  ) : (
+                    events.map((event, eventIdx) => (
+                      <div
+                        key={`${event.noticeId}-${eventIdx}`}
+                        className="week-event-item"
+                        style={{ borderLeftColor: event.color }}
+                        onClick={() => handleEventClick(event)}
+                      >
+                        <div className="week-event-title">{event.title}</div>
+                        <div className="week-event-dept">{event.dept}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderDailyView = () => {
+    const events = getEventsForDate(currentDate);
+
+    return (
+      <div className="daily-view">
+        <div className="daily-header">
+          <h3>{formatDate(currentDate.toISOString())}</h3>
+        </div>
+        <div className="daily-events-list">
+          {events.length === 0 ? (
+            <div className="empty-message">일정 없음</div>
+          ) : (
+            events.map((event, idx) => (
+              <div
+                key={`${event.noticeId}-${idx}`}
+                className="daily-event-card"
+                onClick={() => handleEventClick(event)}
+              >
+                <div className="daily-event-header">
+                  <div className="daily-event-indicator" style={{ background: event.color }}></div>
+                  <div className="daily-event-info">
+                    <h4>{event.title}</h4>
+                    <div className="daily-event-dept">{event.dept}</div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const handleRegisterCompletion = () => {
     navigate('/notices/new', { 
       state: { 
@@ -383,10 +513,9 @@ export default function NoticeDashboard() {
     setShowCompletionModal(false);
   };
 
-  // ✅ 수정: openDetailModal - fetch를 apiClient로 변경
   const openDetailModal = async (noticeId) => {
     try {
-      const result = await noticeApi.getById(noticeId);  // ✅ 변경
+      const result = await noticeApi.getById(noticeId);
       
       if (result.success) {
         setSelectedNotice(result.data);
@@ -395,107 +524,6 @@ export default function NoticeDashboard() {
     } catch (error) {
       console.error('공지 상세 조회 실패:', error);
     }
-  };
-
-  // ✅ 추가: 주간 뷰 렌더링
-  const renderWeeklyView = () => {
-    const startOfWeek = new Date(currentDate);
-    const day = startOfWeek.getDay();
-    startOfWeek.setDate(startOfWeek.getDate() - day);
-    
-    return (
-      <div className="weekly-view">
-        <div className="week-grid">
-          {[...Array(7)].map((_, idx) => {
-            const date = new Date(startOfWeek);
-            date.setDate(date.getDate() + idx);
-            const dayNum = date.getDate();
-            const eventDay = calendarEvents.find(e => e.day === dayNum);
-            
-            return (
-              <div key={idx} className="week-day-column">
-                <div className="week-day-header">
-                  <div className={`week-day-name ${idx === 0 ? 'sunday' : idx === 6 ? 'saturday' : ''}`}>
-                    {['일', '월', '화', '수', '목', '금', '토'][idx]}
-                  </div>
-                  <div className="week-day-number">{dayNum}</div>
-                </div>
-                <div className="week-events-container">
-                  {eventDay && eventDay.events.map((event, eventIdx) => (
-                    <div 
-                      key={eventIdx}
-                      className="week-event-item" 
-                      style={{ borderLeftColor: event.color }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEventClick(event);
-                      }}
-                    >
-                      <div className="week-event-title">{event.fullTitle}</div>
-                      <div className="week-event-dept">{event.dept}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  // ✅ 추가: 일간 뷰 렌더링
-  const renderDailyView = () => {
-    const dayNum = currentDate.getDate();
-    const eventDay = calendarEvents.find(e => e.day === dayNum);
-    
-    return (
-      <div className="daily-view">
-        <div className="daily-header">
-          <h3>{currentDate.toLocaleDateString('ko-KR', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric',
-            weekday: 'long'
-          })}</h3>
-        </div>
-        <div className="daily-events-list">
-          {eventDay && eventDay.events.length > 0 ? (
-            eventDay.events.map((event, idx) => (
-              <div 
-                key={idx}
-                className="daily-event-card"
-                onClick={() => handleEventClick(event)}
-              >
-                <div className="daily-event-header">
-                  <div 
-                    className="daily-event-indicator" 
-                    style={{ background: event.color }}
-                  ></div>
-                  <div className="daily-event-info">
-                    <h4>{event.fullTitle}</h4>
-                    <span className="daily-event-dept">{event.dept}</span>
-                  </div>
-                  <span 
-                    className="daily-event-status"
-                    style={{ color: getStatusColor(event.noticeStatus) }}
-                  >
-                    {getStatusText(event.noticeStatus)}
-                  </span>
-                </div>
-                {event.isMaintenance && (
-                  <div className="daily-event-maintenance-badge">
-                    🔧 시스템 점검
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            <div className="empty-message">이 날짜에 등록된 공지가 없습니다</div>
-          )}
-        </div>
-      </div>
-    );
   };
 
   if (loading) {
@@ -787,9 +815,18 @@ export default function NoticeDashboard() {
               ))
             )}
           </div>
+          <div className="recent-actions">
+            <button
+              className="btn-more"
+              onClick={() => navigate('/notices/history', { state: { status: 'APPROVED' } })}
+            >
+              더보기
+            </button>
+          </div>
         </div>
 
         {/* 부서 별 공지 수신 현황 */}
+
         <div className="content-card">
           <h3 className="card-title">부서 별 공지 수신 현황</h3>
           <div className="bar-chart">
@@ -798,11 +835,13 @@ export default function NoticeDashboard() {
             ) : (
               deptStats.map((dept, idx) => {
                 const maxCount = Math.max(...deptStats.map(d => d.count), 1);
+                const heightPercent = (dept.count / maxCount) * 100;
+                const minHeightPx = dept.count > 0 ? 18 : 0;
                 return (
                   <div key={idx} className="bar-item">
                     <div 
                       className="bar-column" 
-                      style={{ height: `${(dept.count / maxCount) * 100}%` }}
+                      style={{ height: `${heightPercent}%`, minHeight: `${minHeightPx}px` }}
                     >
                       <span className="bar-value">{dept.count}</span>
                     </div>

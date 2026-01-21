@@ -13,3 +13,22 @@ spring:
       enabled: false
     restart:
       enabled: true
+
+notice:
+  mail:
+    # 테스트 모드 (실제 메일 발송 안함)
+    test-mode: false
+
+    # 캘린더 테스트 모드
+    calendar-test-mode: false      # 캘린더 이벤트 생성 안함
+    
+    # 화이트리스트 모드 (특정 이메일만 허용)
+    whitelist-mode: false
+    
+    # 허용된 이메일 목록
+    whitelist-emails:
+      - hamyoonsic@sorin.co.kr
+      - test.user@company.com
+    
+    # 테스트용 대체 이메일 (선택사항)
+    test-recipient-email: test@company.com
