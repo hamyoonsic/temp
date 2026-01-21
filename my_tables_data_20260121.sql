@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict dEwKcMWD5C7ygOgSYlnli0sKDdcdcVdYce5eHINM2HZoIedcaebC90tVrHDvOwa
+\restrict tHxd9zFXhY10fQRchlpW8Kt1nwjPvTFSRnpddYYWaDyqQg7ohC1pmiCsZn8ARez
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 15.15
@@ -17,6 +17,25 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Data for Name: admin_delegation; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.admin_delegation (delegation_id, delegator_user_id, delegator_user_nm, delegate_user_id, delegate_user_nm, start_date, end_date, reason, is_active, created_at, created_by, updated_at, updated_by) FROM stdin;
+1	hamyoonsic	함윤식	park001	박경민	2026-01-21 09:00:00	2026-01-31 18:00:00	출장으로 인한 임시 권한 위임	t	2026-01-21 09:58:37.721198	hamyoonsic	2026-01-21 09:58:37.721198	hamyoonsic
+\.
+
+
+--
+-- Data for Name: audit_log; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.audit_log (log_id, log_type, action, target_type, target_id, user_id, user_name, ip_address, description, old_value, new_value, result, error_message, created_at) FROM stdin;
+1	ADMIN_DELEGATION	CREATE	DELEGATION	1	hamyoonsic	함윤식	192.168.1.100	관리자 권한 위임: 함윤식 → 박경민 (2026-01-21 ~ 2026-01-31)	\N	\N	SUCCESS	\N	2026-01-21 09:58:47.614025
+2	NOTICE_APPROVAL	APPROVE	NOTICE	1	park001	박경민	192.168.1.101	공지 ID 1번 승인 처리 (대리 관리자)	\N	\N	SUCCESS	\N	2026-01-21 09:58:47.614025
+\.
+
 
 --
 -- Data for Name: corporation_master; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -54,6 +73,7 @@ COPY public.notice_base (notice_id, title, content, notice_level, notice_status,
 3	고려아연 연결회계 시스템 장애 발생 안내	고려아연 연결회계 시스템에 장애가 발생하여 현재 접속이 불가합니다.\r\n복구 작업 진행 중이며, 완료 시 별도 안내드리겠습니다.\r\n\r\n문의 : 서린정보기술 ITH1팀 신호용 책임 (2655)	L3	COMPLETED	5	ITH1	서린정보기술 ITH1팀	2025-10-10 14:30:00	2025-10-10 16:00:00	t	t	2025-10-10 15:45:00	[긴급장애] 고려아연 연결회계 시스템 장애 발생	2026-01-12 14:40:12.59047	shin001	2026-01-12 14:40:12.59047	shin001	\N
 4	테스트 공지	<p>테스트 내용</p>	L2	REJECTED	1	park001	서린정보기술 ITH3팀	2026-01-14 11:25:06.203301	\N	t	f	\N	테스트 메일 제목	2026-01-14 11:25:06.203301	park001	2026-01-14 11:25:38.021578	admin001	\N
 5	2월 15일 긴급 서버 점검	<p>2월 15일 긴급 서버 점검 안내 입니다.</p>	L2	APPROVED	1	park001	서린정보기술 ITH3팀	2026-01-16 08:30:00	\N	t	f	\N	2월 15일 긴급 서버 점검	2026-01-15 15:34:29.027067	park001	2026-01-15 15:34:44.8702	admin001	\N
+6	보안 관련 긴급 공지	<p>보안 관련 긴급 공지 입니다.</p><p>&nbsp;</p><p>점검 전까지 서비스 이용 불가능 합니다.</p>	L3	APPROVED	1	park001	서린정보기술 ITH3팀	2026-01-22 08:30:00	\N	t	f	\N	보안 관련 긴급 공지	2026-01-16 14:31:28.480052	park001	2026-01-21 08:39:45.128665	admin	\N
 \.
 
 
@@ -148,6 +168,7 @@ COPY public.notice_recipient (recipient_id, notice_id, user_id, sent_at, read_at
 
 COPY public.notice_send_plan (send_plan_id, notice_id, send_mode, scheduled_send_at, bundle_key, allow_bundle) FROM stdin;
 1	5	SCHEDULED	2026-01-16 08:30:00	\N	t
+2	6	SCHEDULED	2026-01-22 08:30:00	\N	t
 \.
 
 
@@ -163,6 +184,7 @@ COPY public.notice_tag (tag_id, notice_id, tag_value) FROM stdin;
 5	3	긴급장애
 6	3	회계시스템
 7	5	서비스점검
+8	6	긴급
 \.
 
 
@@ -181,7 +203,25 @@ COPY public.notice_target (target_id, notice_id, target_type, target_key, target
 8	3	ORG_UNIT	RAW01	원료 1팀
 9	5	CORP	1	고려아연
 10	5	ORG_UNIT	2	서린정보기술 ITH2팀
+11	6	CORP	1	고려아연
+12	6	ORG_UNIT	7	원료 1팀
+13	6	ORG_UNIT	8	원료 2팀
+14	6	ORG_UNIT	9	원료 3팀
 \.
+
+
+--
+-- Name: admin_delegation_delegation_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.admin_delegation_delegation_id_seq', 1, true);
+
+
+--
+-- Name: audit_log_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.audit_log_log_id_seq', 2, true);
 
 
 --
@@ -209,7 +249,7 @@ SELECT pg_catalog.setval('public.notice_attachment_attachment_id_seq', 1, false)
 -- Name: notice_base_notice_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.notice_base_notice_id_seq', 5, true);
+SELECT pg_catalog.setval('public.notice_base_notice_id_seq', 6, true);
 
 
 --
@@ -237,21 +277,21 @@ SELECT pg_catalog.setval('public.notice_recipient_recipient_id_seq', 7, true);
 -- Name: notice_send_plan_send_plan_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.notice_send_plan_send_plan_id_seq', 1, true);
+SELECT pg_catalog.setval('public.notice_send_plan_send_plan_id_seq', 2, true);
 
 
 --
 -- Name: notice_tag_tag_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.notice_tag_tag_id_seq', 7, true);
+SELECT pg_catalog.setval('public.notice_tag_tag_id_seq', 8, true);
 
 
 --
 -- Name: notice_target_target_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.notice_target_target_id_seq', 10, true);
+SELECT pg_catalog.setval('public.notice_target_target_id_seq', 14, true);
 
 
 --
@@ -272,5 +312,5 @@ SELECT pg_catalog.setval('public.service_master_service_id_seq', 6, true);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict dEwKcMWD5C7ygOgSYlnli0sKDdcdcVdYce5eHINM2HZoIedcaebC90tVrHDvOwa
+\unrestrict tHxd9zFXhY10fQRchlpW8Kt1nwjPvTFSRnpddYYWaDyqQg7ohC1pmiCsZn8ARez
 
