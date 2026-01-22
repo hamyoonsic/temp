@@ -22,7 +22,7 @@ export const dashboardApi = {
 
   /**
    * 월별 캘린더 데이터 조회
-   * ⚠️ 백엔드 미구현 - 프론트에서 전체 공지 조회 후 필터링
+   *  백엔드 미구현 - 프론트에서 전체 공지 조회 후 필터링
    */
   getCalendar: (year, month) => {
     return apiClient.get('/notices?page=0&size=1000');
@@ -30,7 +30,7 @@ export const dashboardApi = {
 
   /**
    * 부서별 통계 조회
-   * ⚠️ 백엔드 미구현 - 프론트에서 계산
+   *  백엔드 미구현 - 프론트에서 계산
    */
   getDeptStats: () => {
     return apiClient.get('/notices?page=0&size=1000');
@@ -38,7 +38,7 @@ export const dashboardApi = {
 
   /**
    * 공지 유형별 통계 조회
-   * ⚠️ 백엔드 미구현 - 프론트에서 계산
+   *  백엔드 미구현 - 프론트에서 계산
    */
   getTypeStats: () => {
     return apiClient.get('/notices?page=0&size=1000');

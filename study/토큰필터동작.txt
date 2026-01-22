@@ -60,7 +60,7 @@ filter.setGetToken((request, response) -> {
 
 여기까지만 봐도 네 말 맞음:
 
-✅ “요청 올 때마다 사용자측에서 보낸 토큰(Authorization 헤더)을 본다”
+ “요청 올 때마다 사용자측에서 보낸 토큰(Authorization 헤더)을 본다”
 라는 구조가 코드에 그대로 박혀 있음.
 
 2️⃣ TokenAuthenticationFilter 안에서 실제로 어떤 일이 일어나는지
@@ -215,7 +215,7 @@ SecurityContext에 인증 객체가 없어도
 accessChecker가 “인증 안 된 사용자”에 대해 대부분 401/403을 던질 거라서
 
 결국 “정상 접근”을 하려면,
-매 요청마다 Authorization 헤더에 토큰을 실어 보내야 하는 구조가 되는 거 맞다 ✅
+매 요청마다 Authorization 헤더에 토큰을 실어 보내야 하는 구조가 되는 거 맞다 
 
 5️⃣ 나중에 쿠키 기반 아키텍처로 바꾸면 바뀌는 지점
 

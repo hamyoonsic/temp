@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  * 2. 메일 발송 (spring-core MailUtils 활용)
  * 3. 발송 이력 저장
  * 4. 수신자 기록 저장
- * 5. ✅ 테스트 모드 지원 (실수 발송 방지)
+ * 5.  테스트 모드 지원 (실수 발송 방지)
  */
 @Slf4j
 @Service
@@ -44,14 +44,14 @@ public class NoticeMailService {
     private final OrganizationMasterRepository organizationMasterRepository;
     
     private final OAuth2Property oauth2Property;
-    private final MailTestProperty mailTestProperty;  // ✅ 테스트 설정 추가
+    private final MailTestProperty mailTestProperty;  //  테스트 설정 추가
     
     /**
      * 단일 공지 메일 발송
      */
     @Transactional
     public void sendNoticeEmail(Long noticeId) {
-        log.info("📧 메일 발송 시작: noticeId={}", noticeId);
+        log.info(" 메일 발송 시작: noticeId={}", noticeId);
         
         try {
             // 1. 공지 정보 조회
@@ -60,7 +60,7 @@ public class NoticeMailService {
             
             // 2. 발송 가능 상태 확인 (APPROVED만 발송)
             if (!"APPROVED".equals(notice.getNoticeStatus())) {
-                log.warn("⚠️ 승인된 공지만 발송 가능합니다: noticeId={}, status={}", 
+                log.warn(" 승인된 공지만 발송 가능합니다: noticeId={}, status={}", 
                     noticeId, notice.getNoticeStatus());
                 return;
             }
@@ -69,7 +69,7 @@ public class NoticeMailService {
             String idempotencyKey = generateIdempotencyKey(noticeId);
             Optional<NoticeDeliveryLog> existingLog = deliveryLogRepository.findByIdempotencyKey(idempotencyKey);
             if (existingLog.isPresent() && "SENT".equals(existingLog.get().getDeliveryStatus())) {
-                log.warn("⚠️ 이미 발송된 공지입니다: noticeId={}", noticeId);
+                log.warn(" 이미 발송된 공지입니다: noticeId={}", noticeId);
                 return;
             }
             
@@ -86,12 +86,12 @@ public class NoticeMailService {
             // 5. 수신 대상자 조회
             Set<String> recipientEmails = getRecipientEmails(noticeId);
             if (recipientEmails.isEmpty()) {
-                log.warn("⚠️ 수신 대상자가 없습니다: noticeId={}", noticeId);
+                log.warn(" 수신 대상자가 없습니다: noticeId={}", noticeId);
                 updateDeliveryLog(deliveryLog, "FAILED", "수신 대상자가 없습니다");
                 return;
             }
             
-            // ✅ 6. 화이트리스트 필터링 (설정된 경우)
+            //  6. 화이트리스트 필터링 (설정된 경우)
             Set<String> originalRecipients = new HashSet<>(recipientEmails);
             if (mailTestProperty.getWhitelistMode() && 
                 mailTestProperty.getWhitelistEmails() != null && 
@@ -101,11 +101,11 @@ public class NoticeMailService {
                     .filter(email -> mailTestProperty.getWhitelistEmails().contains(email))
                     .collect(Collectors.toSet());
                 
-                log.info("🔒 화이트리스트 모드: 원본 {}명 → 필터링 후 {}명", 
+                log.info(" 화이트리스트 모드: 원본 {}명 → 필터링 후 {}명", 
                     originalRecipients.size(), recipientEmails.size());
                 
                 if (recipientEmails.isEmpty()) {
-                    log.warn("⚠️ 화이트리스트에 해당하는 수신자가 없습니다");
+                    log.warn(" 화이트리스트에 해당하는 수신자가 없습니다");
                     updateDeliveryLog(deliveryLog, "FAILED", "화이트리스트에 해당하는 수신자가 없습니다");
                     return;
                 }
@@ -117,7 +117,7 @@ public class NoticeMailService {
                 senderEmail = getUserEmail(notice.getCreatedBy());
             }
             if (senderEmail == null) {
-                log.warn("⚠️ 발신자 이메일을 찾을 수 없습니다: userId={}", notice.getCreatedBy());
+                log.warn(" 발신자 이메일을 찾을 수 없습니다: userId={}", notice.getCreatedBy());
                 updateDeliveryLog(deliveryLog, "FAILED", "발신자 이메일을 찾을 수 없습니다");
                 return;
             }
@@ -139,17 +139,17 @@ public class NoticeMailService {
                 .attachments(new HashSet<>(attachments))
                 .build();
             
-            // ✅✅✅ 11. 테스트 모드 확인 및 메일 발송 ✅✅✅
+            //  11. 테스트 모드 확인 및 메일 발송 
             if (mailTestProperty.getTestMode()) {
-                // 🧪 테스트 모드: 실제 발송 안함, 로그만 출력
+                //  테스트 모드: 실제 발송 안함, 로그만 출력
                 logMailInfoForTest(mailInfo, notice, originalRecipients, recipientEmails);
-                log.warn("🧪🧪🧪 [테스트 모드] 실제 메일은 발송되지 않았습니다 🧪🧪🧪");
+                log.warn(" [테스트 모드] 실제 메일은 발송되지 않았습니다 ");
                 
             } else {
-                // 🚀 실제 발송 모드
-                log.info("🚀 [실제 발송] 메일 발송 실행 중...");
+                //  실제 발송 모드
+                log.info(" [실제 발송] 메일 발송 실행 중...");
                 MailUtils.remoteSend(oauth2Property.getCredential("message"), mailInfo);
-                log.info("✅ [실제 발송] 메일 발송 완료");
+                log.info(" [실제 발송] 메일 발송 완료");
             }
             
             // 12. 발송 성공 처리
@@ -162,10 +162,10 @@ public class NoticeMailService {
             notice.setNoticeStatus("SENT");
             noticeBaseRepository.save(notice);
             
-            log.info("✅ 메일 발송 완료: noticeId={}, recipients={}", noticeId, recipientEmails.size());
+            log.info(" 메일 발송 완료: noticeId={}, recipients={}", noticeId, recipientEmails.size());
             
         } catch (Exception e) {
-            log.error("❌ 메일 발송 실패: noticeId={}, error={}", noticeId, e.getMessage(), e);
+            log.error(" 메일 발송 실패: noticeId={}, error={}", noticeId, e.getMessage(), e);
             
             // 발송 실패 처리
             deliveryLogRepository.findByIdempotencyKey(generateIdempotencyKey(noticeId))
@@ -181,13 +181,13 @@ public class NoticeMailService {
     }
     
     /**
-     * ✅ 테스트 모드용 메일 정보 로깅
+     *  테스트 모드용 메일 정보 로깅
      */
     private void logMailInfoForTest(MailInfo mailInfo, NoticeBase notice, 
                                      Set<String> originalRecipients, Set<String> filteredRecipients) {
         
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.info("🧪 [테스트 모드] 메일 발송 정보");
+        log.info(" [테스트 모드] 메일 발송 정보");
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         
         // 공지 기본 정보
@@ -204,25 +204,25 @@ public class NoticeMailService {
         // 수신자 정보
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         if (mailTestProperty.getWhitelistMode()) {
-            log.info("📧 원본 수신자 (TO): {} 명", originalRecipients.size());
-            log.info("📧 원본 수신자 목록:");
+            log.info(" 원본 수신자 (TO): {} 명", originalRecipients.size());
+            log.info(" 원본 수신자 목록:");
             originalRecipients.forEach(email -> log.info("   - {}", email));
             log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            log.info("🔒 필터링 후 수신자 (TO): {} 명", filteredRecipients.size());
-            log.info("🔒 필터링 후 수신자 목록:");
+            log.info(" 필터링 후 수신자 (TO): {} 명", filteredRecipients.size());
+            log.info(" 필터링 후 수신자 목록:");
         } else {
-            log.info("📧 수신자 (TO): {} 명", mailInfo.getTo().size());
-            log.info("📧 수신자 목록:");
+            log.info(" 수신자 (TO): {} 명", mailInfo.getTo().size());
+            log.info(" 수신자 목록:");
         }
         mailInfo.getTo().forEach(email -> log.info("   ✉️ {}", email));
         
         // 참조 정보
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         if (mailInfo.getCc() != null && !mailInfo.getCc().isEmpty()) {
-            log.info("📧 참조 (CC): {} 명", mailInfo.getCc().size());
+            log.info(" 참조 (CC): {} 명", mailInfo.getCc().size());
             mailInfo.getCc().forEach(email -> log.info("   📋 {}", email));
         } else {
-            log.info("📧 참조 (CC): 없음");
+            log.info(" 참조 (CC): 없음");
         }
         
         // 메일 내용
@@ -240,18 +240,18 @@ public class NoticeMailService {
         // 첨부파일
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         if (mailInfo.getAttachments() != null && !mailInfo.getAttachments().isEmpty()) {
-            log.info("📎 첨부파일: {} 개", mailInfo.getAttachments().size());
+            log.info(" 첨부파일: {} 개", mailInfo.getAttachments().size());
             mailInfo.getAttachments().forEach(file -> 
                 log.info("   📄 {} ({} bytes)", file.getName(), file.length())
             );
         } else {
-            log.info("📎 첨부파일: 없음");
+            log.info(" 첨부파일: 없음");
         }
         
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.warn("⚠️ 테스트 모드이므로 실제 메일은 발송되지 않았습니다!");
-        log.warn("⚠️ 실제 발송을 원하시면 application.yaml에서");
-        log.warn("⚠️ notice.mail.test-mode: false 로 설정하세요");
+        log.warn(" 테스트 모드이므로 실제 메일은 발송되지 않았습니다!");
+        log.warn(" 실제 발송을 원하시면 application.yaml에서");
+        log.warn(" notice.mail.test-mode: false 로 설정하세요");
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }
     
@@ -300,6 +300,18 @@ public class NoticeMailService {
             .map(UserMaster::getEmail)
             .orElse(null);
     }
+
+    private String getUserName(String userId) {
+        if (userId == null || userId.isBlank()) return null;
+        return userMasterRepository.findById(userId)
+            .map(user -> {
+                if (user.getUserKoNm() != null && !user.getUserKoNm().isBlank()) {
+                    return user.getUserKoNm();
+                }
+                return user.getUserEnNm();
+            })
+            .orElse(null);
+    }
     
     /**
      * 사용자 목록에서 이메일 추출
@@ -343,19 +355,35 @@ public class NoticeMailService {
         }
         html.append("</p>");
         
-        // 발송 기간
-        if (notice.getPublishStartAt() != null) {
-            html.append("<p><strong>발송 기간:</strong> ");
-            html.append(formatDateTime(notice.getPublishStartAt()));
-            if (notice.getPublishEndAt() != null) {
-                html.append(" ~ ").append(formatDateTime(notice.getPublishEndAt()));
-            }
-            html.append("</p>");
+        // 발신 정보
+        String senderDept = notice.getSenderOrgUnitName();
+        String creatorId = notice.getCreatedBy();
+        String creatorName = getUserName(creatorId);
+        String approverId = notice.getUpdatedBy();
+        String approverName = getUserName(approverId);
+        String approverEmail = getUserEmail(approverId);
+
+        if (senderDept != null && !senderDept.isBlank()) {
+            html.append("<p><strong>발신:</strong> ").append(escapeHtml(senderDept)).append("</p>");
         }
-        
-        // 발신 부서
-        if (notice.getSenderOrgUnitName() != null) {
-            html.append("<p><strong>발신:</strong> ").append(escapeHtml(notice.getSenderOrgUnitName())).append("</p>");
+        if (creatorId != null && !creatorId.isBlank()) {
+            String creatorLabel = creatorName != null && !creatorName.isBlank()
+                ? String.format("%s (%s)", creatorName, creatorId)
+                : creatorId;
+            html.append("<p><strong>등록자:</strong> ").append(escapeHtml(creatorLabel)).append("</p>");
+        }
+        if (approverId != null && !approverId.isBlank()) {
+            String approverLabel;
+            if (approverEmail != null && !approverEmail.isBlank()) {
+                approverLabel = approverName != null && !approverName.isBlank()
+                    ? String.format("%s (%s)", approverName, approverEmail)
+                    : approverEmail;
+            } else {
+                approverLabel = approverName != null && !approverName.isBlank()
+                    ? String.format("%s (%s)", approverName, approverId)
+                    : approverId;
+            }
+            html.append("<p><strong>참조:</strong> ").append(escapeHtml(approverLabel)).append("</p>");
         }
         
         html.append("<hr style='border: 1px solid #e5e7eb;'>");

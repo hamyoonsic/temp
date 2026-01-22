@@ -303,7 +303,7 @@
   cursor: pointer;
 }
 
-/* ✅ 개선: input-with-icon */
+/*  개선: input-with-icon */
 .input-with-icon {
   position: relative;
   display: flex;
@@ -322,7 +322,7 @@
   pointer-events: none;
 }
 
-/* ✅ 개선: input-group - 간격 추가 */
+/*  개선: input-group - 간격 추가 */
 .input-group {
   display: flex;
   gap: 12px;
@@ -365,7 +365,7 @@
   cursor: not-allowed;
 }
 
-/* ✅ 추가: 선택된 항목 표시 영역 */
+/*  추가: 선택된 항목 표시 영역 */
 .selected-items-display {
   margin-top: 12px;
   padding: 12px;
@@ -540,18 +540,18 @@
   cursor: not-allowed;
 }
 
-/* ✅ 모달 스크롤 방지 - 최우선 적용 */
+/*  모달 스크롤 방지 - 최우선 적용 */
 body.modal-open,
 body[style*="position: fixed"] {
   overflow: hidden !important;
 }
 
-/* ✅ 스크롤바 너비 보정 (레이아웃 shift 방지) */
+/*  스크롤바 너비 보정 (레이아웃 shift 방지) */
 body[style*="padding-right"] {
   box-sizing: border-box;
 }
 
-/* ✅ 개선: 모달 디자인 */
+/*  개선: 모달 디자인 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -565,13 +565,13 @@ body[style*="padding-right"] {
   justify-content: center;
   z-index: 1000;
   padding: 20px;
-  overflow-y: auto; /* ✅ 오버레이 자체는 스크롤 가능 */
-  overscroll-behavior: contain; /* ✅ 스크롤 전파 차단 */
+  overflow-y: auto; /*  오버레이 자체는 스크롤 가능 */
+  overscroll-behavior: contain; /*  스크롤 전파 차단 */
 }
 
-/* ✅ 모달 오버레이 wheel 이벤트 차단 방지 */
+/*  모달 오버레이 wheel 이벤트 차단 방지 */
 .modal-overlay {
-  overscroll-behavior: contain; /* ✅ 스크롤이 부모로 전파되지 않도록 */
+  overscroll-behavior: contain; /*  스크롤이 부모로 전파되지 않도록 */
 }
 
 .modal-content {
@@ -580,11 +580,11 @@ body[style*="padding-right"] {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-width: 600px;
   width: 90%;
-  max-height: 90vh; /* ✅ 90vh로 변경 */
+  max-height: 90vh; /*  90vh로 변경 */
   display: flex;
   flex-direction: column;
-  margin: auto; /* ✅ 중앙 정렬 */
-  position: relative; /* ✅ 추가 */
+  margin: auto; /*  중앙 정렬 */
+  position: relative; /*  추가 */
 }
 
 .modal-header {
@@ -627,9 +627,9 @@ body[style*="padding-right"] {
 .modal-body {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden; /* ✅ 가로 스크롤 방지 */
+  overflow-x: hidden; /*  가로 스크롤 방지 */
   padding: 20px 24px;
-  min-height: 0; /* ✅ flex 컨테이너 내에서 스크롤 가능하게 */
+  min-height: 0; /*  flex 컨테이너 내에서 스크롤 가능하게 */
 }
 
 .modal-body::-webkit-scrollbar {
@@ -656,11 +656,11 @@ body[style*="padding-right"] {
   display: flex;
   justify-content: flex-end;
   flex-shrink: 0;
-  background: #fafbfc; /* ✅ 배경색 추가 */
-  border-radius: 0 0 16px 16px; /* ✅ 하단 모서리 둥글게 */
+  background: #fafbfc; /*  배경색 추가 */
+  border-radius: 0 0 16px 16px; /*  하단 모서리 둥글게 */
 }
 
-/* ✅ 개선: 선택 리스트 */
+/*  개선: 선택 리스트 */
 .selection-list {
   display: flex;
   flex-direction: column;

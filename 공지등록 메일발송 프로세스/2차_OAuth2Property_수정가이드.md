@@ -1,6 +1,6 @@
-# 🔧 OAuth2Property 오류 수정 완료
+#  OAuth2Property 오류 수정 완료
 
-## ❌ 문제점
+##  문제점
 
 3개 서비스 파일에서 다음 오류 발생:
 ```
@@ -10,7 +10,7 @@ credentials cannot be resolved or is not a field
 
 **원인**: `OAuth2Property.Credentials` (복수형)는 존재하지 않음
 
-## ✅ 해결 방법
+##  해결 방법
 
 ### spring-core OAuth2Property 구조
 
@@ -127,7 +127,7 @@ spring:
 
 ## 🎯 핵심 정리
 
-### ✅ 올바른 방법
+###  올바른 방법
 ```java
 @Service
 @RequiredArgsConstructor
@@ -142,15 +142,15 @@ public class MyService {
 }
 ```
 
-### ❌ 잘못된 방법
+###  잘못된 방법
 ```java
 @Service
 @RequiredArgsConstructor
 public class MyService {
-    // ❌ Credentials (복수형) - 존재하지 않음
+    //  Credentials (복수형) - 존재하지 않음
     private final OAuth2Property.Credentials credentials;
     
-    // ❌ 직접 접근 불가
+    //  직접 접근 불가
     credentials.getFile()
     credentials.getMessage()
 }
@@ -158,17 +158,17 @@ public class MyService {
 
 ---
 
-## ✅ 수정 완료된 파일
+##  수정 완료된 파일
 
-1. **NoticeMailService.java** ✅
-2. **NoticeAttachmentService.java** ✅
-3. **OutlookCalendarService.java** ✅
+1. **NoticeMailService.java** 
+2. **NoticeAttachmentService.java** 
+3. **OutlookCalendarService.java** 
 
 모든 파일이 정상적으로 컴파일되며, OAuth2Property를 올바르게 사용합니다.
 
 ---
 
-## 🚀 배포 시 주의사항
+##  배포 시 주의사항
 
 ### application.yaml 설정 확인
 

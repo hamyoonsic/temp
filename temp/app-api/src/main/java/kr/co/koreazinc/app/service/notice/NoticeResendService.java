@@ -65,10 +65,10 @@ public class NoticeResendService {
             // 4. 메일 재발송
             mailService.sendNoticeEmail(noticeId);
             
-            log.info("✅ 공지 재발송 완료: noticeId={}", noticeId);
+            log.info(" 공지 재발송 완료: noticeId={}", noticeId);
             
         } catch (Exception e) {
-            log.error("❌ 공지 재발송 실패: noticeId={}, error={}", noticeId, e.getMessage(), e);
+            log.error(" 공지 재발송 실패: noticeId={}, error={}", noticeId, e.getMessage(), e);
             throw new RuntimeException("공지 재발송 실패: " + e.getMessage(), e);
         }
     }

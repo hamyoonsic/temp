@@ -7,6 +7,14 @@ import apiClient from '../../utils/apiClient';
  */
 export const adminUsersApi = {
   /**
+   * 전체 사용자 목록 조회
+   * @returns {Promise} 전체 사용자 목록
+   */
+  getAllUsers: () => {
+    return apiClient.get('/admin/users');
+  },
+
+  /**
    * 관리자 권한자 목록 조회
    * @param {string} ttlCd - 직책 코드 (예: HR150138)
    * @returns {Promise} 관리자 권한자 목록

@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  * 공지 관리 Service
  * 위치: temp/app-api/src/main/java/kr/co/koreazinc/app/service/notice/NoticeService.java
  * 
- * ✅ 수정 내역:
+ *  수정 내역:
  * - DashboardStats DTO 필드명을 프론트엔드와 일치하도록 변경
  * - pendingCount → pendingApprovalCount
  * - approvedCount → scheduledSendCount
@@ -305,11 +305,11 @@ public class NoticeService {
         });
 
         // ?? ? ??? ?? ???
-        if (Boolean.TRUE.equals(notice.getCalendarRegister()) && notice.getCalendarEventAt() != null) {
-            LocalDateTime eventStartAt = notice.getCalendarEventAt();
-            LocalDateTime eventEndAt = eventStartAt.plusHours(1);
-            outlookCalendarService.createCalendarEvent(noticeId, eventStartAt, eventEndAt);
-        }
+        // if (Boolean.TRUE.equals(notice.getCalendarRegister()) && notice.getCalendarEventAt() != null) {
+        //     LocalDateTime eventStartAt = notice.getCalendarEventAt();
+        //     LocalDateTime eventEndAt = eventStartAt.plusHours(1);
+        //     outlookCalendarService.createCalendarEvent(noticeId, eventStartAt, eventEndAt);
+        // }
 
         log.info("Notice approved successfully. ID: {}", noticeId);
     }
@@ -437,7 +437,7 @@ public class NoticeService {
     }
     
     /**
-     * ✅ 수정: 대시보드용 통계 조회 - 프론트엔드 필드명과 일치
+     *  수정: 대시보드용 통계 조회 - 프론트엔드 필드명과 일치
      */
     @Transactional(readOnly = true)
     public DashboardStats getDashboardStats() {
@@ -456,7 +456,7 @@ public class NoticeService {
     }
     
     /**
-     * ✅ 수정: 대시보드 통계 DTO - 프론트엔드와 일치하는 필드명
+     *  수정: 대시보드 통계 DTO - 프론트엔드와 일치하는 필드명
      */
     @lombok.Data
     @lombok.Builder

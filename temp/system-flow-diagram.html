@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>공지 시스템 전체 플로우</title>
+    <style>
+      :root {
+        --bg: #f7f7f5;
+        --ink: #1f2937;
+        --muted: #6b7280;
+        --card: #ffffff;
+        --line: #94a3b8;
+        --accent: #0f766e;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      header {
+        padding: 20px 24px;
+        background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+        color: #fff;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 20px;
+      }
+      header p {
+        margin: 6px 0 0;
+        font-size: 13px;
+        opacity: 0.9;
+      }
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      .panel {
+        background: var(--card);
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+      }
+      .note {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+      svg {
+        width: 100%;
+        height: auto;
+      }
+      .box {
+        fill: #fff;
+        stroke: var(--line);
+        stroke-width: 1.2;
+        rx: 8;
+        ry: 8;
+      }
+      .title {
+        font-size: 12px;
+        fill: var(--ink);
+      }
+      .small {
+        font-size: 10px;
+        fill: var(--muted);
+      }
+      .section {
+        fill: #f0fdf4;
+        stroke: #86efac;
+        stroke-width: 1;
+        rx: 10;
+        ry: 10;
+      }
+      .section-title {
+        font-size: 11px;
+        fill: #166534;
+        font-weight: 600;
+      }
+      .arrow {
+        stroke: var(--line);
+        stroke-width: 1.4;
+        fill: none;
+        marker-end: url(#arrow);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>공지 시스템 전체 플로우</h1>
+      <p>공지 등록/승인/발송, 대시보드, 관리자 위임 흐름 요약</p>
+    </header>
+    <main>
+      <div class="panel">
+        <svg viewBox="0 0 1200 760" role="img" aria-label="공지 시스템 플로우 다이어그램">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+              <path d="M0,0 L9,3 L0,6 Z" fill="#94a3b8"></path>
+            </marker>
+          </defs>
+
+          <!-- Sections -->
+          <rect class="section" x="20" y="20" width="360" height="300"></rect>
+          <text class="section-title" x="30" y="40">공지 등록/승인/발송</text>
+
+          <rect class="section" x="410" y="20" width="360" height="300"></rect>
+          <text class="section-title" x="420" y="40">메일 발송</text>
+
+          <rect class="section" x="800" y="20" width="360" height="300"></rect>
+          <text class="section-title" x="810" y="40">캘린더 등록 (현재 비활성)</text>
+
+          <rect class="section" x="20" y="360" width="560" height="320"></rect>
+          <text class="section-title" x="30" y="380">대시보드/조회</text>
+
+          <rect class="section" x="620" y="360" width="540" height="320"></rect>
+          <text class="section-title" x="630" y="380">관리자 위임/권한</text>
+
+          <!-- Notice flow boxes -->
+          <rect class="box" x="40" y="70" width="150" height="44"></rect>
+          <text class="title" x="52" y="95">공지 등록</text>
+          <text class="small" x="52" y="110">/v1/api/notices</text>
+
+          <rect class="box" x="210" y="70" width="150" height="44"></rect>
+          <text class="title" x="222" y="95">결재/승인</text>
+          <text class="small" x="222" y="110">/approve</text>
+
+          <rect class="box" x="40" y="140" width="150" height="44"></rect>
+          <text class="title" x="52" y="165">공지 상태 변경</text>
+          <text class="small" x="52" y="180">PENDING → APPROVED</text>
+
+          <rect class="box" x="210" y="140" width="150" height="44"></rect>
+          <text class="title" x="222" y="165">즉시 발송</text>
+          <text class="small" x="222" y="180">조건 분기</text>
+
+          <!-- Mail flow boxes -->
+          <rect class="box" x="430" y="70" width="150" height="44"></rect>
+          <text class="title" x="442" y="95">메일 발송</text>
+          <text class="small" x="442" y="110">NoticeMailService</text>
+
+          <rect class="box" x="600" y="70" width="150" height="44"></rect>
+          <text class="title" x="612" y="95">토큰 발급</text>
+          <text class="small" x="612" y="110">OAuthUtils</text>
+
+          <rect class="box" x="430" y="140" width="150" height="44"></rect>
+          <text class="title" x="442" y="165">message-api</text>
+          <text class="small" x="442" y="180">/v1/mail/{sender}</text>
+
+          <!-- Calendar flow boxes -->
+          <rect class="box" x="820" y="70" width="160" height="44"></rect>
+          <text class="title" x="832" y="95">캘린더 등록</text>
+          <text class="small" x="832" y="110">OutlookCalendarService</text>
+
+          <rect class="box" x="1000" y="70" width="160" height="44"></rect>
+          <text class="title" x="1012" y="95">Graph API</text>
+          <text class="small" x="1012" y="110">/v1.0/users/{mailbox}/events</text>
+
+          <!-- Dashboard boxes -->
+          <rect class="box" x="40" y="420" width="200" height="44"></rect>
+          <text class="title" x="52" y="445">대시보드 통계</text>
+          <text class="small" x="52" y="460">/dashboard/stats</text>
+
+          <rect class="box" x="260" y="420" width="200" height="44"></rect>
+          <text class="title" x="272" y="445">일정/캘린더</text>
+          <text class="small" x="272" y="460">APPROVED/SENT/COMPLETED</text>
+
+          <rect class="box" x="40" y="480" width="200" height="44"></rect>
+          <text class="title" x="52" y="505">공지 상세 조회</text>
+          <text class="small" x="52" y="520">/v1/api/notices/{id}</text>
+
+          <!-- Admin boxes -->
+          <rect class="box" x="640" y="420" width="220" height="44"></rect>
+          <text class="title" x="652" y="445">전체 사용자 조회</text>
+          <text class="small" x="652" y="460">/admin/users</text>
+
+          <rect class="box" x="880" y="420" width="220" height="44"></rect>
+          <text class="title" x="892" y="445">관리자 권한 체크</text>
+          <text class="small" x="892" y="460">/admin/users/{id}/permission</text>
+
+          <rect class="box" x="640" y="480" width="220" height="44"></rect>
+          <text class="title" x="652" y="505">위임 생성/해제</text>
+          <text class="small" x="652" y="520">/admin/delegations</text>
+
+          <rect class="box" x="880" y="480" width="220" height="44"></rect>
+          <text class="title" x="892" y="505">받은 위임 목록</text>
+          <text class="small" x="892" y="520">/admin/delegations/received</text>
+
+          <!-- Arrows -->
+          <path class="arrow" d="M190 92 L210 92"></path>
+          <path class="arrow" d="M115 114 L115 140"></path>
+          <path class="arrow" d="M285 114 L285 140"></path>
+          <path class="arrow" d="M360 162 L430 162"></path>
+
+          <path class="arrow" d="M580 92 L600 92"></path>
+          <path class="arrow" d="M505 114 L505 140"></path>
+          <path class="arrow" d="M750 92 L820 92"></path>
+          <path class="arrow" d="M980 92 L1000 92"></path>
+
+          <path class="arrow" d="M240 442 L260 442"></path>
+          <path class="arrow" d="M140 464 L140 480"></path>
+          <path class="arrow" d="M860 442 L880 442"></path>
+          <path class="arrow" d="M750 464 L750 480"></path>
+          <path class="arrow" d="M860 502 L880 502"></path>
+        </svg>
+        <div class="note">캘린더 등록은 권한 이슈로 현재 승인 시 호출이 주석 처리된 상태입니다.</div>
+      </div>
+    </main>
+  </body>
+</html>

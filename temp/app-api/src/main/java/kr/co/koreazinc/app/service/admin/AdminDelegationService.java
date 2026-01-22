@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -25,6 +26,13 @@ public class AdminDelegationService {
     
     private final AdminDelegationRepository delegationRepository;
     private final AuditLogRepository auditLogRepository;
+
+    private static final Set<String> ADMIN_USER_IDS = Set.of(
+        "tpdls7080",
+        "park001",
+        "shin001",
+        "jeon001"
+    );
     
     /**
      * 위임 생성
@@ -96,6 +104,19 @@ public class AdminDelegationService {
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
+
+    /**
+     * 위임 목록 조회 (대리자 기준)
+     */
+    @Transactional(readOnly = true)
+    public List<AdminDelegationDto.Response> getDelegationsByDelegate(String delegateUserId) {
+        List<AdminDelegation> delegations = delegationRepository
+                .findByDelegateUserIdAndIsActiveTrueOrderByCreatedAtDesc(delegateUserId);
+
+        return delegations.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
     
     /**
      * 현재 유효한 위임 조회 (대리자 기준)
@@ -114,15 +135,15 @@ public class AdminDelegationService {
      */
     @Transactional(readOnly = true)
     public boolean hasAdminPermission(String userId, String ttlCd) {
-        // 1. 원래 관리자 권한 확인 (ttlCd = HR150138)
-        if ("HR150138".equals(ttlCd)) {
-            return true;
-        }
-        
-        // 2. 대리 관리자 권한 확인
-        return delegationRepository
-                .findCurrentActiveDelegationByDelegateUserId(userId, LocalDateTime.now())
-                .isPresent();
+        // if ("HR150138".equals(ttlCd)) {
+        //     return true;
+        // }
+        //
+        // return delegationRepository
+        //         .findCurrentActiveDelegationByDelegateUserId(userId, LocalDateTime.now())
+        //         .isPresent();
+
+        return ADMIN_USER_IDS.contains(userId);
     }
     
     /**

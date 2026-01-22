@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { noticeApi, corporationApi } from '../api';
 import './NoticeHistory.css';
 
-// ✅ 모달 스크롤 제어 함수
+//  모달 스크롤 제어 함수
 const openModal = () => {
   const scrollY = window.scrollY;
   const scrollX = window.scrollX;
@@ -65,7 +65,7 @@ const NoticeHistory = () => {
     loadHistoryList(filters);
   }, []);
 
-  // ✅ 모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
+  //  모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
   useEffect(() => {
     if (showDetailModal) {
       openModal();

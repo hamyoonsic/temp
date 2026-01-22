@@ -1,0 +1,243 @@
+1. 공지 등록 시: 공지 + 발송계획 저장
+(1) 컨트롤러 레벨
+
+파일:
+temp/app-api/src/main/java/kr/co/koreazinc/app/controller/v1/notice/NoticeController.java
+
+메서드(추정 이름):
+@PostMapping("/v1/api/notices") 쪽 메서드
+→ noticeService.createNotice(dto, userId) 호출
+
+(2) 서비스 레벨
+
+파일:
+NoticeService.java
+(temp/app-api/src/main/java/kr/co/koreazinc/app/service/notice/NoticeService.java)
+
+핵심 메서드:
+@Transactional public Long createNotice(NoticeRegistrationDto dto, String userId)
+
+여기서 하는 일:
+
+공지 본문 저장
+
+NoticeBase 엔티티 생성 & 저장
+(NoticeBaseRepository.save(...))
+
+상태는 기본적으로 PENDING (승인 대기)
+
+발송 계획(언제 메일을 쏠지) 저장
+
+DTO 안에 있는 dto.getSendPlan() 을 보고
+NoticeSendPlan 엔티티 생성:
+
+NoticeSendPlan sendPlan = NoticeSendPlan.builder()
+    .noticeId(savedNotice.getNoticeId())
+    .sendMode(sendMode)             // IMMEDIATE or SCHEDULED
+    .scheduledSendAt(scheduledAt)   // 예약 발송 시간 or 지금
+    .allowBundle(...)
+    .bundleKey(...)
+    .build();
+noticeSendPlanRepository.save(sendPlan);
+
+
+즉, “언제 보낼지”는 notice_send_plan 테이블에 기록해 두고,
+
+아직 메일은 안 보냄. (승인 전에 쏘면 안 되니까)
+
+2. 결재(승인/반려): 승인 시 메일 & 캘린더 트리거 포인트
+(1) 컨트롤러
+
+파일:
+NoticeController.java
+
+메서드:
+
+@PostMapping("/{noticeId}/approve")
+public ApiResponse<Void> approveNotice(...)
+    → noticeService.approveNotice(noticeId, approver);
+
+(2) 서비스: 승인 로직
+
+파일: NoticeService.java
+
+메서드: @Transactional public void approveNotice(Long noticeId, String approver)
+
+내부 핵심 흐름:
+
+상태 변경
+
+NoticeBase notice = noticeBaseRepository.findById(noticeId)...
+if (!"PENDING".equals(notice.getNoticeStatus())) { ... }
+
+notice.setNoticeStatus("APPROVED");
+notice.setUpdatedBy(approver);
+noticeBaseRepository.save(notice);
+
+
+발송 모드에 따라 메일 처리 트리거
+
+noticeSendPlanRepository.findByNoticeId(noticeId).ifPresent(plan -> {
+    if (NoticeSendPlan.SendMode.IMMEDIATE.equals(plan.getSendMode())) {
+        noticeMailService.sendNoticeEmail(noticeId);  // 바로 메일 발송
+        noticeSendPlanRepository.delete(plan);        // 계획 삭제
+    }
+    // SCHEDULED 인 경우: 여기서 안 보내고, 스케줄러가 나중에 처리
+});
+
+
+캘린더 등록
+
+if (Boolean.TRUE.equals(notice.getCalendarRegister()) 
+    && notice.getCalendarEventAt() != null) {
+
+    LocalDateTime eventStartAt = notice.getCalendarEventAt();
+    LocalDateTime eventEndAt = eventStartAt.plusHours(1);
+
+    outlookCalendarService.createCalendarEvent(
+        noticeId, eventStartAt, eventEndAt
+    );
+}
+
+
+정리하면:
+
+**승인 버튼 클릭 → approveNotice →
+
+IMMEDIATE 공지면: 그 자리에서 메일 발송
+
+SCHEDULED 공지면: 예약만 남겨두고 스케줄러가 나중에 발송
+
+calendarRegister = true면: 그 자리에서 Outlook 캘린더도 바로 생성**
+
+3. 메일 발송 실제 구현: 서비스 + 스케줄러
+(1) 메일 발송 서비스
+
+파일:
+NoticeMailService.java
+(temp/app-api/src/main/java/kr/co/koreazinc/app/service/notice/NoticeMailService.java)
+
+핵심 메서드:
+public void sendNoticeEmail(Long noticeId)
+
+안에서 하는 일(간단 버전):
+
+공지 & 발송로그 조회/저장
+
+NoticeBaseRepository 로 공지 정보 조회
+
+NoticeDeliveryLogRepository 로 발송 로그 생성(STATUS: SENDING 같은 느낌)
+
+수신자 목록 구성
+
+getRecipientEmails(noticeId) 에서
+NoticeRecipientRepository, NoticeTargetRepository, UserMasterRepository 등을 조합해서
+실제 이메일 주소 리스트를 만듦
+
+테스트/화이트리스트 처리
+
+MailTestProperty 참고해서
+
+테스트 모드면 특정 메일로만 보내거나
+
+화이트리스트만 통과시키는 로직 수행
+
+메일 전송
+
+MailInfo 객체 만들어서
+
+MailUtils.sendMail(...) 호출
+(kr.co.koreazinc.spring.utility.MailUtils 사용)
+
+발송 결과 업데이트
+
+성공/실패에 따라 NoticeDeliveryLog 상태 갱신
+
+(2) 예약 발송 스케줄러
+
+파일:
+NoticeMailScheduler.java
+(temp/app-api/src/main/java/kr/co/koreazinc/app/scheduler/NoticeMailScheduler.java)
+
+주요 역할:
+
+@Scheduled 메서드들이 주기적으로 돌아가면서
+NoticeSendPlanRepository 를 조회해서
+“시간이 된 예약 공지 + 상태 APPROVED” 인 것들을 찾아 메일 발송
+
+대략 구조:
+
+@Scheduled(...)
+public void sendScheduledNotices() {
+    LocalDateTime now = ...
+    List<NoticeSendPlan> plans = sendPlanRepository.findDueScheduledPlans(now);
+
+    for (NoticeSendPlan plan : plans) {
+        try {
+            NoticeBase notice = noticeBaseRepository.findById(plan.getNoticeId())...
+            // APPROVED 공지만 실제 발송
+            mailService.sendNoticeEmail(plan.getNoticeId());
+            sendPlanRepository.delete(plan);  // 한 번 쓴 계획은 삭제
+        } catch (...) { ... }
+    }
+}
+
+
+정리:
+
+IMMEDIATE
+승인 시 approveNotice 안에서 바로 sendNoticeEmail 호출
+
+SCHEDULED
+승인 후에도 DB에는 NoticeSendPlan만 존재
+→ 정해진 시각이 되면 NoticeMailScheduler가 sendNoticeEmail 호출
+
+4. 캘린더 등록: Outlook Graph API 연동
+
+파일:
+OutlookCalendarService.java
+(temp/app-api/src/main/java/kr/co/koreazinc/app/service/notice/OutlookCalendarService.java)
+
+핵심 메서드:
+public String createCalendarEvent(Long noticeId, LocalDateTime eventStartAt, LocalDateTime eventEndAt)
+
+안에서 하는 일:
+
+NoticeBase, UserMaster, NoticeTarget 등으로부터
+이벤트 제목 / 본문 / 참석자 목록 구성
+
+OAuthUtils + OAuth2Property 로
+Outlook Graph API 액세스 토큰 발급
+
+WebClient 로
+POST /users/{mailboxEmail}/events 호출
+
+응답으로 받은 eventId 를
+NoticeCalendarEvent 엔티티로 DB에 저장
+(NoticeCalendarEventRepository.save(...))
+
+테스트 모드일 땐 실제 호출 대신 "TEST_EVENT_..." 처럼 가짜 eventId만 생성해서 저장하는 로직도 들어가 있음.
+
+한 줄 요약 플로우
+
+공지 등록 화면에서 저장
+→ NoticeController.create
+→ NoticeService.createNotice
+→ NoticeBase + NoticeSendPlan 저장
+
+관리자 승인 버튼 클릭
+→ NoticeController.approveNotice
+→ NoticeService.approveNotice
+
+상태 PENDING → APPROVED
+
+sendMode = IMMEDIATE면 바로 NoticeMailService.sendNoticeEmail
+
+sendMode = SCHEDULED면 NoticeSendPlan만 유지
+
+calendarRegister = true면 OutlookCalendarService.createCalendarEvent
+
+예약 시간 도래
+→ NoticeMailScheduler 의 @Scheduled 메서드
+→ NoticeSendPlanRepository.findDueScheduledPlans
+→ NoticeMailService.sendNoticeEmail 호출 + 계획 삭제

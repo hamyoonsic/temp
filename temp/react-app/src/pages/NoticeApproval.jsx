@@ -6,7 +6,7 @@ import { approvalApi, noticeApi } from '../api';
 import { useAdmin } from '../contexts/AdminContext';
 import AdminDelegationModal from '../components/AdminDelegationModal';
 
-// ✅ 모달 스크롤 제어 함수
+//  모달 스크롤 제어 함수
 const openModal = () => {
   const scrollY = window.scrollY;
   const scrollX = window.scrollX;
@@ -48,7 +48,7 @@ const NoticeApproval = () => {
   const [approvalList, setApprovalList] = useState([]);
   const [showDelegationModal, setShowDelegationModal] = useState(false);
   
-  // ✅ AdminContext에서 관리자 상태 가져오기
+  //  AdminContext에서 관리자 상태 가져오기
   const { isAdmin, isDelegatedAdmin, userInfo } = useAdmin();
   
   const [filters, setFilters] = useState({
@@ -63,7 +63,7 @@ const NoticeApproval = () => {
     loadApprovalList();
   }, []);
 
-  // ✅ 모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
+  //  모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
   useEffect(() => {
     if (showDetailModal || showDelegationModal) {
       openModal();
@@ -176,7 +176,7 @@ const NoticeApproval = () => {
           </div>
           
           <div className="header-right">
-            {/* ✅ 로그인 정보 없음 경고 */}
+            {/*  로그인 정보 없음 경고 */}
             {!userInfo && (
               <div className="error-badge">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -186,7 +186,7 @@ const NoticeApproval = () => {
               </div>
             )}
             
-            {/* ✅ 관리자 위임 버튼 - HR150138 권한자만 표시 */}
+            {/*  관리자 위임 버튼 - HR150138 권한자만 표시 */}
             {userInfo && userInfo.job?.[0]?.ttlCd === 'HR150138' && (
               <div 
                 className="admin-badge clickable"
@@ -273,7 +273,7 @@ const NoticeApproval = () => {
                       <td>{formatDateTime(item.createdAt)}</td>
                       <td>
                         <div className="action-buttons">
-                          {/* ✅ 승인 버튼 - 권한에 따라 활성화/비활성화 */}
+                          {/*  승인 버튼 - 권한에 따라 활성화/비활성화 */}
                           <button 
                             className={`btn-approve ${!isAdmin ? 'disabled' : ''}`}
                             onClick={() => handleApprove(item.noticeId)}
@@ -282,7 +282,7 @@ const NoticeApproval = () => {
                           >
                             승인
                           </button>
-                          {/* ✅ 반려 버튼 - 권한에 따라 활성화/비활성화 */}
+                          {/*  반려 버튼 - 권한에 따라 활성화/비활성화 */}
                           <button 
                             className={`btn-reject ${!isAdmin ? 'disabled' : ''}`}
                             onClick={() => handleReject(item.noticeId)}
@@ -411,7 +411,7 @@ const NoticeApproval = () => {
         </div>
       )}
 
-      {/* ✅ 권한 위임 모달 */}
+      {/*  권한 위임 모달 */}
       {userInfo && (
         <AdminDelegationModal
           isOpen={showDelegationModal}

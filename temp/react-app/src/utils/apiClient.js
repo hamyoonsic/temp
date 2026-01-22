@@ -18,13 +18,13 @@ class ApiClient {
       ...customHeaders,
     };
 
-    // ✅ 1. Authorization 토큰 자동 추가
+    //  1. Authorization 토큰 자동 추가
     const token = getAccessToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // ✅ 2. X-User-Id, X-User-Name 헤더 자동 추가
+    //  2. X-User-Id, X-User-Name 헤더 자동 추가
     try {
       // userData 또는 user_me에서 사용자 정보 가져오기
       const userDataStr = sessionStorage.getItem('userData') || sessionStorage.getItem('user_me');
@@ -37,7 +37,7 @@ class ApiClient {
           headers['X-User-Id'] = userData.userId;
         }
         
-        // ✅ X-User-Name (한글 포함 가능 → Base64 인코딩)
+        //  X-User-Name (한글 포함 가능 → Base64 인코딩)
         if (userData.userNm || userData.userKoNm) {
           const userName = userData.userNm || userData.userKoNm;
           // Base64 인코딩하여 한글 문제 해결
@@ -58,7 +58,7 @@ class ApiClient {
    async handleResponse(response) {
     // 401 Unauthorized
     if (response.status === 401) {
-      console.warn('🔒 인증 실패 (401) - 로그인 페이지로 이동');
+      console.warn(' 인증 실패 (401) - 로그인 페이지로 이동');
       clearSession();
       window.location.replace('/login');
       throw new Error('인증이 필요합니다.');
@@ -77,7 +77,7 @@ class ApiClient {
             errorMessage.includes('Token has expired') ||
             errorMessage.includes('만료')
           ) {
-            console.warn('🔒 토큰 만료 (400) - 로그인 페이지로 이동');
+            console.warn(' 토큰 만료 (400) - 로그인 페이지로 이동');
             clearSession();
             window.location.replace('/login');
             throw new Error('토큰이 만료되었습니다.');
@@ -112,7 +112,7 @@ class ApiClient {
       throw new Error('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     }
 
-    // ✅ 여기서부터 "성공 or 기타 2xx/3xx" 처리
+    //  여기서부터 "성공 or 기타 2xx/3xx" 처리
     if (response.ok) {
       // 204 No Content - 응답 본문 없음
       if (response.status === 204) {
@@ -168,7 +168,7 @@ class ApiClient {
 
       return await this.handleResponse(response);
     } catch (error) {
-      console.error('❌ GET 요청 실패:', url, error);
+      console.error(' GET 요청 실패:', url, error);
       throw error;
     }
   }
@@ -187,7 +187,7 @@ class ApiClient {
 
       return await this.handleResponse(response);
     } catch (error) {
-      console.error('❌ POST 요청 실패:', url, error);
+      console.error(' POST 요청 실패:', url, error);
       throw error;
     }
   }
@@ -206,7 +206,7 @@ class ApiClient {
 
       return await this.handleResponse(response);
     } catch (error) {
-      console.error('❌ PUT 요청 실패:', url, error);
+      console.error(' PUT 요청 실패:', url, error);
       throw error;
     }
   }
@@ -224,7 +224,7 @@ class ApiClient {
 
       return await this.handleResponse(response);
     } catch (error) {
-      console.error('❌ DELETE 요청 실패:', url, error);
+      console.error(' DELETE 요청 실패:', url, error);
       throw error;
     }
   }

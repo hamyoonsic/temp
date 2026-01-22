@@ -81,3 +81,11 @@ gradle-*.zip
 # (만약 로컬 DB 파일 쓰면)
 *.db
 *.sqlite
+
+
+
+# Oauth2 
+# 로컬 OAuth 시크릿
+temp/spring-core/src/main/resources/config/custom-spring-core-local-secret.yaml
+**/custom-spring-core-local-secret.yaml
+

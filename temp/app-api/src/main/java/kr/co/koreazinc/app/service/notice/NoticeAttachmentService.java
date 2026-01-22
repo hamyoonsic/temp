@@ -41,7 +41,7 @@ public class NoticeAttachmentService {
      */
     @Transactional
     public NoticeAttachment uploadFile(Long noticeId, MultipartFile file, String uploadedBy) {
-        log.info("📎 파일 업로드 시작: noticeId={}, fileName={}", noticeId, file.getOriginalFilename());
+        log.info(" 파일 업로드 시작: noticeId={}, fileName={}", noticeId, file.getOriginalFilename());
         
         try {
             // 1. 파일명 생성 (UUID + 원본 확장자)
@@ -78,13 +78,13 @@ public class NoticeAttachmentService {
             
             NoticeAttachment saved = attachmentRepository.save(attachment);
             
-            log.info("✅ 파일 업로드 완료: attachmentId={}, path={}", 
+            log.info(" 파일 업로드 완료: attachmentId={}, path={}", 
                 saved.getAttachmentId(), saved.getFilePath());
             
             return saved;
             
         } catch (IOException e) {
-            log.error("❌ 파일 업로드 실패: noticeId={}, error={}", noticeId, e.getMessage(), e);
+            log.error(" 파일 업로드 실패: noticeId={}, error={}", noticeId, e.getMessage(), e);
             throw new RuntimeException("파일 업로드 실패: " + e.getMessage(), e);
         }
     }
@@ -94,7 +94,7 @@ public class NoticeAttachmentService {
      */
     @Transactional
     public List<NoticeAttachment> uploadFiles(Long noticeId, List<MultipartFile> files, String uploadedBy) {
-        log.info("📎 파일 일괄 업로드: noticeId={}, count={}", noticeId, files.size());
+        log.info(" 파일 일괄 업로드: noticeId={}, count={}", noticeId, files.size());
         
         return files.stream()
             .map(file -> uploadFile(noticeId, file, uploadedBy))
@@ -105,7 +105,7 @@ public class NoticeAttachmentService {
      * 파일 다운로드 (spring-core FileUtils 활용)
      */
     public InputStream downloadFile(Long attachmentId) {
-        log.info("📥 파일 다운로드 시작: attachmentId={}", attachmentId);
+        log.info(" 파일 다운로드 시작: attachmentId={}", attachmentId);
         
         try {
             // 1. 첨부파일 정보 조회
@@ -123,11 +123,11 @@ public class NoticeAttachmentService {
             // 3. spring-core FileUtils로 다운로드
             InputStream inputStream = FileUtils.remoteDownload(oauth2Property.getCredential("file"), fileInfo);
             
-            log.info("✅ 파일 다운로드 완료: attachmentId={}", attachmentId);
+            log.info(" 파일 다운로드 완료: attachmentId={}", attachmentId);
             return inputStream;
             
         } catch (IOException e) {
-            log.error("❌ 파일 다운로드 실패: attachmentId={}, error={}", attachmentId, e.getMessage(), e);
+            log.error(" 파일 다운로드 실패: attachmentId={}, error={}", attachmentId, e.getMessage(), e);
             throw new RuntimeException("파일 다운로드 실패: " + e.getMessage(), e);
         }
     }
@@ -145,7 +145,7 @@ public class NoticeAttachmentService {
      */
     @Transactional
     public void deleteAttachment(Long attachmentId) {
-        log.info("🗑️ 첨부파일 삭제: attachmentId={}", attachmentId);
+        log.info(" 첨부파일 삭제: attachmentId={}", attachmentId);
         
         NoticeAttachment attachment = attachmentRepository.findById(attachmentId)
             .orElseThrow(() -> new RuntimeException("첨부파일을 찾을 수 없습니다: " + attachmentId));
@@ -154,7 +154,7 @@ public class NoticeAttachmentService {
         // 현재는 DB 레코드만 삭제
         
         attachmentRepository.delete(attachment);
-        log.info("✅ 첨부파일 삭제 완료: attachmentId={}", attachmentId);
+        log.info(" 첨부파일 삭제 완료: attachmentId={}", attachmentId);
     }
     
     /**
@@ -162,7 +162,7 @@ public class NoticeAttachmentService {
      */
     @Transactional
     public void deleteAttachmentsByNoticeId(Long noticeId) {
-        log.info("🗑️ 공지 첨부파일 전체 삭제: noticeId={}", noticeId);
+        log.info(" 공지 첨부파일 전체 삭제: noticeId={}", noticeId);
         attachmentRepository.deleteByNoticeId(noticeId);
     }
 }

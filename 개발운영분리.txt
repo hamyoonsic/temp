@@ -15,7 +15,7 @@ pnpm run dev
   - import.meta.env.DEV = true
   - import.meta.env.PROD = false
   - import.meta.env.MODE = 'development'
-  - vite.config.js의 server.proxy 활성화 ✅
+  - vite.config.js의 server.proxy 활성화 
   - 파일을 메모리에서 제공
   - Hot Reload 활성화
 
@@ -35,7 +35,7 @@ pnpm run build
 javascriptexport default defineConfig({
   plugins: [react()],
   
-  // ✅ 이 부분은 'pnpm run dev' 할 때만 사용
+  //  이 부분은 'pnpm run dev' 할 때만 사용
   server: {
     port: 5173,
     proxy: {
@@ -45,7 +45,7 @@ javascriptexport default defineConfig({
     },
   },
   
-  // ✅ 이 부분은 'pnpm run build' 할 때만 사용
+  //  이 부분은 'pnpm run build' 할 때만 사용
   build: {
     outDir: '../app-api/src/main/resources/static',
     emptyOutDir: true,

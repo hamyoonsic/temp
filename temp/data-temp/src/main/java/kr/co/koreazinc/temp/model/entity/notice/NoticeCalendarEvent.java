@@ -27,21 +27,16 @@ public class NoticeCalendarEvent {
     
     @Column(name = "notice_id", nullable = false)
     private Long noticeId;
-    
-    @Column(name = "event_subject", length = 255)
+    @Transient
     private String eventSubject;
-    
-    @Column(name = "event_body", columnDefinition = "TEXT")
+    @Transient
     private String eventBody;
-    
-    @Column(name = "event_start_at", nullable = false)
+    @Transient
     private LocalDateTime eventStartAt;
-    
-    @Column(name = "event_end_at")
+    @Transient
     private LocalDateTime eventEndAt;
-    
-    @Column(name = "attendees", columnDefinition = "TEXT")
-    private String attendees;  // JSON 형태로 저장
+    @Transient
+    private String attendees;  // JSON payload
     
     @Column(name = "resource_mailbox", length = 150)
     private String resourceMailbox;  // 공지 자원 메일 주소

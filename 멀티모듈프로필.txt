@@ -1,0 +1,22 @@
+spring-core 코드도 그걸 전제로 만들어져 있음
+
+spring-core에 있는 이 파일 기억나지?
+
+spring-core/src/main/resources/META-INF/spring.factories
+→ kr.co.koreazinc.spring.CustomYamlPropertiesInitializer
+
+
+이 클래스(CustomYamlPropertiesInitializer)가 하는 일이:
+
+클래스패스의 config 폴더에서
+custom-*.yaml 같은 걸 찾아서
+
+스프링이 뜰 때 추가 프로퍼티 소스로 넣어주는 작업
+
+근데 각 YAML 자체에 spring.config.activate.on-profile: local이 걸려 있어서
+
+“어떤 파일이 실제로 적용될지”는
+결국 active profile (local/dev/prod/test)에 의해 결정돼요.
+
+그래서 따로 spring-core에서 “나는 dev 쓸래요” 이런 설정은 없고,
+app-api가 뭘로 뜨냐에 따라 같이 따라가는 구조라고 보면 돼요.

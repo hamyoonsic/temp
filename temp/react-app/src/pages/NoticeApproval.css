@@ -881,7 +881,7 @@ body.modal-open {
   flex-shrink: 0;
 }
 
-/* ✅ 관리자 위임 버튼 (기존 admin-badge 스타일 + 클릭 기능) */
+/*  관리자 위임 버튼 (기존 admin-badge 스타일 + 클릭 기능) */
 .admin-badge.clickable {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);

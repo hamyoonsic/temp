@@ -1,0 +1,14 @@
+Spring Data JPA는 **메서드 이름으로 쿼리를 자동 생성하는 규칙(Method Name Query Derivation)**을 갖고 있어.
+
+deleteByNoticeId
+→ delete
+→ by
+→ NoticeId (엔티티 필드명)
+
+이 3가지만 보고 내부에서 이렇게 JPQL을 자동 생성해:
+
+delete from NoticeAttachment n
+where n.noticeId = :noticeId
+
+
+그리고 이 JPQL을 Hibernate가 실제 DB 쿼리로 변환해서 실행한다.

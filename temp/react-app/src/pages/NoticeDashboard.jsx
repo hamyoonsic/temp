@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "./NoticeDashboard.css";
 import { dashboardApi, noticeApi, organizationApi } from '../api';
 
-// ✅ 모달 스크롤 제어 함수
+//  모달 스크롤 제어 함수
 const openModal = () => {
   const scrollY = window.scrollY;
   const scrollX = window.scrollX;
@@ -78,7 +78,7 @@ export default function NoticeDashboard() {
     loadCalendarData();
   }, [currentDate]);
 
-  // ✅ 모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
+  //  모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
   useEffect(() => {
     if (showDetailModal || showCompletionModal) {
       openModal();
@@ -141,8 +141,11 @@ export default function NoticeDashboard() {
         const eventsByDate = {};
         const currentYear = currentDate.getFullYear();
         const currentMonth = currentDate.getMonth();
+        const allowedStatuses = new Set(['APPROVED', 'SENT', 'COMPLETED']);
 
-        (Array.isArray(notices) ? notices : []).forEach((notice) => {
+        (Array.isArray(notices) ? notices : [])
+          .filter((notice) => allowedStatuses.has(notice.noticeStatus))
+          .forEach((notice) => {
           const baseDate = notice.publishStartAt || notice.createdAt;
           if (!baseDate) return;
           const date = new Date(baseDate);
@@ -279,7 +282,7 @@ export default function NoticeDashboard() {
   };
 
   const getNoticeIcon = (level) => {
-    return level === 'L3' ? '🚨' : '📧';
+    return level === 'L3' ? '🚨' : '';
   };
 
   const getNoticeIconBg = (level) => {
@@ -575,7 +578,7 @@ export default function NoticeDashboard() {
           </div>
         </div>
 
-        {/* ✅ 수정: 캘린더 - 뷰 모드 선택 추가 */}
+        {/*  수정: 캘린더 - 뷰 모드 선택 추가 */}
         <div className="calendar-card">
           <div className="calendar-header">
             <div className="calendar-nav">
@@ -623,7 +626,7 @@ export default function NoticeDashboard() {
             </div>
           </div>
 
-          {/* ✅ 뷰 모드에 따라 다른 캘린더 렌더링 */}
+          {/*  뷰 모드에 따라 다른 캘린더 렌더링 */}
           {viewMode === 'monthly' && (
             <div className="calendar-grid">
               {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
@@ -692,13 +695,22 @@ export default function NoticeDashboard() {
               {schedules.length === 0 ? (
                 <div className="empty-message">예정된 점검이 없습니다</div>
               ) : (
-                schedules.map((schedule, idx) => (
-                  <div key={idx} className="schedule-item">
-                    <div className="schedule-icon" style={{ 
-                      background: getNoticeIconBg(schedule.noticeLevel) 
-                    }}>
-                      {getNoticeIcon(schedule.noticeLevel)}
-                    </div>
+                schedules.map((schedule, idx) => {
+                  const scheduleIcon = getNoticeIcon(schedule.noticeLevel);
+                  return (
+                  <div
+                    key={idx}
+                    className="schedule-item clickable"
+                    onClick={() => handleEventClick(schedule)}
+                  >
+                    {scheduleIcon && (
+                      <div
+                        className="schedule-icon"
+                        style={{ background: getNoticeIconBg(schedule.noticeLevel) }}
+                      >
+                        {scheduleIcon}
+                      </div>
+                    )}
                     <div className="schedule-content">
                       <div className="schedule-header">
                         <div className="schedule-title">{schedule.title}</div>
@@ -721,7 +733,7 @@ export default function NoticeDashboard() {
                       </div>
                     </div>
                   </div>
-                ))
+                )})
               )}
             </div>
           </div>
@@ -786,7 +798,9 @@ export default function NoticeDashboard() {
             {recentNotices.length === 0 ? (
               <div className="empty-message">최근 공지가 없습니다</div>
             ) : (
-              recentNotices.map((notice, idx) => (
+              recentNotices.map((notice, idx) => {
+                const noticeIcon = getNoticeIcon(notice.noticeLevel);
+                return (
                 <div 
                   key={idx} 
                   className="notice-item" 
@@ -796,7 +810,7 @@ export default function NoticeDashboard() {
                   }}
                   onClick={() => openDetailModal(notice.noticeId)}
                 >
-                  <div className="notice-icon">{getNoticeIcon(notice.noticeLevel)}</div>
+                  {noticeIcon && <div className="notice-icon">{noticeIcon}</div>}
                   <div className="notice-content">
                     <div className="notice-grid">
                       <div className="notice-title">{notice.title}</div>
@@ -812,7 +826,7 @@ export default function NoticeDashboard() {
                     <div className="notice-date">{formatDate(notice.createdAt)}</div>
                   </div>
                 </div>
-              ))
+              )})
             )}
           </div>
           <div className="recent-actions">
@@ -853,12 +867,12 @@ export default function NoticeDashboard() {
           </div>
         </div>
 
-        {/* ✅ 추가: 완료 공지 등록 모달 */}
+        {/*  추가: 완료 공지 등록 모달 */}
         {showCompletionModal && selectedMaintenanceNotice && (
           <div className="modal-overlay" onClick={() => setShowCompletionModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>🔧 시스템 점검 완료 공지</h3>
+                <h3> 시스템 점검 완료 공지</h3>
                 <button onClick={() => setShowCompletionModal(false)}>×</button>
               </div>
               

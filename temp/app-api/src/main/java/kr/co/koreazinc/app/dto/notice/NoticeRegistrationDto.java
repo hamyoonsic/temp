@@ -50,10 +50,10 @@ public class NoticeRegistrationDto {
     // 태그
     private List<String> tags;
     
-    // ✅ 발송 계획 (새로 추가)
+    //  발송 계획 (새로 추가)
     private SendPlanDto sendPlan;
     
-    // ✅ Outlook 캘린더 연동 (새로 추가)
+    //  Outlook 캘린더 연동 (새로 추가)
     private OutlookCalendarDto outlookCalendar;
     
     /**
@@ -70,7 +70,7 @@ public class NoticeRegistrationDto {
     }
     
     /**
-     * ✅ 발송 계획 DTO
+     *  발송 계획 DTO
      */
     @Data
     @Builder
@@ -84,7 +84,7 @@ public class NoticeRegistrationDto {
     }
     
     /**
-     * ✅ Outlook 캘린더 연동 DTO
+     *  Outlook 캘린더 연동 DTO
      */
     @Data
     @Builder

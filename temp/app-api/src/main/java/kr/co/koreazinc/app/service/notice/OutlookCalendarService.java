@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  * 위치: temp/app-api/src/main/java/kr/co/koreazinc/app/service/notice/OutlookCalendarService.java
  * 
  * Graph API를 통한 Outlook 캘린더 이벤트 생성
- * ✅ 테스트 모드 지원 (실수 이벤트 생성 방지)
+ *  테스트 모드 지원 (실수 이벤트 생성 방지)
  */
 @Slf4j
 @Service
@@ -35,7 +35,7 @@ public class OutlookCalendarService {
     private final UserMasterRepository userMasterRepository;
     
     private final OAuth2Property oauth2Property;
-    private final MailTestProperty mailTestProperty;  // ✅ 테스트 설정 추가
+    private final MailTestProperty mailTestProperty;  //  테스트 설정 추가
     
     private static final String GRAPH_API_BASE = "https://graph.microsoft.com/v1.0";
     
@@ -44,7 +44,7 @@ public class OutlookCalendarService {
      */
     @Transactional
     public String createCalendarEvent(Long noticeId, LocalDateTime eventStartAt, LocalDateTime eventEndAt) {
-        log.info("✅ Outlook calendar event create: noticeId={}", noticeId);
+        log.info(" Outlook calendar event create: noticeId={}", noticeId);
 
         try {
             NoticeBase notice = noticeBaseRepository.findById(noticeId)
@@ -52,7 +52,7 @@ public class OutlookCalendarService {
 
             List<String> attendeeEmails = getAttendeeEmails(noticeId);
             if (attendeeEmails.isEmpty()) {
-                log.warn("⚠️ No attendees for calendar event: noticeId={}", noticeId);
+                log.warn(" No attendees for calendar event: noticeId={}", noticeId);
                 return null;
             }
 
@@ -93,7 +93,7 @@ public class OutlookCalendarService {
                         .block();
 
                     eventId = response != null ? (String) response.get("id") : null;
-                    log.info("✅ Calendar event created: mailbox={}", mailboxEmail);
+                    log.info(" Calendar event created: mailbox={}", mailboxEmail);
                 }
 
                 NoticeCalendarEvent calendarEvent = NoticeCalendarEvent.builder()
@@ -114,7 +114,7 @@ public class OutlookCalendarService {
             return lastEventId;
 
         } catch (Exception e) {
-            log.error("❌ Outlook calendar event create failed: noticeId={}, error={}", noticeId, e.getMessage(), e);
+            log.error(" Outlook calendar event create failed: noticeId={}, error={}", noticeId, e.getMessage(), e);
             throw new RuntimeException("Calendar event create failed: " + e.getMessage(), e);
         }
     }
@@ -128,7 +128,7 @@ public class OutlookCalendarService {
             Map<String, Object> eventBody) {
         
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.info("🧪 [캘린더 테스트 모드] Outlook 이벤트 생성 정보");
+        log.info(" [캘린더 테스트 모드] Outlook 이벤트 생성 정보");
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         
         // 공지 기본 정보
@@ -152,7 +152,7 @@ public class OutlookCalendarService {
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         log.info("👥 참석자 (Attendees): {} 명", attendeeEmails.size());
         log.info("👥 참석자 목록:");
-        attendeeEmails.forEach(email -> log.info("   📧 {}", email));
+        attendeeEmails.forEach(email -> log.info("    {}", email));
         
         // 이벤트 본문
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -179,9 +179,9 @@ public class OutlookCalendarService {
         log.info("   POST {}/users/{}/events", GRAPH_API_BASE, senderEmail);
         
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.warn("⚠️ 캘린더 테스트 모드이므로 실제 이벤트는 생성되지 않았습니다!");
-        log.warn("⚠️ 실제 이벤트 생성을 원하시면 application.yaml에서");
-        log.warn("⚠️ notice.mail.calendar-test-mode: false 로 설정하세요");
+        log.warn(" 캘린더 테스트 모드이므로 실제 이벤트는 생성되지 않았습니다!");
+        log.warn(" 실제 이벤트 생성을 원하시면 application.yaml에서");
+        log.warn(" notice.mail.calendar-test-mode: false 로 설정하세요");
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }
     

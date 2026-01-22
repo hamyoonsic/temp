@@ -35,6 +35,11 @@ public class OAuthUtils {
 
     public String issuedToken(String tokenUrl, String clientId, String clientSecret, String scope) throws TokenIssuanceException {
         try {
+            //log.error(">>> Loaded clientId = {}", clientId);
+            //log.error(">>> Loaded clientSecret = {}", clientSecret);
+            //log.error(">>> Loaded tokenUrl = {}", tokenUrl);
+            //log.error(">>> Loaded scope = {}", scope);
+
             @SuppressWarnings("unchecked")
             Map<String, Object> responseBody = WebClient.create().post()
                 .uri(tokenUrl)
@@ -46,6 +51,9 @@ public class OAuthUtils {
                 .exchangeToMono(response->{
                     return response.bodyToMono(Map.class);
                 }).block();
+
+            log.error("OAuthUtils - issuedToken: responseBody = {}", responseBody);               
+
             if (responseBody == null) {
                 log.error("OAuthUtils - issuedToken: Empty response");
                 throw new TokenIssuanceException();
@@ -60,6 +68,8 @@ public class OAuthUtils {
                 log.error("OAuthUtils - issuedToken: Missing access_token");
                 throw new TokenIssuanceException();
             }
+
+
             return String.valueOf(accessToken);
         } catch (Exception e) {
             log.error("OAuthUtils - issuedToken: " + e.getMessage());

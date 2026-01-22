@@ -1,6 +1,6 @@
 // temp/react-app/src/contexts/AdminContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { adminDelegationApi } from '../api/admin/adminDelegationApi';
+import { adminUsersApi } from '../api/admin/adminUsersApi';
 
 const AdminContext = createContext();
 
@@ -24,10 +24,10 @@ export const AdminProvider = ({ children }) => {
   const checkAdminPermission = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // sessionStorage에서 사용자 정보 가져오기
+
+      // sessionStorage?? ??? ?? ????
       const userDataStr = sessionStorage.getItem('userData') || sessionStorage.getItem('user_me');
-      
+
       if (!userDataStr) {
         setIsAdmin(false);
         setIsDelegatedAdmin(false);
@@ -38,32 +38,20 @@ export const AdminProvider = ({ children }) => {
       const userData = JSON.parse(userDataStr);
       setUserInfo(userData);
 
-      // 1. 원래 관리자 권한 체크 (ttlCd === HR150138)
-      const ttlCd = userData.job?.[0]?.ttlCd;
-      const hasOriginalAdmin = ttlCd === 'HR150138';
-      
-      setIsAdmin(hasOriginalAdmin);
-
-      // 2. 대리 관리자 권한 체크
-      if (!hasOriginalAdmin) {
-        try {
-          const delegationResult = await adminDelegationApi.getCurrentDelegation();
-          if (delegationResult.success && delegationResult.data) {
-            console.log('✅ 대리 관리자 권한 발견:', delegationResult.data);
-            setIsDelegatedAdmin(true);
-            setIsAdmin(true);
-          } else {
-            setIsDelegatedAdmin(false);
-          }
-        } catch (error) {
-          console.log('ℹ️ 대리 관리자 권한 없음');
-          setIsDelegatedAdmin(false);
-        }
-      } else {
+      const userId = userData.userId;
+      if (!userId) {
+        setIsAdmin(false);
         setIsDelegatedAdmin(false);
+        return;
       }
+
+      const permissionResult = await adminUsersApi.checkAdminPermission(userId);
+      const hasPermission = Boolean(permissionResult?.data);
+
+      setIsAdmin(hasPermission);
+      setIsDelegatedAdmin(false);
     } catch (error) {
-      console.error('❌ 관리자 권한 체크 실패:', error);
+      console.error('??? ?? ?? ??:', error);
       setIsAdmin(false);
       setIsDelegatedAdmin(false);
     } finally {
@@ -77,7 +65,7 @@ export const AdminProvider = ({ children }) => {
   const refreshPermission = useCallback(async () => {
     console.log('🔄 권한 갱신 시작...');
     await checkAdminPermission();
-    console.log('✅ 권한 갱신 완료');
+    console.log(' 권한 갱신 완료');
   }, [checkAdminPermission]);
 
   // 초기 로드

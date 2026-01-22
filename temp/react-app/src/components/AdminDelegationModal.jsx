@@ -18,6 +18,7 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
   const [loading, setLoading] = useState(false);
   const [adminUsers, setAdminUsers] = useState([]);
   const [myDelegations, setMyDelegations] = useState([]);
+  const [receivedDelegations, setReceivedDelegations] = useState([]);
   
   const [formData, setFormData] = useState({
     delegateUserId: '',
@@ -31,6 +32,8 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
     if (isOpen) {
       loadAdminUsers();
       loadMyDelegations();
+      loadReceivedDelegations();
+      loadReceivedDelegations();
       initializeDefaultDates();
     }
   }, [isOpen]);
@@ -56,7 +59,7 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
 
   const loadAdminUsers = async () => {
     try {
-      const result = await adminUsersApi.getAdminUsers('HR150138');
+      const result = await adminUsersApi.getAllUsers();
       if (result.success) {
         // 현재 사용자 제외
         const filteredUsers = result.data.filter(user => user.userId !== currentUserId);
@@ -76,6 +79,17 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
       }
     } catch (error) {
       console.error('위임 목록 로드 실패:', error);
+    }
+  };
+
+  const loadReceivedDelegations = async () => {
+    try {
+      const result = await adminDelegationApi.getReceivedDelegations();
+      if (result.success) {
+        setReceivedDelegations(result.data || []);
+      }
+    } catch (error) {
+      console.error('received delegations load failed:', error);
     }
   };
 
@@ -109,10 +123,11 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
       await adminDelegationApi.createDelegation(requestData);
       alert('권한 위임이 생성되었습니다.');
       
-      // ✅ 위임 목록 갱신
+      //  위임 목록 갱신
       loadMyDelegations();
+      loadReceivedDelegations();
       
-      // ✅ 전역 권한 상태 갱신 (헤더 배지 즉시 업데이트)
+      //  전역 권한 상태 갱신 (헤더 배지 즉시 업데이트)
       await refreshPermission();
       
       resetForm();
@@ -142,10 +157,11 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
       await adminDelegationApi.deactivateDelegation(delegationId);
       alert('권한 위임이 비활성화되었습니다.');
       
-      // ✅ 위임 목록 갱신
+      //  위임 목록 갱신
       loadMyDelegations();
+      loadReceivedDelegations();
       
-      // ✅ 전역 권한 상태 갱신 (헤더 배지 즉시 업데이트)
+      //  전역 권한 상태 갱신 (헤더 배지 즉시 업데이트)
       await refreshPermission();
     } catch (error) {
       console.error('비활성화 실패:', error);
@@ -334,6 +350,47 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
             )}
           </div>
         </div>
+
+          {/* Received delegations */}
+          <div className="delegation-list-section">
+            <h4>Received Delegations</h4>
+            {receivedDelegations.length === 0 ? (
+              <p className="no-data">No received delegations.</p>
+            ) : (
+              <div className="delegation-table-wrapper">
+                <table className="delegation-table">
+                  <thead>
+                    <tr>
+                      <th>Delegator</th>
+                      <th>Start</th>
+                      <th>End</th>
+                      <th>Reason</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {receivedDelegations.map(delegation => (
+                      <tr key={delegation.delegationId}>
+                        <td>{delegation.delegatorUserNm}</td>
+                        <td>{formatDateTime(delegation.startDate)}</td>
+                        <td>{formatDateTime(delegation.endDate)}</td>
+                        <td className="reason-cell">{delegation.reason || '-'}</td>
+                        <td>
+                          {delegation.isCurrentlyValid ? (
+                            <span className="status-badge active">Active</span>
+                          ) : delegation.isActive ? (
+                            <span className="status-badge scheduled">Scheduled</span>
+                          ) : (
+                            <span className="status-badge inactive">Inactive</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
 
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose}>닫기</button>

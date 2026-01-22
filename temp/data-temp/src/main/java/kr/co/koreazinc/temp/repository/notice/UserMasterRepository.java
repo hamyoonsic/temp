@@ -13,6 +13,9 @@ import java.util.List;
 @Repository
 public interface UserMasterRepository extends JpaRepository<UserMaster, String> {
 
+    // active users ordered by name
+    List<UserMaster> findByIsActiveTrueOrderByUserKoNmAsc();
+
     // user_id 여러 개로 조회
     List<UserMaster> findByUserIdIn(List<String> userIds);
 

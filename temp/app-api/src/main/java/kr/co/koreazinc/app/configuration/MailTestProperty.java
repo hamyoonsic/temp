@@ -42,7 +42,7 @@ public class MailTestProperty {
      */
     private String testRecipientEmail;
     
-    // ✅ 캘린더 테스트 모드 추가
+    //  캘린더 테스트 모드 추가
     /**
      * Outlook 캘린더 테스트 모드
      * true: 실제 캘린더 이벤트 생성 안함, 로그만 출력

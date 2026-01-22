@@ -12,7 +12,7 @@ export default function AppHeader() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
-  // ✅ AdminContext에서 관리자 상태 가져오기
+  //  AdminContext에서 관리자 상태 가져오기
   const { isAdmin, isDelegatedAdmin } = useAdmin();
 
   const displayName = me?.userKoNm || me?.userNm || me?.userId || "";

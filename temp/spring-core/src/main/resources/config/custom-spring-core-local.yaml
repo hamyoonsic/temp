@@ -118,3 +118,6 @@ spring:
         redirect:
           login-url: '{URL}/authorize'
           logout-url: '{URL}'
+        id: 
+        secret: 
+                  

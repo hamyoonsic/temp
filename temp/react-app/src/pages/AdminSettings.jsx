@@ -151,7 +151,7 @@ const AdminSettings = () => {
             className={`tab-button ${activeTab === 'system' ? 'active' : ''}`}
             onClick={() => setActiveTab('system')}
           >
-            🔧 시스템 설정
+             시스템 설정
           </button>
         </div>
 

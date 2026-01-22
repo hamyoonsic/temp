@@ -142,10 +142,13 @@ const NoticeRegistration = () => {
     if (dateValue === todayDate && value < nowTime) {
       return;
     }
+    if (field === 'sendTime' && formData.sendTimeType !== '시간 직접 선택') {
+      handleInputChange('sendTimeType', '시간 직접 선택');
+    }
     handleInputChange(field, value);
   };
 
-  // ✅ 모달 스크롤 제어
+  //  모달 스크롤 제어
   useEffect(() => {
     const isAnyModalOpen = showServiceModal || showCorpModal || showOrgModal;
 
@@ -165,7 +168,7 @@ const NoticeRegistration = () => {
     loadMasterData();
     loadUserInfo();
     
-    // ✅ 완료 공지 등록 모드인지 확인
+    //  완료 공지 등록 모드인지 확인
     if (location.state?.isCompletion && location.state?.originalNotice) {
       setIsCompletionNotice(true);
       setOriginalNotice(location.state.originalNotice);
@@ -179,9 +182,9 @@ const NoticeRegistration = () => {
     }
   }, [formData.receiverCompanies.length]);
 
-  // ✅ 완료 공지 폼 초기화
+  //  완료 공지 폼 초기화
   const initializeCompletionForm = async (original) => {
-    console.log('✅ 완료 공지 초기화:', original);
+    console.log(' 완료 공지 초기화:', original);
     
     // 제목: "[완료] 원본 제목"
     const completionTitle = `[완료] ${original.title}`;
@@ -239,7 +242,7 @@ const NoticeRegistration = () => {
       const storedUserId = sessionStorage.getItem('userId');
       
       if (storedOrgName && storedUserName && storedUserId) {
-        console.log('✅ sessionStorage에서 직접 로드:', {
+        console.log(' sessionStorage에서 직접 로드:', {
           userId: storedUserId,
           orgUnitName: storedOrgName,
           userName: storedUserName
@@ -279,7 +282,7 @@ const NoticeRegistration = () => {
         const userName = userData.userKoNm || userData.userName || '-';
         const userId = userData.userId || 'unknown';
         
-        console.log('✅ 최종 사용자 정보:', {
+        console.log(' 최종 사용자 정보:', {
           userId,
           orgUnitName: orgName,
           userName
@@ -296,10 +299,10 @@ const NoticeRegistration = () => {
           senderDept: orgName
         }));
       } else {
-        console.warn('⚠️ 사용자 정보 없음 - 기본값 사용');
+        console.warn(' 사용자 정보 없음 - 기본값 사용');
       }
     } catch (error) {
-      console.error('❌ 사용자 정보 로드 실패:', error);
+      console.error(' 사용자 정보 로드 실패:', error);
     }
   };
 
@@ -307,9 +310,9 @@ const NoticeRegistration = () => {
   setLoading(true);
   try {
     const [corpData, orgData, serviceData] = await Promise.all([
-      corporationApi.getAll(),    // ✅ 변경
-      organizationApi.getAll(),   // ✅ 변경
-      serviceApi.getAll()         // ✅ 변경
+      corporationApi.getAll(),    //  변경
+      organizationApi.getAll(),   //  변경
+      serviceApi.getAll()         //  변경
     ]);
 
     if (corpData.success) {
@@ -327,7 +330,7 @@ const NoticeRegistration = () => {
   } catch (error) {
     console.error('마스터 데이터 로드 실패:', error);
   } finally {
-    setLoading(false);  // ✅ 추가: 로딩 상태 해제
+    setLoading(false);  //  추가: 로딩 상태 해제
   }
 };
 
@@ -563,11 +566,11 @@ const NoticeRegistration = () => {
       } : null
     };
 
-    console.log('🚀 공지 등록 요청:', requestData);
+    console.log(' 공지 등록 요청:', requestData);
 
     const result = await noticeApi.create(requestData);
   
-    console.log('✅ 등록 성공:', result);
+    console.log(' 등록 성공:', result);
     navigate('/notices/history');
     
   } catch (error) {
@@ -602,7 +605,7 @@ const NoticeRegistration = () => {
       <div className="notice-registration-container">
         <div className="page-header">
           <h1 className="page-title">
-            {isCompletionNotice ? '🔧 점검 완료 공지 등록' : '공지 등록'}
+            {isCompletionNotice ? ' 점검 완료 공지 등록' : '공지 등록'}
           </h1>
           <p className="page-description">
             {isCompletionNotice 
@@ -611,10 +614,10 @@ const NoticeRegistration = () => {
           </p>
         </div>
 
-        {/* ✅ 완료 공지 안내 배너 */}
+        {/*  완료 공지 안내 배너 */}
         {isCompletionNotice && originalNotice && (
           <div className="completion-notice-banner">
-            <div className="banner-icon">ℹ️</div>
+            <div className="banner-icon"></div>
             <div className="banner-content">
               <h4>완료 공지 자동 설정</h4>
               <ul>
@@ -658,7 +661,7 @@ const NoticeRegistration = () => {
                     </select>
                     {isCompletionNotice && (
                       <p className="form-hint">
-                        🔒 완료 공지는 "시스템 정상화안내"로 고정됩니다
+                         완료 공지는 "시스템 정상화안내"로 고정됩니다
                       </p>
                     )}
                   </div>
@@ -871,7 +874,7 @@ const NoticeRegistration = () => {
                   />
                   {isCompletionNotice && (
                     <p className="form-hint">
-                      🔒 완료 공지 제목은 "[완료] 원본 제목" 형식으로 자동 설정됩니다
+                       완료 공지 제목은 "[완료] 원본 제목" 형식으로 자동 설정됩니다
                     </p>
                   )}
                 </div>
@@ -952,6 +955,7 @@ const NoticeRegistration = () => {
                     >
                       <option value="오전 정기발송 시간">오전 정기발송 시간</option>
                       <option value="오후 정기발송 시간">오후 정기발송 시간</option>
+                      <option value="시간 직접 선택">시간 직접 선택</option>
                       <option value="즉시 발송">즉시 발송</option>
                     </select>
                     <input
@@ -960,6 +964,7 @@ const NoticeRegistration = () => {
                       value={formData.sendTime}
                       min={formData.sendDate === todayDate ? nowTime : undefined}
                       onChange={(e) => handleTimeInputChange('sendTime', e.target.value, formData.sendDate)}
+                      disabled={formData.sendTimeType !== '시간 직접 선택'}
                     />
                   </div>
                 </div>

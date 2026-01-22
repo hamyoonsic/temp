@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>메일/캘린더 API 인터페이스 설계서</title>
+    <style>
+      :root {
+        --bg: #f7f7f5;
+        --card: #ffffff;
+        --ink: #1f2937;
+        --muted: #4b5563;
+        --accent: #0f766e;
+        --border: #e5e7eb;
+        --mono: "Courier New", Courier, monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Georgia", "Times New Roman", serif;
+        line-height: 1.6;
+      }
+      header {
+        padding: 28px 24px;
+        background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+        color: #fff;
+      }
+      header h1 {
+        margin: 0 0 6px 0;
+        font-size: 24px;
+      }
+      header p {
+        margin: 0;
+        font-size: 14px;
+        opacity: 0.9;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 20px 16px 40px;
+      }
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px 18px 10px;
+        margin: 14px 0;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+      }
+      h2 {
+        margin: 0 0 10px 0;
+        font-size: 18px;
+      }
+      h3 {
+        margin: 12px 0 6px 0;
+        font-size: 15px;
+        color: var(--accent);
+      }
+      ul {
+        margin: 6px 0 12px 18px;
+        padding: 0;
+      }
+      code, pre {
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      pre {
+        background: #0b1020;
+        color: #d1fae5;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+      }
+      .label {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        background: #ecfdf5;
+        color: #0f766e;
+        border: 1px solid #a7f3d0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 10px;
+      }
+      .kv {
+        padding: 10px;
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        background: #fafafa;
+      }
+      .kv b { display: block; margin-bottom: 4px; }
+      .note {
+        font-size: 12px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>메일/캘린더 API 인터페이스 설계서</h1>
+      <p>MailUtils 및 OutlookCalendarService 기준 구현 내용을 정리했습니다.</p>
+    </header>
+    <main>
+      <section>
+        <h2>개요</h2>
+        <div class="grid">
+          <div class="kv">
+            <b>메일 발송 API</b>
+            <div class="note">MailUtils에서 사용하는 내부 message API.</div>
+          </div>
+          <div class="kv">
+            <b>캘린더 생성 API</b>
+            <div class="note">OutlookCalendarService에서 사용하는 Microsoft Graph API.</div>
+          </div>
+          <div class="kv">
+            <b>토큰 발급</b>
+            <div class="note">OAuthUtils를 통한 OAuth2 client credentials 방식.</div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>인증</h2>
+        <p>토큰 발급은 OAuth2 client credentials 방식입니다:</p>
+        <pre>POST {tokenUrl}
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials
+client_id={clientId}
+client_secret={clientSecret}
+scope={scope}</pre>
+        <p class="note">아래 API 호출은 모두 <code>Authorization: Bearer {access_token}</code>가 필요합니다.</p>
+      </section>
+
+      <section>
+        <h2>메일 발송 API <span class="label">message-api</span></h2>
+        <h3>엔드포인트</h3>
+        <pre>POST {baseUrl}/v1/mail/{sender}</pre>
+        <h3>헤더</h3>
+        <ul>
+          <li><code>Authorization: Bearer {access_token}</code></li>
+          <li><code>Accept: application/json</code></li>
+          <li><code>Content-Type: application/json</code></li>
+        </ul>
+        <h3>요청 바디</h3>
+        <pre>{
+  "from": "sender@company.com",
+  "to": "a@company.com;b@company.com",
+  "cc": "c@company.com",
+  "bcc": "d@company.com",
+  "title": "Subject",
+  "content": "<html>...</html>",
+  "attachments": [
+    {
+      "name": "file.pdf",
+      "contentBytes": "BASE64_ENCODED_BYTES"
+    }
+  ]
+}</pre>
+        <h3>메모</h3>
+        <ul>
+          <li><code>to/cc/bcc</code>는 현재 구현에서 세미콜론 구분 문자열입니다.</li>
+          <li><code>attachments</code>는 선택이며, 포함 시 base64 인코딩이 필요합니다.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>캘린더 생성 API <span class="label">graph-api</span></h2>
+        <h3>엔드포인트</h3>
+        <pre>POST https://graph.microsoft.com/v1.0/users/{mailboxEmail}/events</pre>
+        <h3>헤더</h3>
+        <ul>
+          <li><code>Authorization: Bearer {access_token}</code></li>
+          <li><code>Content-Type: application/json</code></li>
+        </ul>
+        <h3>요청 바디</h3>
+        <pre>{
+  "subject": "Notice Title",
+  "body": {
+    "contentType": "HTML",
+    "content": "<html>...</html>"
+  },
+  "start": {
+    "dateTime": "2026-01-22T10:00:00",
+    "timeZone": "Asia/Seoul"
+  },
+  "end": {
+    "dateTime": "2026-01-22T11:00:00",
+    "timeZone": "Asia/Seoul"
+  },
+  "attendees": [
+    {
+      "emailAddress": {
+        "address": "user@company.com"
+      },
+      "type": "required"
+    }
+  ],
+  "isReminderOn": true,
+  "reminderMinutesBeforeStart": 15
+}</pre>
+        <h3>응답</h3>
+        <pre>{
+  "id": "EVENT_ID",
+  "...": "other Graph fields"
+}</pre>
+      </section>
+
+      <section>
+        <h2>설정 참고</h2>
+        <ul>
+          <li><code>spring.security.oauth2.provider.message</code> (baseUrl, tokenUrl, scope)</li>
+          <li><code>spring.security.oauth2.provider.microsoft</code> (tokenUrl, scope, tenant)</li>
+          <li><code>spring.security.oauth2.client</code> (client_id, client_secret)</li>
+        </ul>
+        <p class="note">Source: MailUtils, OAuthUtils, OutlookCalendarService, custom-spring-core-local.yaml</p>
+      </section>
+    </main>
+  </body>
+</html>

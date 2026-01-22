@@ -105,35 +105,40 @@ public class NoticeController {
      * POST /v1/api/notices/{noticeId}/approve
      */
     @PostMapping("/{noticeId}/approve")
-    public ApiResponse<Void> approveNotice(@PathVariable Long noticeId) {
-        log.info("POST /v1/api/notices/{}/approve - 공지 승인", noticeId);
-        
-        // TODO: 인증된 사용자 ID 가져오기
-        String approver = "admin";
-        
+    public ApiResponse<Void> approveNotice(
+            @PathVariable Long noticeId,
+            @RequestHeader(value = "X-User-Id", required = false) String approver) {
+        log.info("POST /v1/api/notices/{}/approve - ?? ??", noticeId);
+
+        if (approver == null || approver.isBlank()) {
+            approver = "admin";
+        }
+
         noticeService.approveNotice(noticeId, approver);
-        return ApiResponse.success(null, "공지가 승인되었습니다.");
+        return ApiResponse.success(null, "??? ???????");
     }
-    
-    /**
+
+/**
      * 공지 반려
      * POST /v1/api/notices/{noticeId}/reject
      */
     @PostMapping("/{noticeId}/reject")
     public ApiResponse<Void> rejectNotice(
             @PathVariable Long noticeId,
-            @RequestParam String reason) {
-        
-        log.info("POST /v1/api/notices/{}/reject - 공지 반려", noticeId);
-        
-        // TODO: 인증된 사용자 ID 가져오기
-        String rejector = "admin";
-        
+            @RequestParam String reason,
+            @RequestHeader(value = "X-User-Id", required = false) String rejector) {
+
+        log.info("POST /v1/api/notices/{}/reject - ?? ??", noticeId);
+
+        if (rejector == null || rejector.isBlank()) {
+            rejector = "admin";
+        }
+
         noticeService.rejectNotice(noticeId, reason, rejector);
-        return ApiResponse.success(null, "공지가 반려되었습니다.");
+        return ApiResponse.success(null, "??? ???????");
     }
-    
-    /**
+
+/**
      * 대시보드 통계 조회
      * GET /v1/api/notices/dashboard/stats
      */

@@ -19,7 +19,7 @@ export const IS_DEV = import.meta.env.DEV;
 
 // 설정 정보 출력 (개발 환경에서만)
 if (IS_DEV) {
-  console.log('🔧 API Configuration:', {
+  console.log(' API Configuration:', {
     version: API_VERSION,
     baseUrl: API_BASE_URL,
     endpoint: API_ENDPOINT,

@@ -1,0 +1,75 @@
+1. 왜 메서드 내부에 붙어 있을까?
+
+OAuthUtils.issuedToken() 안의 핵심 코드를 보면:
+
+Map<String, Object> responseBody = WebClient.create().post()
+    .uri(tokenUrl)
+    .accept(MediaType.APPLICATION_JSON)
+    .body(...)
+    .exchangeToMono(response -> response.bodyToMono(Map.class))
+    .block();
+
+
+여기서 가장 중요한 문제는:
+
+bodyToMono(Map.class)
+→ 반환되는 Map의 실제 제네릭 타입이 불명확
+→ Map<String, Object> 로 캐스팅할 때 Unchecked cast 경고 발생
+
+즉, WebClient의 Mono<Map>은 내부적으로 raw type 이므로,
+컴파일러가 "이 Map 안의 key/value 타입을 보장할 수 없어요" 라고 경고함.
+
+그래서 Java는 컴파일 경고를 띄우고,
+개발자는 불필요한 경고를 숨기기 위해 SuppressWarnings("unchecked") 를 단 거예요.
+
+✅ 2. 왜 메서드 전체에 붙이지 않고 “메서드 내부 한 줄”에 붙였을까?
+
+스프링/자바 실무에서는 이렇게 합니다:
+
+📌 원칙
+
+“경고를 야기하는 정확한 범위에만 @SuppressWarnings 를 붙이는 게 가장 좋다.”
+
+메서드 전체 또는 클래스 전체에 붙이면:
+
+다른 제네릭 문제도 숨어버리고
+
+버그를 놓치게 되고
+
+리팩토링 때 추적이 어려워짐
+
+그래서 특정 한 줄 혹은 메서드 일부에만 붙이는 게 모범 패턴입니다.
+
+즉, 줄에서 발생하는 Map 제네릭 체크 경고 딱 하나만 무시하려고
+메서드 위가 아니라 메서드 안쪽 특정 지점에만 넣은 것.
+
+✅ 3. 이게 문제인가? → 절대 문제 아님
+
+완전히 정상이에요.
+
+실무에서 WebClient + Map.class 쓸 때 거의 100% 등장
+
+Azure/OAuth 토큰 발급 응답이 보통 { "access_token": "...", "expires_in":... } 같은 구조의 Map이기 때문에 더더욱 그렇게 씀
+
+스프링 팀도 내부에서 비슷한 식으로 suppress 한 코드를 사용
+
+즉,
+
+이건 경고를 없애기 위한 목적이지 기능/버그/문제와 직접적 관련 없음.
+
+메일 발송 실패 문제랑도 완전 무관.
+
+🔥 결론
+
+왜 메서드 안쪽에 @SuppressWarnings("unchecked") 가 있나?
+
+WebClient가 Map.class로 deserialize하면
+제네릭 타입 안전성이 보장되지 않음
+
+그 부분에서 컴파일 경고(unchecked cast)가 뜸
+
+그래서 개발자가
+그줄만 깔끔하게 경고 제거하려고
+메서드 전체가 아니라, 메서드 “내부”에 붙인 것
+
+👉 문제 있는 코드가 아니라, 아주 정상적인 자바/스프링 실무 패턴입니다.

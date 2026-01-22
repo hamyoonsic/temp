@@ -24,6 +24,14 @@ export const adminDelegationApi = {
   },
 
   /**
+   * 받은 위임 목록 조회
+   * @returns {Promise} 받은 위임 목록
+   */
+  getReceivedDelegations: () => {
+    return apiClient.get('/admin/delegations/received');
+  },
+
+  /**
    * 현재 유효한 위임 조회
    * @returns {Promise} 현재 유효한 위임 정보
    */
