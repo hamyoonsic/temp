@@ -89,12 +89,26 @@ public class NoticeService {
         // 2. 대상 저장
         if (dto.getTargets() != null && !dto.getTargets().isEmpty()) {
             List<NoticeTarget> targets = dto.getTargets().stream()
-                    .map(targetDto -> NoticeTarget.builder()
-                            .noticeId(savedNotice.getNoticeId())
-                            .targetType(targetDto.getTargetType())
-                            .targetKey(targetDto.getTargetKey())
-                            .targetName(targetDto.getTargetName())
-                            .build())
+                    .map(targetDto -> {
+                        String normalizedKey = normalizeTargetKey(
+                                targetDto.getTargetType(),
+                                targetDto.getTargetKey()
+                        );
+                        String normalizedName = targetDto.getTargetName();
+                        if (normalizedName == null || normalizedName.isBlank()) {
+                            normalizedName = resolveTargetName(
+                                    targetDto.getTargetType(),
+                                    normalizedKey
+                            );
+                        }
+
+                        return NoticeTarget.builder()
+                                .noticeId(savedNotice.getNoticeId())
+                                .targetType(targetDto.getTargetType())
+                                .targetKey(normalizedKey)
+                                .targetName(normalizedName)
+                                .build();
+                    })
                     .collect(Collectors.toList());
             
             noticeTargetRepository.saveAll(targets);
@@ -148,32 +162,36 @@ public class NoticeService {
         
         List<Long> corpNoticeIds = null;
         if (corpId != null) {
-            List<String> targetKeys = new ArrayList<>();
-            targetKeys.add(String.valueOf(corpId));
+            List<String> corpTargetKeys = new ArrayList<>();
+            corpTargetKeys.add(String.valueOf(corpId));
+
+            List<String> orgTargetKeys = new ArrayList<>();
 
             List<OrganizationMaster> orgs =
                 organizationMasterRepository.findByCorpIdAndIsActiveTrueOrderByDisplayOrder(corpId);
             for (OrganizationMaster org : orgs) {
                 if (org.getOrgUnitId() != null) {
-                    targetKeys.add(String.valueOf(org.getOrgUnitId()));
+                    orgTargetKeys.add(String.valueOf(org.getOrgUnitId()));
                 }
                 if (org.getOrgUnitCode() != null && !org.getOrgUnitCode().isBlank()) {
-                    targetKeys.add(org.getOrgUnitCode());
+                    orgTargetKeys.add(org.getOrgUnitCode());
                 }
             }
 
-            if (!targetKeys.isEmpty()) {
+            if (!corpTargetKeys.isEmpty() || !orgTargetKeys.isEmpty()) {
                 Set<Long> noticeIdSet = new HashSet<>();
                 List<NoticeTarget> corpTargets =
-                    noticeTargetRepository.findByTargetTypeAndTargetKeyIn("CORP", targetKeys);
+                    noticeTargetRepository.findByTargetTypeAndTargetKeyIn("CORP", corpTargetKeys);
                 for (NoticeTarget target : corpTargets) {
                     noticeIdSet.add(target.getNoticeId());
                 }
 
-                List<NoticeTarget> orgTargets =
-                    noticeTargetRepository.findByTargetTypeAndTargetKeyIn("ORG_UNIT", targetKeys);
-                for (NoticeTarget target : orgTargets) {
-                    noticeIdSet.add(target.getNoticeId());
+                if (!orgTargetKeys.isEmpty()) {
+                    List<NoticeTarget> orgTargets =
+                        noticeTargetRepository.findByTargetTypeAndTargetKeyIn("ORG_UNIT", orgTargetKeys);
+                    for (NoticeTarget target : orgTargets) {
+                        noticeIdSet.add(target.getNoticeId());
+                    }
                 }
 
                 if (noticeIdSet.isEmpty()) {
@@ -296,7 +314,7 @@ public class NoticeService {
         
         noticeBaseRepository.save(notice);
 
-        // ?? ? ?? ?? ???
+        
         noticeSendPlanRepository.findByNoticeId(noticeId).ifPresent(plan -> {
             if (NoticeSendPlan.SendMode.IMMEDIATE.equals(plan.getSendMode())) {
                 noticeMailService.sendNoticeEmail(noticeId);
@@ -304,7 +322,7 @@ public class NoticeService {
             }
         });
 
-        // ?? ? ??? ?? ???
+        
         // if (Boolean.TRUE.equals(notice.getCalendarRegister()) && notice.getCalendarEventAt() != null) {
         //     LocalDateTime eventStartAt = notice.getCalendarEventAt();
         //     LocalDateTime eventEndAt = eventStartAt.plusHours(1);
@@ -392,36 +410,18 @@ public class NoticeService {
         dto.setTargets(targets.stream()
                 .map(target -> {
                     String targetName = target.getTargetName();
-
-                    if ("ORG_UNIT".equals(target.getTargetType())) {
-                        OrganizationMaster org = null;
-                        if (target.getTargetKey() != null) {
-                            try {
-                                Long orgUnitId = Long.parseLong(target.getTargetKey());
-                                org = organizationMasterRepository.findById(orgUnitId).orElse(null);
-                            } catch (NumberFormatException ignored) {
-                                org = organizationMasterRepository.findByOrgUnitCode(target.getTargetKey()).orElse(null);
-                            }
-                        }
-
-                        if (org != null) {
-                            String orgName = org.getOrgUnitName();
-                            String corpName = corporationMasterRepository.findById(org.getCorpId())
-                                    .map(CorporationMaster::getCorpName)
-                                    .orElse(null);
-                            targetName = corpName != null ? corpName + " / " + orgName : orgName;
-                        }
-                    } else if ("CORP".equals(target.getTargetType())
-                            && (targetName == null || targetName.isBlank())
+                    if ("ORG_UNIT".equals(target.getTargetType())
                             && target.getTargetKey() != null) {
-                        try {
-                            Long corpId = Long.parseLong(target.getTargetKey());
-                            targetName = corporationMasterRepository.findById(corpId)
-                                    .map(CorporationMaster::getCorpName)
-                                    .orElse(targetName);
-                        } catch (NumberFormatException ignored) {
-                            // keep original targetName
-                        }
+                        targetName = resolveTargetName(
+                                target.getTargetType(),
+                                target.getTargetKey()
+                        );
+                    } else if ((targetName == null || targetName.isBlank())
+                            && target.getTargetKey() != null) {
+                        targetName = resolveTargetName(
+                                target.getTargetType(),
+                                target.getTargetKey()
+                        );
                     }
 
                     return NoticeResponseDto.TargetDto.builder()
@@ -434,6 +434,76 @@ public class NoticeService {
                 .collect(Collectors.toList()));
         
         return dto;
+    }
+
+    private String normalizeTargetKey(String targetType, String targetKey) {
+        if (targetType == null || targetKey == null || targetKey.isBlank()) {
+            return targetKey;
+        }
+
+        try {
+            Long.parseLong(targetKey);
+            return targetKey;
+        } catch (NumberFormatException ignored) {
+            // keep going for code lookups
+        }
+
+        if ("CORP".equals(targetType)) {
+            return corporationMasterRepository.findByCorpCode(targetKey)
+                    .map(CorporationMaster::getCorpId)
+                    .map(String::valueOf)
+                    .orElse(targetKey);
+        }
+
+        if ("ORG_UNIT".equals(targetType)) {
+            return organizationMasterRepository.findByOrgUnitCode(targetKey)
+                    .map(OrganizationMaster::getOrgUnitId)
+                    .map(String::valueOf)
+                    .orElse(targetKey);
+        }
+
+        return targetKey;
+    }
+
+    private String resolveTargetName(String targetType, String targetKey) {
+        if (targetType == null || targetKey == null || targetKey.isBlank()) {
+            return null;
+        }
+
+        if ("CORP".equals(targetType)) {
+            try {
+                Long corpId = Long.parseLong(targetKey);
+                return corporationMasterRepository.findById(corpId)
+                        .map(CorporationMaster::getCorpName)
+                        .orElse(null);
+            } catch (NumberFormatException ignored) {
+                return corporationMasterRepository.findByCorpCode(targetKey)
+                        .map(CorporationMaster::getCorpName)
+                        .orElse(null);
+            }
+        }
+
+        if ("ORG_UNIT".equals(targetType)) {
+            OrganizationMaster org = null;
+            try {
+                Long orgUnitId = Long.parseLong(targetKey);
+                org = organizationMasterRepository.findById(orgUnitId).orElse(null);
+            } catch (NumberFormatException ignored) {
+                org = organizationMasterRepository.findByOrgUnitCode(targetKey).orElse(null);
+            }
+
+            if (org == null) {
+                return null;
+            }
+
+            String orgName = org.getOrgUnitName();
+            String corpName = corporationMasterRepository.findById(org.getCorpId())
+                    .map(CorporationMaster::getCorpName)
+                    .orElse(null);
+            return corpName != null ? corpName + " / " + orgName : orgName;
+        }
+
+        return null;
     }
     
     /**

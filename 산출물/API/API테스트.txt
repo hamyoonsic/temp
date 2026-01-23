@@ -1,0 +1,17 @@
+# 1. 기본 조회 (최신순)
+curl "http://172.20.80.224:8080/api/notices?sort=createdAt,DESC"
+
+# 2. 상태 필터
+curl "http://172.20.80.224:8080/api/notices?status=PENDING&sort=createdAt,DESC"
+
+# 3. 법인 필터
+curl "http://172.20.80.224:8080/api/notices?corpId=1&sort=createdAt,DESC"
+
+# 4. 날짜 범위
+curl "http://172.20.80.224:8080/api/notices?startDate=2026-01-01&endDate=2026-01-31&sort=createdAt,DESC"
+
+# 5. 검색어
+curl "http://172.20.80.224:8080/api/notices?search=테스트&sort=createdAt,DESC"
+
+# 6. 복합 필터
+curl "http://172.20.80.224:8080/api/notices?status=PENDING&corpId=1&search=테스트&sort=createdAt,DESC"

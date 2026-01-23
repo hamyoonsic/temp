@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT 공지관리 시스템 WBS </title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Malgun Gothic',sans-serif;background:#f5f5f5;padding:20px;font-size:12px}
+.container{max-width:100%;background:white;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.header{border-bottom:3px solid #2c3e50;padding-bottom:20px;margin-bottom:20px}
+h1{font-size:26px;color:#2c3e50;margin-bottom:15px}
+.info{font-size:13px;line-height:1.8;color:#555;margin-bottom:10px}
+.box{padding:15px;margin-bottom:15px;border-radius:5px;font-size:12px}
+.version-box{background:#e9ecef;border-left:4px solid #6c757d}
+.milestone-box{background:#fff3cd;border-left:4px solid #ffc107}
+
+/* 필터 패널 */
+.filter-panel{
+    background:#f8f9fa;
+    border:1px solid #dee2e6;
+    border-radius:5px;
+    padding:15px;
+    margin-bottom:15px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+}
+.filter-panel label{
+    font-weight:600;
+    margin-right:5px;
+}
+.filter-panel select, .filter-panel input{
+    padding:5px 10px;
+    border:1px solid #ced4da;
+    border-radius:3px;
+    font-size:11px;
+}
+.filter-panel button{
+    padding:5px 15px;
+    background:#007bff;
+    color:white;
+    border:none;
+    border-radius:3px;
+    cursor:pointer;
+    font-weight:600;
+    font-size:11px;
+}
+.filter-panel button:hover{
+    background:#0056b3;
+}
+
+/* 진행률 박스 */
+.progress-box{
+    background:#e3f2fd;
+    border-left:4px solid #2196f3;
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+}
+.progress-item{
+    text-align:center;
+    min-width:150px;
+}
+.progress-label{
+    font-size:11px;
+    color:#555;
+    margin-bottom:5px;
+}
+.progress-value{
+    font-size:20px;
+    font-weight:700;
+    color:#1976d2;
+}
+
+/* 개선된 스크롤 처리 */
+.wrapper{
+    overflow-x:auto;
+    overflow-y:auto;
+    max-height:calc(100vh - 450px);
+    min-height:600px;
+    border:1px solid #ddd;
+    border-radius:5px;
+    position:relative;
+}
+
+table{
+    border-collapse:collapse;
+    width:100%;
+    min-width:2200px;
+    font-size:11.5px;
+}
+
+thead{
+    background:#2c3e50;
+    color:white;
+    position:sticky;
+    top:0;
+    z-index:10;
+}
+
+th,td{border:1px solid #ddd;padding:6px;text-align:center;vertical-align:middle;line-height:1.3}
+th{font-weight:600;padding:8px 6px;font-size:11px;color:white}
+tbody tr:hover{background:#f8f9fa}
+
+/* 편집 가능 셀 스타일 */
+td[contenteditable="true"]{
+    cursor:text;
+}
+td[contenteditable="true"]:hover{
+    background:#e3f2fd !important;
+}
+td[contenteditable="true"]:focus{
+    background:#fff9c4 !important;
+    outline:2px solid #2196f3;
+}
+
+/* 행 삭제 버튼 */
+.delete-btn{
+    background:#dc3545;
+    color:white;
+    border:none;
+    padding:2px 6px;
+    border-radius:3px;
+    cursor:pointer;
+    font-size:10px;
+}
+.delete-btn:hover{
+    background:#c82333;
+}
+
+.ms{background:#fff3cd!important;font-weight:700;text-align:center}
+.ms td{border-top:3px solid #ffc107;border-bottom:3px solid #ffc107;padding:10px;font-size:12px}
+.c1{width:50px;text-align:center;background:#ecf0f1;font-weight:600}
+.c2{width:70px;text-align:center;background:#e3f2fd;color:#1565c0;font-weight:600}
+.c3{width:80px;text-align:center}
+.c4{width:200px;text-align:left;font-weight:500}
+.c5{width:280px;text-align:left}
+.c6{width:280px;text-align:left}
+.c7{width:60px;text-align:center;font-size:9px}
+.c8{width:50px;text-align:center;font-weight:600}
+.c9{width:50px;text-align:center;font-weight:500}
+.c10{width:75px;text-align:center;font-size:11.5px}
+.c11{width:75px;text-align:center;font-size:11.5px}
+.c12{width:50px;text-align:center;font-weight:500}
+.c13{width:65px;text-align:center}
+.c14{width:130px;text-align:left;font-size:9px}
+.c15{width:150px;text-align:left;font-size:9px;color:#856404;background:#fffbf0}
+.c16{width:120px;text-align:left;font-size:11.5px;color:#6c757d}
+.c17{width:60px;text-align:center}
+.high{color:#dc3545}
+.mid{color:#fd7e14}
+.low{color:#28a745}
+
+/* 상태 색상 */
+.status-complete{background:#d4edda;color:#155724;font-weight:600}
+.status-progress{background:#fff3cd;color:#856404;font-weight:600}
+.status-pending{background:#f8f9fa;color:#6c757d}
+
+/* 스크롤 힌트 추가 */
+.scroll-hint{
+    background:#e3f2fd;
+    padding:8px;
+    text-align:center;
+    font-size:11px;
+    color:#1565c0;
+    border-radius:5px 5px 0 0;
+    margin-bottom:-1px;
+}
+
+/* 숨겨진 행 */
+tr.hidden{
+    display:none !important;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>IT 공지관리 시스템 WBS</h1>
+<div class="info">
+기간: 2025-12-19 ~ 2026-02-28 (주말/공휴일/연차 제외) | 환경: Java+PostgreSQL (개인노트북)<br>
+인력: 단독개발 | 산출물: 요구사항정의서, 설계서, 소스코드, 테스트시나리오, WIKI매뉴얼
+</div>
+</div>
+
+<!-- 진행률 표시 -->
+<div class="box progress-box">
+<div class="progress-item">
+<div class="progress-label">요구분석</div>
+<div class="progress-value" id="progress-analysis">0%</div>
+</div>
+<div class="progress-item">
+<div class="progress-label">설계</div>
+<div class="progress-value" id="progress-design">0%</div>
+</div>
+<div class="progress-item">
+<div class="progress-label">개발</div>
+<div class="progress-value" id="progress-develop">0%</div>
+</div>
+<div class="progress-item">
+<div class="progress-label">테스트</div>
+<div class="progress-value" id="progress-test">0%</div>
+</div>
+<div class="progress-item">
+<div class="progress-label">이행</div>
+<div class="progress-value" id="progress-deploy">0%</div>
+</div>
+<div class="progress-item">
+<div class="progress-label">전체 진행률</div>
+<div class="progress-value" id="progress-total">0%</div>
+</div>
+</div>
+
+<!-- 필터 패널 -->
+<div class="filter-panel">
+<div>
+<label>단계:</label>
+<select id="filterPhase" onchange="applyFilters()">
+<option value="">전체</option>
+<option value="요구분석">요구분석</option>
+<option value="설계">설계</option>
+<option value="개발">개발</option>
+<option value="테스트">테스트</option>
+<option value="이행">이행</option>
+</select>
+</div>
+<div>
+<label>상태:</label>
+<select id="filterStatus" onchange="applyFilters()">
+<option value="">전체</option>
+<option value="완료">완료</option>
+<option value="진행중">진행중</option>
+<option value="미착수">미착수</option>
+</select>
+</div>
+<div>
+<label>난이도:</label>
+<select id="filterDifficulty" onchange="applyFilters()">
+<option value="">전체</option>
+<option value="상">상</option>
+<option value="중">중</option>
+<option value="하">하</option>
+</select>
+</div>
+<div>
+<label>검색:</label>
+<input type="text" id="filterSearch" placeholder="작업명 검색..." onkeyup="applyFilters()" style="width:200px;">
+</div>
+<button onclick="clearFilters()">🔄 필터 초기화</button>
+</div>
+
+<div class="scroll-hint">
+    ✏️ 모든 셀 편집 가능 (클릭하여 수정) → 
+    <button onclick="addNewRow()" style="font-size:11.5px;margin-left:20px;padding:5px 15px;background:#28a745;color:white;border:none;border-radius:3px;cursor:pointer;font-weight:600;">행 추가</button>
+    <button onclick="saveAllData()" style="font-size:11.5px;margin-left:10px;padding:5px 15px;background:#3d7b9e;color:white;border:none;border-radius:3px;cursor:pointer;font-weight:600;">저장</button>
+    <button onclick="loadAllData()" style="font-size:11.5px;margin-left:10px;padding:5px 15px;background:#1f5c8d;color:white;border:none;border-radius:3px;cursor:pointer;font-weight:600;">불러오기</button>
+    <button onclick="exportToExcel()" style="font-size:11.5px;margin-left:10px;padding:5px 15px;background:#227958;color:white;border:none;border-radius:3px;cursor:pointer;font-weight:600;">Excel</button>
+</div>
+
+<div class="wrapper">
+<table id="wbsTable">
+<thead>
+<tr>
+<th class="c1">WBS</th>
+<th class="c2">단계</th>
+<th class="c3">영역</th>
+<th class="c4">세부작업</th>
+<th class="c5">범위/설명</th>
+<th class="c6">산정근거</th>
+<th class="c7">선행</th>
+<th class="c8">난이도</th>
+<th class="c9">예상공수</th>
+<th class="c10">시작일</th>
+<th class="c11">종료일</th>
+<th class="c12">총공수</th>
+<th class="c13">상태</th>
+<th class="c14">산출물</th>
+<th class="c15">리스크/의존성</th>
+<th class="c16">비고</th>
+<th class="c17">삭제</th>
+</tr>
+</thead>
+<tbody id="wbsBody">
+<tr data-phase="요구분석"><td class="c1">1</td><td class="c2">요구분석</td><td class="c3">전체</td><td class="c4">과제 이해</td><td class="c5">프로젝트 목적/범위, 기존 문제점 정리</td><td class="c6">제안서 검토(2h)+자료정리(2h)</td><td class="c7">-</td><td class="c8 mid">중</td><td class="c9">0.5</td><td class="c10">2025-12-19</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">프로젝트 정의서</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="요구분석"><td class="c1">1.1</td><td class="c2">요구분석</td><td class="c3">제안서</td><td class="c4">제안서 전체 리뷰</td><td class="c5">PDF 10p 정독, 4개 화면 기능 추출</td><td class="c6">정독(4h)+리스트업(2h)+질문(2h)</td><td class="c7">1</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-12-19</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">기능 체크리스트</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="요구분석"><td class="c1">1.2</td><td class="c2">요구분석</td><td class="c3">제안서</td><td class="c4">요구사항 항목 추출</td><td class="c5">30~40개 기능 항목 분해 및 목록화</td><td class="c6">매핑(4h)+우선순위(2h)+플래그(2h)</td><td class="c7">1.1</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-12-20</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">요구사항 목록</td><td class="c15">-</td><td class="c16">멀티셀렉트</td></tr>
+<tr data-phase="요구분석"><td class="c1">1.3</td><td class="c2">요구분석</td><td class="c3">현황</td><td class="c4">기존 채널 조사</td><td class="c5">현 메일/Teams/KZ이음/포털/GW 현황</td><td class="c6">문서조사(2h)+담당자(2h)+정리(2h)</td><td class="c7">-</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-12-27</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">현행 프로세스</td><td class="c15">⚠️담당자 협조</td><td class="c16">연락처</td></tr>
+<tr data-phase="요구분석"><td class="c1">1.4</td><td class="c2">요구분석</td><td class="c3">인터뷰</td><td class="c4">Q&A 준비</td><td class="c5">팀장 질의 15~20개 질문 목록</td><td class="c6">질문작성(3h)+우선순위(1h)</td><td class="c7">1.2</td><td class="c8 mid">중</td><td class="c9">0.5</td><td class="c10">2025-12-27</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">질문 리스트</td><td class="c15">⚠️팀장 일정</td><td class="c16">-</td></tr>
+<tr data-phase="요구분석"><td class="c1">1.5</td><td class="c2">요구분석</td><td class="c3">인터뷰</td><td class="c4">미팅 진행</td><td class="c5">Q&A, 녹화/녹취</td><td class="c6">조율(0.5h)+회의(1.5h)+메모(0.5h)</td><td class="c7">1.4</td><td class="c8 high">상</td><td class="c9">1</td><td class="c10">2025-12-30</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">녹취+메모</td><td class="c15">🔗팀장 필수</td><td class="c16">유선포함</td></tr>
+<tr data-phase="요구분석"><td class="c1">1.6</td><td class="c2">요구분석</td><td class="c3">회의록</td><td class="c4">회의록 작성</td><td class="c5">녹취/메일/유선 통합</td><td class="c6">전사(3h)+통합(2h)+정리(3h)</td><td class="c7">1.5</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-12-31</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">회의록 v1.0</td><td class="c15">-</td><td class="c16">감사용</td></tr>
+<tr data-phase="요구분석"><td class="c1">1.7</td><td class="c2">요구분석</td><td class="c3">요구정리</td><td class="c4">화면1~4 상세</td><td class="c5">등록/발송/캘린더/대시보드 매핑</td><td class="c6">분석(4h)+매핑(3h)+우선순위(1h)</td><td class="c7">1.2,1.5</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-01-02</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">화면별 요구정의</td><td class="c15">-</td><td class="c16">ASKME</td></tr>
+<tr data-phase="요구분석"><td class="c1">1.8</td><td class="c2">요구분석</td><td class="c3">확장</td><td class="c4">확장기능</td><td class="c5">완료공지, 알림채널</td><td class="c6">확장(2h)+Flow(2h)+연계(2h)</td><td class="c7">1.2,1.5</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-01-03</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">확장 요구정의</td><td class="c15">🔗타시스템</td><td class="c16">-</td></tr>
+<tr data-phase="요구분석"><td class="c1">1.9</td><td class="c2">요구분석</td><td class="c3">비기능</td><td class="c4">NFR 정의</td><td class="c5">성능/로그/권한/보안</td><td class="c6">도출(2h)+추가(2h)+정리(2h)</td><td class="c7">1.5</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-01-06</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">NFR 문서</td><td class="c15">-</td><td class="c16">재시도</td></tr>
+<tr data-phase="요구분석"><td class="c1">1.10</td><td class="c2">요구분석</td><td class="c3">정리</td><td class="c4">요구사항 확정</td><td class="c5">통합, 팀장 검토</td><td class="c6">통합(3h)+이력(1h)+준비(2h)</td><td class="c7">1.6-1.9</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-01-07</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">요구정의서 v1.0</td><td class="c15">🔗팀장 승인</td><td class="c16">설계기준</td></tr>
+<tr class="ms"><td colspan="16">M1: 2025-01-10 설계 완료 및 팀장 리뷰</td></tr>
+<tr data-phase="설계"><td class="c1">2</td><td class="c2">설계</td><td class="c3">전체</td><td class="c4">설계 계획</td><td class="c5">DB/화면/연동 범위</td><td class="c6">체크리스트(2h)+일정(2h)</td><td class="c7">1.10</td><td class="c8 mid">중</td><td class="c9">0.5</td><td class="c10">2025-01-08</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">설계 체크리스트</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="설계"><td class="c1">2.1</td><td class="c2">설계</td><td class="c3">도메인</td><td class="c4">도메인 모델</td><td class="c5">Notice/Recipient/History/Log</td><td class="c6">추출(3h)+분류(2h)+관계(3h)</td><td class="c7">1.10</td><td class="c8 high">상</td><td class="c9">1</td><td class="c10">2025-01-08</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">도메인 다이어그램</td><td class="c15">-</td><td class="c16">DDD</td></tr>
+<tr data-phase="설계"><td class="c1">2.2</td><td class="c2">설계</td><td class="c3">DB</td><td class="c4">공지/이력 테이블</td><td class="c5">기본정보, 상태, 이력</td><td class="c6">필드(3h)+정규화(2h)+제약(2h)+History(1h)</td><td class="c7">2.1</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-01-09</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">ERD(공지/이력)</td><td class="c15">-</td><td class="c16">PG타입</td></tr>
+<tr data-phase="설계"><td class="c1">2.3</td><td class="c2">설계</td><td class="c3">DB</td><td class="c4">수신/캘린더 테이블</td><td class="c5">수신대상, 캘린더, 해시태그</td><td class="c6">Graph(3h)+조직도(2h)+태그(2h)+연계(1h)</td><td class="c7">2.1</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-01-10</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">ERD(수신/캘린더)</td><td class="c15">⚠️자원ID</td><td class="c16">-</td></tr>
+<tr data-phase="설계"><td class="c1">2.4</td><td class="c2">설계</td><td class="c3">DB</td><td class="c4">인덱스/제약</td><td class="c5">PK/FK/Index, Unique</td><td class="c6">패턴(2h)+인덱스(2h)+제약(2h)</td><td class="c7">2.2,2.3</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-01-13</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">DB설계서</td><td class="c15">-</td><td class="c16">성능</td></tr>
+<tr data-phase="설계"><td class="c1">2.5</td><td class="c2">설계</td><td class="c3">화면</td><td class="c4">화면1 등록</td><td class="c5">UI, 멀티셀렉트, 해시태그</td><td class="c6">스케치(2h)+검증(2h)+사용성(2h)+에디터(2h)</td><td class="c7">1.7</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-01-14</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">화면설계(등록)</td><td class="c15">-</td><td class="c16">ASKME</td></tr>
+<tr data-phase="설계"><td class="c1">2.6</td><td class="c2">설계</td><td class="c3">화면</td><td class="c4">화면2 발송</td><td class="c5">발송관리, 승인/반려</td><td class="c6">레이아웃(2h)+플로우(3h)+필터(1h)</td><td class="c7">1.7</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-01-15</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">화면설계(발송)</td><td class="c15">-</td><td class="c16">성능</td></tr>
+<tr data-phase="설계"><td class="c1">2.7</td><td class="c2">설계</td><td class="c3">화면</td><td class="c4">화면3 캘린더</td><td class="c5">월/주/일 View, 색상</td><td class="c6">레이아웃(2h)+라이브러리(2h)+이벤트(2h)</td><td class="c7">1.7</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-01-16</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">화면설계(캘린더)</td><td class="c15">-</td><td class="c16">FullCalendar</td></tr>
+<tr data-phase="설계"><td class="c1">2.8</td><td class="c2">설계</td><td class="c3">화면</td><td class="c4">화면4 대시보드</td><td class="c5">카드, 통계, 차트</td><td class="c6">위젯(2h)+차트(2h)+집계(2h)</td><td class="c7">1.7</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-01-17</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">화면설계(대시보드)</td><td class="c15">-</td><td class="c16">Chart.js</td></tr>
+<tr data-phase="설계"><td class="c1">2.9</td><td class="c2">설계</td><td class="c3">플로우</td><td class="c4">상태 전이</td><td class="c5">작성→승인→발송→완료</td><td class="c6">승인(2h)+다이어그램(3h)+History(1h)</td><td class="c7">1.7,1.8</td><td class="c8 high">상</td><td class="c9">1</td><td class="c10">2025-01-20</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">상태전이도</td><td class="c15">-</td><td class="c16">재승인</td></tr>
+<tr data-phase="설계"><td class="c1">2.10</td><td class="c2">설계</td><td class="c3">연동</td><td class="c4">Graph 권한</td><td class="c5">Azure AD 앱 등록</td><td class="c6">앱등록(1h)+승인대기(4h)+테스트(1h)</td><td class="c7">1.6,1.8</td><td class="c8 high">상</td><td class="c9">1</td><td class="c10">2025-01-21</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">앱등록 정보</td><td class="c15">⚠️관리자 승인</td><td class="c16">사전협의</td></tr>
+<tr data-phase="설계"><td class="c1">2.11</td><td class="c2">설계</td><td class="c3">연동</td><td class="c4">Graph API 설계</td><td class="c5">메일, 캘린더 API</td><td class="c6">문서(3h)+제약(2h)+에러(2h)</td><td class="c7">2.10</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-01-22</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">연동설계서</td><td class="c15">-</td><td class="c16">토큰갱신</td></tr>
+<tr data-phase="설계"><td class="c1">2.12</td><td class="c2">설계</td><td class="c3">템플릿</td><td class="c4">메일 템플릿</td><td class="c5">유형/중요도 포함 본문</td><td class="c6">포맷(1h)+관례(1h)+HTML(3h)</td><td class="c7">1.7</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-01-23</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">템플릿 설계서</td><td class="c15">-</td><td class="c16">유형별</td></tr>
+<tr data-phase="설계"><td class="c1">2.13</td><td class="c2">설계</td><td class="c3">테스트</td><td class="c4">테스트 전략</td><td class="c5">단위/통합, 시나리오</td><td class="c6">플로우(2h)+케이스(2h)+데이터(2h)</td><td class="c7">1.10</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-01-24</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">테스트 전략</td><td class="c15">-</td><td class="c16">M1전</td></tr>
+<tr class="ms"><td colspan="16">M2: 2025-01-31 핵심 기능(공지등록/발송) 개발 완료</td></tr>
+<tr data-phase="개발"><td class="c1">3</td><td class="c2">개발</td><td class="c3">공통</td><td class="c4">환경 세팅</td><td class="c5">Spring Boot+PostgreSQL 구축</td><td class="c6">프로젝트(1h)+DB(1h)+검증(2h)</td><td class="c7">2.2-2.4</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-01-27</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">프로젝트 뼈대</td><td class="c15">-</td><td class="c16">개인노트북</td></tr>
+<tr data-phase="개발"><td class="c1">3.1</td><td class="c2">개발</td><td class="c3">공통</td><td class="c4">도메인/Repository</td><td class="c5">JPA 엔티티, Repository</td><td class="c6">매핑(6h)+인터페이스(3h)+테스트(3h)</td><td class="c7">3,2.2,2.3</td><td class="c8 high">상</td><td class="c9">2</td><td class="c10">2025-01-28</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">도메인 코드</td><td class="c15">-</td><td class="c16">JPA연관</td></tr>
+<tr data-phase="개발"><td class="c1">3.2</td><td class="c2">개발</td><td class="c3">공통</td><td class="c4">공통 모듈</td><td class="c5">예외처리, 로깅, 응답포맷</td><td class="c6">핸들러(2h)+DTO(1h)+로깅(2h)+테스트(1h)</td><td class="c7">3</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-01-30</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">공통 모듈</td><td class="c15">-</td><td class="c16">운영로그</td></tr>
+<tr data-phase="개발"><td class="c1">3.3</td><td class="c2">개발</td><td class="c3">공지등록</td><td class="c4">CRUD API</td><td class="c5">생성/수정/조회/목록 API</td><td class="c6">Controller(3h)+Service(4h)+검증(2h)+테스트(3h)</td><td class="c7">3.1</td><td class="c8 high">상</td><td class="c9">2</td><td class="c10">2025-01-31</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">공지 API</td><td class="c15">-</td><td class="c16">Swagger</td></tr>
+<tr data-phase="개발"><td class="c1">3.4</td><td class="c2">개발</td><td class="c3">공지등록</td><td class="c4">ASKME 연동</td><td class="c5">서비스 목록 조회 API</td><td class="c6">API연동(3h) or 코드테이블(2h)+UI(2h)</td><td class="c7">3.3</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-02-03</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">서비스목록 API</td><td class="c15">🔗ASKME 협조</td><td class="c16">대체방안</td></tr>
+<tr data-phase="개발"><td class="c1">3.5</td><td class="c2">개발</td><td class="c3">공지등록</td><td class="c4">조직도 연동</td><td class="c5">법인/부서 멀티셀렉트</td><td class="c6">API연동(4h)+트리변환(2h)+로직(2h)</td><td class="c7">3.3,2.5</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-02-04</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">조직도 연동</td><td class="c15">🔗조직도 API</td><td class="c16">캐싱</td></tr>
+<tr data-phase="개발"><td class="c1">3.6</td><td class="c2">개발</td><td class="c3">공지등록</td><td class="c4">해시태그</td><td class="c5">입력, 자동완성, 통계</td><td class="c6">UI(2h)+API(2h)+자동완성(2h)+집계(2h)</td><td class="c7">3.3,2.5</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-02-05</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">해시태그 기능</td><td class="c15">-</td><td class="c16">대시보드</td></tr>
+<tr data-phase="개발"><td class="c1">3.7</td><td class="c2">개발</td><td class="c3">공지등록</td><td class="c4">일정/완료 플래그</td><td class="c5">시작/종료일시, 완료 체크</td><td class="c6">UI(1h)+로직(1h)+연계(2h)</td><td class="c7">3.3,2.5</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-02-06</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">일정 입력</td><td class="c15">-</td><td class="c16">완료공지</td></tr>
+<tr data-phase="개발"><td class="c1">3.8</td><td class="c2">개발</td><td class="c3">공지등록</td><td class="c4">메일 미리보기</td><td class="c5">템플릿 미리보기, 에디터</td><td class="c6">미리보기(3h)+에디터연동(3h)+테스트(2h)</td><td class="c7">3.3,2.12</td><td class="c8 high">상</td><td class="c9">2</td><td class="c10">2025-02-07</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">미리보기 기능</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.9</td><td class="c2">개발</td><td class="c3">발송/승인</td><td class="c4">승인요청 트리거</td><td class="c5">등록 시 승인요청 메일</td><td class="c6">트리거(3h)+메일(2h)+테스트(1h)</td><td class="c7">3.3,2.11</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-02-10</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">승인요청 기능</td><td class="c15">-</td><td class="c16">Graph API</td></tr>
+<tr data-phase="개발"><td class="c1">3.10</td><td class="c2">개발</td><td class="c3">발송/승인</td><td class="c4">발송관리 목록</td><td class="c5">상태별 목록/검색</td><td class="c6">목록API(3h)+검색(2h)+필터(2h)</td><td class="c7">3.1,2.6</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-02-11</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">발송관리 화면</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.11</td><td class="c2">개발</td><td class="c3">발송/승인</td><td class="c4">승인 상세/처리</td><td class="c5">상세, 승인/반려, 코멘트</td><td class="c6">상세(2h)+처리로직(4h)+이력(2h)</td><td class="c7">3.10,2.9</td><td class="c8 high">상</td><td class="c9">2</td><td class="c10">2025-02-12</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">승인 처리</td><td class="c15">-</td><td class="c16">통제핵심</td></tr>
+<tr data-phase="개발"><td class="c1">3.12</td><td class="c2">개발</td><td class="c3">발송/상태</td><td class="c4">상태 전이</td><td class="c5">승인→발송→완료 전이 로직</td><td class="c6">전이로직(4h)+제약조건(2h)+테스트(2h)</td><td class="c7">3.11,2.9</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-02-14</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">상태 전이 코드</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.13</td><td class="c2">개발</td><td class="c3">발송/History</td><td class="c4">History 관리</td><td class="c5">발송로그, 상태변경 이력</td><td class="c6">로그저장(3h)+조회(2h)+필터(2h)</td><td class="c7">3.10,3.12</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-02-17</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">History 기능</td><td class="c15">-</td><td class="c16">트러블슈팅</td></tr>
+<tr data-phase="개발"><td class="c1">3.14</td><td class="c2">개발</td><td class="c3">발송엔진</td><td class="c4">정기발송</td><td class="c5">예약 시간 일괄 발송</td><td class="c6">스케줄러(4h)+배치(4h)+테스트(2h)</td><td class="c7">3.12,2.11</td><td class="c8 high">상</td><td class="c9">2</td><td class="c10">2025-02-18</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">정기발송 모듈</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.15</td><td class="c2">개발</td><td class="c3">발송엔진</td><td class="c4">즉시발송</td><td class="c5">긴급공지 즉시 발송</td><td class="c6">분기처리(2h)+로직(3h)+UI(1h)</td><td class="c7">3.12,2.11</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-02-20</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">즉시발송 모듈</td><td class="c15">-</td><td class="c16">중요</td></tr>
+<tr data-phase="개발"><td class="c1">3.16</td><td class="c2">개발</td><td class="c3">발송엔진</td><td class="c4">수신자 매핑</td><td class="c5">법인/부서→메일주소 매핑</td><td class="c6">매핑로직(4h)+조직도연동(3h)+테스트(2h)</td><td class="c7">3.5,2.3</td><td class="c8 high">상</td><td class="c9">2</td><td class="c10">2025-02-21</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">수신자 매핑</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.17</td><td class="c2">개발</td><td class="c3">발송엔진</td><td class="c4">재시도 로직</td><td class="c5">실패 시 재시도/포기</td><td class="c6">재시도(3h)+에러분류(2h)+저장(2h)</td><td class="c7">3.14,3.15</td><td class="c8 high">상</td><td class="c9">1.5</td><td class="c10">2025-02-25</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">재시도 모듈</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.18</td><td class="c2">개발</td><td class="c3">GraphAPI</td><td class="c4">메일 발송 연동</td><td class="c5">Graph API 메일 발송</td><td class="c6">API구현(4h)+토큰관리(3h)+테스트(3h)</td><td class="c7">2.11,3.14</td><td class="c8 high">상</td><td class="c9">2.5</td><td class="c10">2025-02-26</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">메일발송 코드</td><td class="c15">⚠️권한 확인</td><td class="c16">토큰갱신</td></tr>
+<tr data-phase="개발"><td class="c1">3.19</td><td class="c2">개발</td><td class="c3">GraphAPI</td><td class="c4">캘린더 등록</td><td class="c5">Outlook 자원 캘린더 등록</td><td class="c6">API구현(4h)+자원ID(2h)+테스트(2h)</td><td class="c7">2.11,3.18</td><td class="c8 high">상</td><td class="c9">2</td><td class="c10">2025-02-28</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">캘린더 연동</td><td class="c15">⚠️자원ID 확인</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.20</td><td class="c2">개발</td><td class="c3">캘린더</td><td class="c4">캘린더 UI</td><td class="c5">월/주/일 View, 색상, more</td><td class="c6">UI구현(6h)+이벤트(3h)+테스트(3h)</td><td class="c7">2.7,3.19</td><td class="c8 mid">중</td><td class="c9">2</td><td class="c10">2025-03-03</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">캘린더 화면</td><td class="c15">-</td><td class="c16">FullCalendar</td></tr>
+<tr data-phase="개발"><td class="c1">3.21</td><td class="c2">개발</td><td class="c3">캘린더</td><td class="c4">보조 리스트</td><td class="c5">최근공지/점검일정 목록</td><td class="c6">필터링(2h)+UI(2h)+연동(2h)</td><td class="c7">3.20,2.7</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-03-05</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">보조 리스트</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.22</td><td class="c2">개발</td><td class="c3">대시보드</td><td class="c4">카드/통계</td><td class="c5">상태별 카드, 통계 그래프</td><td class="c6">집계쿼리(4h)+차트(3h)+캐싱(2h)</td><td class="c7">2.8,3.13</td><td class="c8 high">상</td><td class="c9">2</td><td class="c10">2025-03-06</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">대시보드 위젯</td><td class="c15">-</td><td class="c16">Chart.js</td></tr>
+<tr data-phase="개발"><td class="c1">3.23</td><td class="c2">개발</td><td class="c3">대시보드</td><td class="c4">부서별 수신현황</td><td class="c5">부서별 수신 집계 차트</td><td class="c6">조인쿼리(3h)+차트(2h)+테스트(2h)</td><td class="c7">3.16,3.22</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-03-10</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">수신현황 통계</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.24</td><td class="c2">개발</td><td class="c3">완료공지</td><td class="c4">완료공지 등록</td><td class="c5">장애/점검 완료 입력 화면</td><td class="c6">UI(3h)+로직(2h)+테스트(2h)</td><td class="c7">3.7,2.9</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-03-11</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">완료공지 화면</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.25</td><td class="c2">개발</td><td class="c3">완료공지</td><td class="c4">상태 색상 변경</td><td class="c5">완료 시 빨강→녹색 전환</td><td class="c6">상태변경(2h)+이벤트(2h)+반영(2h)</td><td class="c7">3.24,3.20,3.22</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-03-12</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">완료 상태 반영</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.26</td><td class="c2">개발</td><td class="c3">알림채널</td><td class="c4">알림 API Spec</td><td class="c5">KZ이음/포털/GW용 API 규격</td><td class="c6">표준정의(3h)+JSON샘플(2h)+문서(2h)</td><td class="c7">1.8,2.11</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-03-13</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">알림 API Spec</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="개발"><td class="c1">3.27</td><td class="c2">개발</td><td class="c3">알림채널</td><td class="c4">연계 가이드</td><td class="c5">서비스별 샘플/가이드 문서</td><td class="c6">샘플작성(3h)+에러케이스(2h)+정리(2h)</td><td class="c7">3.26</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-03-14</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">연계 가이드</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr class="ms"><td colspan="16">M3: 2025-02-14 전체 기능 개발 완료</td></tr>
+<tr data-phase="테스트"><td class="c1">4</td><td class="c2">테스트</td><td class="c3">단위</td><td class="c4">단위 테스트 작성</td><td class="c5">도메인/서비스/엔진 단위 테스트</td><td class="c6">작성(6h)+실행(3h)+수정(3h)</td><td class="c7">3.1-3.27</td><td class="c8 mid">중</td><td class="c9">2</td><td class="c10">2025-03-17</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">단위 테스트 코드</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="테스트"><td class="c1">4.1</td><td class="c2">테스트</td><td class="c3">단위</td><td class="c4">단위 테스트 실행</td><td class="c5">테스트 수행 후 실패 케이스 정리</td><td class="c6">실행(2h)+결과정리(2h)+리포트(2h)</td><td class="c7">4</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-03-19</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">단위 테스트 리포트</td><td class="c15">-</td><td class="c16">익일 리뷰</td></tr>
+<tr data-phase="테스트"><td class="c1">4.2</td><td class="c2">테스트</td><td class="c3">통합</td><td class="c4">통합 시나리오 상세화</td><td class="c5">등록→승인→발송→완료 전체 플로우 시나리오</td><td class="c6">정상플로우(2h)+예외케이스(3h)+데이터준비(2h)</td><td class="c7">2.13</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-03-20</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">통합 시나리오 문서</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="테스트"><td class="c1">4.3</td><td class="c2">테스트</td><td class="c3">통합</td><td class="c4">통합 테스트 수행</td><td class="c5">화면 연동 전체 시나리오 테스트, 버그 리스팅</td><td class="c6">정상케이스(4h)+예외케이스(4h)+버그정리(2h)</td><td class="c7">4.2,3.3-3.27</td><td class="c8 high">상</td><td class="c9">2</td><td class="c10">2025-03-21</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">통합 테스트 결과</td><td class="c15">-</td><td class="c16">체크리스트</td></tr>
+<tr data-phase="테스트"><td class="c1">4.4</td><td class="c2">테스트</td><td class="c3">결함수정</td><td class="c4">결함 분석 및 수정</td><td class="c5">주요 결함 우선순위, 코드 수정, 재테스트</td><td class="c6">분석(3h)+수정(6h)+재테스트(3h)</td><td class="c7">4.3</td><td class="c8 high">상</td><td class="c9">2</td><td class="c10">2025-03-25</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">수정 내역/패치</td><td class="c15">-</td><td class="c16">버그 리포트</td></tr>
+<tr class="ms"><td colspan="16">M4: 2025-02-24 통합테스트 완료 및 최종 리뷰</td></tr>
+<tr data-phase="이행"><td class="c1">5</td><td class="c2">이행</td><td class="c3">문서화</td><td class="c4">운영 관점 정리</td><td class="c5">운영 담당자 관점 버튼/화면/로그/권한 정리</td><td class="c6">운영포인트(3h)+권한체계(2h)+정리(2h)</td><td class="c7">4.4</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-03-27</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">운영 포인트 목록</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="이행"><td class="c1">5.1</td><td class="c2">이행</td><td class="c3">문서화</td><td class="c4">사용자 매뉴얼(WIKI)</td><td class="c5">공지등록/승인/발송/캘린더/대시보드 사용법</td><td class="c6">화면캡처(4h)+단계별설명(6h)+정리(3h)</td><td class="c7">3.3-3.25</td><td class="c8 mid">중</td><td class="c9">2</td><td class="c10">2025-03-28</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">WIKI 사용자 매뉴얼</td><td class="c15">-</td><td class="c16">화면캡처</td></tr>
+<tr data-phase="이행"><td class="c1">5.2</td><td class="c2">이행</td><td class="c3">문서화</td><td class="c4">관리자/운영 가이드</td><td class="c5">권한관리, 장애대응, 로그조회, 재시도</td><td class="c6">권한관리(2h)+장애대응(3h)+로그가이드(2h)</td><td class="c7">5,3.13,3.17</td><td class="c8 mid">중</td><td class="c9">1.5</td><td class="c10">2025-04-01</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">운영 가이드</td><td class="c15">-</td><td class="c16">트러블슈팅</td></tr>
+<tr data-phase="이행"><td class="c1">5.3</td><td class="c2">이행</td><td class="c3">정리</td><td class="c4">잔여이슈/백로그</td><td class="c5">미뤄진 항목/향후 개선사항 목록화</td><td class="c6">TODO정리(2h)+우선순위(2h)+문서화(2h)</td><td class="c7">4.4</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-04-02</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">백로그 리스트</td><td class="c15">-</td><td class="c16">-</td></tr>
+<tr data-phase="이행"><td class="c1">5.4</td><td class="c2">이행</td><td class="c3">정리</td><td class="c4">최종 산출물 패키징</td><td class="c5">요구사항/설계/코드/테스트/매뉴얼 경로 정리</td><td class="c6">문서경로(2h)+소스정리(2h)+README(2h)</td><td class="c7">5.1-5.3</td><td class="c8 mid">중</td><td class="c9">1</td><td class="c10">2025-04-03</td><td class="c11"></td><td class="c12"></td><td class="c13">미착수</td><td class="c14">최종 산출물 목록</td><td class="c15">-</td><td class="c16">인수인계</td></tr>
+</tbody>
+</table>
+</div>
+
+<br>
+<div style="margin-top:20px;padding:15px;background:#fff3cd;border-left:4px solid#ffc107;border-radius:5px;font-size:11px">
+<strong>📌 사용 방법</strong><br>
+- <strong>✏️ 전체 편집:</strong> 모든 셀 클릭하여 수정 가능<br>
+- <strong>➕ 행 추가:</strong> 테이블 맨 아래에 새 행 추가<br>
+- <strong>🗑️ 행 삭제:</strong> 각 행의 "삭제" 버튼 클릭<br>
+- <strong>🔍 필터:</strong> 단계/상태/난이도/검색어로 행 필터링<br>
+- <strong>💾 저장/불러오기:</strong> LocalStorage에 전체 데이터 저장<br>
+- <strong>📊 Excel:</strong> CSV 파일로 다운로드
+</div>
+
+<div style="margin-top:20px;text-align:center;padding:20px;border-top:2px solid #e0e0e0">
+<div style="font-size:11px;color:#666">
+IT 공지관리 웹시스템 WBS (완전판)<br>
+작성일: 2025-12-19 | 작성자: 함윤식 | 총 63개 작업
+</div>
+</div>
+</div>
+
+<script>
+// 공휴일
+const holidays = ['2025-12-22','2025-12-23','2025-12-25','2025-12-26','2026-01-01','2026-01-28','2026-01-29','2026-01-30'];
+
+function parseDate(dateStr) {
+    const parts = dateStr.split('-');
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function formatDate(date) {
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+function isWorkingDay(date) {
+    const day = date.getDay();
+    if (day === 0 || day === 6) return false;
+    if (holidays.includes(formatDate(date))) return false;
+    return true;
+}
+
+function calculateWorkingDays(startDate, endDate) {
+    let current = new Date(startDate);
+    let end = new Date(endDate);
+    let workingDays = 0;
+    while (current <= end) {
+        if (isWorkingDay(current)) workingDays++;
+        current.setDate(current.getDate() + 1);
+    }
+    return workingDays;
+}
+
+// 모든 tbody의 td를 편집 가능하게 (삭제 버튼 제외)
+function makeAllCellsEditable() {
+    const rows = document.querySelectorAll('#wbsTable tbody tr:not(.ms)');
+    
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td:not(.c17)');
+        cells.forEach(cell => {
+            cell.contentEditable = true;
+            
+            cell.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.blur();
+                }
+            });
+            
+            cell.addEventListener('blur', function() {
+                calculateProgress();
+                autoCalculate();
+            });
+        });
+        
+        // 삭제 버튼 추가
+        addDeleteButton(row);
+    });
+}
+
+// 삭제 버튼 추가
+function addDeleteButton(row) {
+    // 이미 삭제 버튼이 있으면 추가하지 않음
+    if (row.querySelector('.c17')) return;
+    
+    const deleteCell = document.createElement('td');
+    deleteCell.className = 'c17';
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.textContent = '🗑️';
+    deleteBtn.onclick = function() {
+        if (confirm('이 행을 삭제하시겠습니까?')) {
+            row.remove();
+            calculateProgress();
+        }
+    };
+    deleteCell.appendChild(deleteBtn);
+    row.appendChild(deleteCell);
+}
+
+// 새 행 추가
+function addNewRow() {
+    const tbody = document.getElementById('wbsBody');
+    const newRow = document.createElement('tr');
+    newRow.setAttribute('data-phase', '요구분석');
+    newRow.innerHTML = `
+        <td class="c1" contenteditable="true"></td>
+        <td class="c2" contenteditable="true">요구분석</td>
+        <td class="c3" contenteditable="true"></td>
+        <td class="c4" contenteditable="true"></td>
+        <td class="c5" contenteditable="true"></td>
+        <td class="c6" contenteditable="true"></td>
+        <td class="c7" contenteditable="true"></td>
+        <td class="c8 mid" contenteditable="true">중</td>
+        <td class="c9" contenteditable="true"></td>
+        <td class="c10" contenteditable="true"></td>
+        <td class="c11" contenteditable="true"></td>
+        <td class="c12" contenteditable="true"></td>
+        <td class="c13" contenteditable="true">미착수</td>
+        <td class="c14" contenteditable="true"></td>
+        <td class="c15" contenteditable="true"></td>
+        <td class="c16" contenteditable="true"></td>
+    `;
+    tbody.appendChild(newRow);
+    addDeleteButton(newRow);
+    makeRowEditable(newRow);
+    alert('✅ 새 행이 추가되었습니다!');
+}
+
+// 단일 행을 편집 가능하게
+function makeRowEditable(row) {
+    const cells = row.querySelectorAll('td:not(.c17)');
+    cells.forEach(cell => {
+        cell.contentEditable = true;
+        cell.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.blur();
+            }
+        });
+        cell.addEventListener('blur', function() {
+            calculateProgress();
+            autoCalculate();
+        });
+    });
+}
+
+// 자동 계산
+function autoCalculate() {
+    const rows = document.querySelectorAll('#wbsTable tbody tr:not(.ms)');
+    
+    rows.forEach(row => {
+        const statusCell = row.querySelector('.c13');
+        const startDateCell = row.querySelector('.c10');
+        const endDateCell = row.querySelector('.c11');
+        const actualEffortCell = row.querySelector('.c12');
+        
+        if (!statusCell || !startDateCell || !endDateCell || !actualEffortCell) return;
+        
+        const status = statusCell.textContent.trim();
+        const startDateStr = startDateCell.textContent.trim();
+        const endDateStr = endDateCell.textContent.trim();
+        
+        if (status === '완료') {
+            statusCell.className = 'c13 status-complete';
+            if (startDateStr && endDateStr) {
+                const startDate = parseDate(startDateStr);
+                const endDate = parseDate(endDateStr);
+                const actualDays = calculateWorkingDays(startDate, endDate);
+                actualEffortCell.textContent = actualDays;
+            }
+        } else if (status === '진행중') {
+            statusCell.className = 'c13 status-progress';
+        } else {
+            statusCell.className = 'c13 status-pending';
+        }
+    });
+}
+
+// 진행률 계산
+function calculateProgress() {
+    const phases = {
+        '요구분석': { total: 0, completed: 0 },
+        '설계': { total: 0, completed: 0 },
+        '개발': { total: 0, completed: 0 },
+        '테스트': { total: 0, completed: 0 },
+        '이행': { total: 0, completed: 0 }
+    };
+    
+    const rows = document.querySelectorAll('#wbsTable tbody tr:not(.ms):not(.hidden)');
+    rows.forEach(row => {
+        const phase = row.getAttribute('data-phase');
+        const statusCell = row.querySelector('.c13');
+        if (!phase || !statusCell) return;
+        const status = statusCell.textContent.trim();
+        if (phases[phase]) {
+            phases[phase].total++;
+            if (status === '완료') phases[phase].completed++;
+        }
+    });
+    
+    let totalTasks = 0, totalCompleted = 0;
+    Object.keys(phases).forEach(phase => {
+        const data = phases[phase];
+        const percentage = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+        totalTasks += data.total;
+        totalCompleted += data.completed;
+        
+        let elementId = '';
+        switch(phase) {
+            case '요구분석': elementId = 'progress-analysis'; break;
+            case '설계': elementId = 'progress-design'; break;
+            case '개발': elementId = 'progress-develop'; break;
+            case '테스트': elementId = 'progress-test'; break;
+            case '이행': elementId = 'progress-deploy'; break;
+        }
+        
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = percentage + '%';
+            element.style.color = percentage === 100 ? '#4caf50' : (percentage > 0 ? '#ff9800' : '#1976d2');
+        }
+    });
+    
+    const totalPercentage = totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0;
+    const totalElement = document.getElementById('progress-total');
+    if (totalElement) {
+        totalElement.textContent = totalPercentage + '%';
+        totalElement.style.color = totalPercentage === 100 ? '#4caf50' : (totalPercentage > 0 ? '#ff9800' : '#1976d2');
+        totalElement.style.fontSize = '24px';
+    }
+}
+
+// 필터 적용
+function applyFilters() {
+    const phaseFilter = document.getElementById('filterPhase').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+    const difficultyFilter = document.getElementById('filterDifficulty').value;
+    const searchFilter = document.getElementById('filterSearch').value.toLowerCase();
+    
+    const rows = document.querySelectorAll('#wbsTable tbody tr:not(.ms)');
+    
+    rows.forEach(row => {
+        let show = true;
+        
+        // 단계 필터
+        if (phaseFilter && row.getAttribute('data-phase') !== phaseFilter) {
+            show = false;
+        }
+        
+        // 상태 필터
+        if (statusFilter) {
+            const statusCell = row.querySelector('.c13');
+            if (statusCell && statusCell.textContent.trim() !== statusFilter) {
+                show = false;
+            }
+        }
+        
+        // 난이도 필터
+        if (difficultyFilter) {
+            const diffCell = row.querySelector('.c8');
+            if (diffCell && diffCell.textContent.trim() !== difficultyFilter) {
+                show = false;
+            }
+        }
+        
+        // 검색 필터
+        if (searchFilter) {
+            const taskCell = row.querySelector('.c4');
+            if (taskCell && !taskCell.textContent.toLowerCase().includes(searchFilter)) {
+                show = false;
+            }
+        }
+        
+        if (show) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
+        }
+    });
+    
+    calculateProgress();
+}
+
+// 필터 초기화
+function clearFilters() {
+    document.getElementById('filterPhase').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterDifficulty').value = '';
+    document.getElementById('filterSearch').value = '';
+    applyFilters();
+}
+
+// 전체 데이터 저장
+function saveAllData() {
+     // 현재 화면의 전체 HTML(수정된 테이블 내용 포함)
+    const updatedHTML = document.documentElement.outerHTML;
+
+    // Blob 생성
+    const blob = new Blob([updatedHTML], { type: "text/html;charset=utf-8" });
+
+    // 다운로드 링크 생성
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+
+    // 파일명: 날짜 기반 자동 부여
+    const fileName = "WBS_updated_" + new Date().toISOString().slice(0,10) + ".html";
+    link.download = fileName;
+
+    // 다운로드 트리거
+    link.click();
+
+    // 메모리 해제
+    URL.revokeObjectURL(link.href);
+    alert('✅ 저장되었습니다!\n' + new Date().toLocaleString('ko-KR'));
+}
+
+// 전체 데이터 불러오기
+function loadAllData() {
+    const savedData = localStorage.getItem('wbs_complete_v1.0');
+    
+    if (!savedData) {
+        alert('⚠️ 저장된 데이터가 없습니다.');
+        return;
+    }
+    
+    try {
+        const data = JSON.parse(savedData);
+        const tbody = document.getElementById('wbsBody');
+        tbody.innerHTML = data.html;
+        
+        makeAllCellsEditable();
+        calculateProgress();
+        autoCalculate();
+        
+        alert('✅ 불러오기 완료!\n저장 시간: ' + new Date(data.timestamp).toLocaleString('ko-KR'));
+    } catch(e) {
+        alert('❌ 데이터 로딩 실패: ' + e.message);
+    }
+}
+
+// Excel 다운로드
+function exportToExcel() {
+    const rows = document.querySelectorAll('#wbsTable tr:not(.hidden)');
+    let csv = '\uFEFF';
+    
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('th:not(.c17), td:not(.c17)');
+        const rowData = [];
+        cells.forEach(cell => {
+            let text = cell.textContent.trim();
+            if (text.includes(',') || text.includes('\n')) {
+                text = '"' + text.replace(/"/g, '""') + '"';
+            }
+            rowData.push(text);
+        });
+        csv += rowData.join(',') + '\n';
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'WBS_' + new Date().toISOString().split('T')[0] + '.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    alert('✅ CSV 파일이 다운로드되었습니다!');
+}
+
+// 초기화
+window.addEventListener('DOMContentLoaded', function() {
+    makeAllCellsEditable();
+    calculateProgress();
+});
+</script>
+</body>
+</html>

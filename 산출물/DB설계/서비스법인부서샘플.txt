@@ -1,0 +1,260 @@
+-- =====================================================
+-- NoticeGate v1.4 - 샘플 데이터
+-- =====================================================
+
+BEGIN;
+
+-- =====================================================
+-- 1) 서비스 마스터
+-- =====================================================
+INSERT INTO SERVICE_MASTER (SERVICE_CODE, SERVICE_NAME, SERVICE_CATEGORY, OWNER_ORG_UNIT_ID, CONTACT_INFO, IS_ACTIVE, DISPLAY_ORDER) VALUES
+('ERP', '고려아연 ERP', '업무시스템', 'ITH3', '02-1234-5678', TRUE, 1),
+('GROUPWARE', 'KZ 이음', '업무시스템', 'ITH3', '02-1234-5679', TRUE, 2),
+('MAIL', 'Outlook 메일', '인프라', 'ITH1', '02-1234-5680', TRUE, 3),
+('VPN', 'VPN 시스템', '보안', 'ITH2', '02-1234-5681', TRUE, 4),
+('ACCOUNTING', '고려아연 연결회계', '업무시스템', 'ITH1', '02-1234-5682', TRUE, 5),
+('HR', '인사급여 시스템', '업무시스템', 'ITH3', '02-1234-5683', TRUE, 6);
+
+-- =====================================================
+-- 2) 법인 마스터
+-- =====================================================
+INSERT INTO CORPORATION_MASTER (CORP_CODE, CORP_NAME, PARENT_CORP_ID, BUSINESS_NUMBER, IS_ACTIVE, DISPLAY_ORDER) VALUES
+('KZ', '고려아연', NULL, '123-45-67890', TRUE, 1),
+('KZGT', '케이지그린텍', 1, '123-45-67891', TRUE, 2),
+('YP', '영풍', NULL, '123-45-67892', TRUE, 3),
+('KZMS', '고려아연메탈서플라이', 1, '123-45-67893', TRUE, 4);
+
+-- =====================================================
+-- 3) 조직 마스터
+-- =====================================================
+INSERT INTO ORGANIZATION_MASTER (ORG_UNIT_CODE, ORG_UNIT_NAME, CORP_ID, PARENT_ORG_UNIT_ID, ORG_LEVEL, IS_ACTIVE, DISPLAY_ORDER) VALUES
+-- 서린정보기술
+('ITH1', '서린정보기술 ITH1팀', 1, NULL, 2, TRUE, 1),
+('ITH2', '서린정보기술 ITH2팀', 1, NULL, 2, TRUE, 2),
+('ITH3', '서린정보기술 ITH3팀', 1, NULL, 2, TRUE, 3),
+
+-- 구매 조직
+('PURCHASE01', '구매전략 1팀', 1, NULL, 2, TRUE, 4),
+('PURCHASE02', '구매전략 2팀', 1, NULL, 2, TRUE, 5),
+('PURCHASE03', '구매전략 3팀', 1, NULL, 2, TRUE, 6),
+
+-- 원료 조직
+('RAW01', '원료 1팀', 1, NULL, 2, TRUE, 7),
+('RAW02', '원료 2팀', 1, NULL, 2, TRUE, 8),
+('RAW03', '원료 3팀', 1, NULL, 2, TRUE, 9),
+
+-- 영업 조직
+('SALES_ZINC', '아연영업팀', 1, NULL, 2, TRUE, 10),
+('SALES_LEAD', '연영업팀', 1, NULL, 2, TRUE, 11),
+('SALES_PRECIOUS', '귀금속영업팀', 1, NULL, 2, TRUE, 12),
+
+-- 고려아연 본사
+('KZ_HQ', '고려아연_본사', 1, NULL, 2, TRUE, 13),
+
+-- 고려아연 온산
+('KZ_ONSAN', '고려아연_온산', 1, NULL, 2, TRUE, 14);
+
+-- =====================================================
+-- 4) 사용자 마스터
+-- =====================================================
+INSERT INTO USER_MASTER (USER_ID, USER_KO_NM, USER_EN_NM, EMAIL, ORG_UNIT_ID, CORP_ID, POSITION, IS_ACTIVE) VALUES
+-- 서린정보기술
+('park001', '박경민', 'Park Kyung-min', 'park.km@company.com', 3, 1, '수석', TRUE),
+('shin001', '신호용', 'Shin Ho-yong', 'shin.hy@company.com', 1, 1, '책임', TRUE),
+('jeon001', '전종하', 'Jeon Jong-ha', 'jeon.jh@company.com', 3, 1, '책임', TRUE),
+('an001', '안소희', 'An So-hee', 'an.sh@company.com', 3, 1, '책임', TRUE),
+
+-- 구매팀
+('kim001', '김철수', 'Kim Chul-su', 'kim.cs@company.com', 4, 1, '과장', TRUE),
+('lee001', '이영희', 'Lee Young-hee', 'lee.yh@company.com', 5, 1, '대리', TRUE),
+
+-- 영업팀
+('hong001', '홍길동', 'Hong Gil-dong', 'hong.gd@company.com', 10, 1, '차장', TRUE),
+('choi001', '최민준', 'Choi Min-jun', 'choi.mj@company.com', 11, 1, '과장', TRUE);
+
+-- =====================================================
+-- 5) 공지 샘플 데이터
+-- =====================================================
+
+-- 공지 1: 고려아연 ERP 시스템 점검 안내
+INSERT INTO NOTICE_BASE (
+    TITLE, CONTENT, NOTICE_LEVEL, NOTICE_STATUS, AFFECTED_SERVICE_ID,
+    SENDER_ORG_UNIT_ID, SENDER_ORG_UNIT_NAME,
+    PUBLISH_START_AT, PUBLISH_END_AT,
+    IS_MAINTENANCE, IS_COMPLETED,
+    MAIL_SUBJECT, CREATED_BY, UPDATED_BY
+) VALUES (
+    '고려아연 ERP 시스템 점검 안내',
+    '고려아연 ERP 시스템 점검으로 인하여 22일(수) 18:00시 부터 시스템 사용이 불가합니다.
+업무에 참고하여 주시기 바랍니다.
+
+문의 : 서린정보기술 ITH3팀 박경민 수석 (2656)',
+    'L2',
+    'APPROVED',
+    1,  -- 고려아연 ERP
+    'ITH3',
+    '서린정보기술 ITH3팀',
+    '2025-10-22 08:00:00',
+    '2025-10-22 19:00:00',
+    TRUE,
+    FALSE,
+    '[점검] 고려아연 ERP 시스템 점검 안내',
+    'park001',
+    'park001'
+);
+
+-- 공지 2: 윈도우 보안 패치 작업 안내
+INSERT INTO NOTICE_BASE (
+    TITLE, CONTENT, NOTICE_LEVEL, NOTICE_STATUS, AFFECTED_SERVICE_ID,
+    SENDER_ORG_UNIT_ID, SENDER_ORG_UNIT_NAME,
+    PUBLISH_START_AT, PUBLISH_END_AT,
+    IS_MAINTENANCE, IS_COMPLETED,
+    MAIL_SUBJECT, CREATED_BY, UPDATED_BY
+) VALUES (
+    '윈도우 보안 패치 작업 안내',
+    '윈도우 보안 패치 적용을 위해 전사 PC 재부팅이 필요합니다.
+금일 18:00 이후 자동 재부팅 예정이오니 작업 중인 파일은 미리 저장해주시기 바랍니다.
+
+문의 : 서린정보기술 ITH3팀 전종하 책임 (2657)',
+    'L1',
+    'SENT',
+    NULL,
+    'ITH3',
+    '서린정보기술 ITH3팀',
+    '2025-10-15 08:00:00',
+    '2025-10-15 19:00:00',
+    FALSE,
+    TRUE,
+    '[보안] 윈도우 보안 패치 작업 안내',
+    'jeon001',
+    'jeon001'
+);
+
+-- 공지 3: 고려아연 연결회계 시스템 장애 발생
+INSERT INTO NOTICE_BASE (
+    TITLE, CONTENT, NOTICE_LEVEL, NOTICE_STATUS, AFFECTED_SERVICE_ID,
+    SENDER_ORG_UNIT_ID, SENDER_ORG_UNIT_NAME,
+    PUBLISH_START_AT, PUBLISH_END_AT,
+    IS_MAINTENANCE, IS_COMPLETED, COMPLETED_AT,
+    MAIL_SUBJECT, CREATED_BY, UPDATED_BY
+) VALUES (
+    '고려아연 연결회계 시스템 장애 발생 안내',
+    '고려아연 연결회계 시스템에 장애가 발생하여 현재 접속이 불가합니다.
+복구 작업 진행 중이며, 완료 시 별도 안내드리겠습니다.
+
+문의 : 서린정보기술 ITH1팀 신호용 책임 (2655)',
+    'L3',
+    'COMPLETED',
+    5,  -- 고려아연 연결회계
+    'ITH1',
+    '서린정보기술 ITH1팀',
+    '2025-10-10 14:30:00',
+    '2025-10-10 16:00:00',
+    TRUE,
+    TRUE,
+    '2025-10-10 15:45:00',
+    '[긴급장애] 고려아연 연결회계 시스템 장애 발생',
+    'shin001',
+    'shin001'
+);
+
+-- =====================================================
+-- 6) 공지 수신 대상
+-- =====================================================
+
+-- 공지 1 수신 대상
+INSERT INTO NOTICE_TARGET (NOTICE_ID, TARGET_TYPE, TARGET_KEY, TARGET_NAME) VALUES
+(1, 'CORP', 'KZ', '고려아연'),
+(1, 'ORG_UNIT', 'KZ_HQ', '고려아연_본사'),
+(1, 'ORG_UNIT', 'KZ_ONSAN', '고려아연_온산');
+
+-- 공지 2 수신 대상 (전사)
+INSERT INTO NOTICE_TARGET (NOTICE_ID, TARGET_TYPE, TARGET_KEY, TARGET_NAME) VALUES
+(2, 'CORP', 'KZ', '고려아연'),
+(2, 'CORP', 'KZGT', '케이지그린텍');
+
+-- 공지 3 수신 대상
+INSERT INTO NOTICE_TARGET (NOTICE_ID, TARGET_TYPE, TARGET_KEY, TARGET_NAME) VALUES
+(3, 'ORG_UNIT', 'PURCHASE01', '구매전략 1팀'),
+(3, 'ORG_UNIT', 'PURCHASE02', '구매전략 2팀'),
+(3, 'ORG_UNIT', 'RAW01', '원료 1팀');
+
+-- =====================================================
+-- 7) 공지 태그
+-- =====================================================
+
+INSERT INTO NOTICE_TAG (NOTICE_ID, TAG_VALUE) VALUES
+(1, '인프라 작업'),
+(1, 'ERP'),
+(2, '보안패치'),
+(2, '전사공지'),
+(3, '긴급장애'),
+(3, '회계시스템');
+
+-- =====================================================
+-- 8) 개별 수신자 (샘플)
+-- =====================================================
+
+-- 공지 1 개별 수신자
+INSERT INTO NOTICE_RECIPIENT (NOTICE_ID, USER_ID, SENT_AT, IS_READ) VALUES
+(1, 'kim001', '2025-10-22 08:30:00', TRUE),
+(1, 'lee001', '2025-10-22 08:30:00', FALSE),
+(1, 'hong001', '2025-10-22 08:30:00', TRUE);
+
+-- 공지 2 개별 수신자
+INSERT INTO NOTICE_RECIPIENT (NOTICE_ID, USER_ID, SENT_AT, IS_READ, READ_AT) VALUES
+(2, 'park001', '2025-10-15 08:30:00', TRUE, '2025-10-15 09:15:00'),
+(2, 'shin001', '2025-10-15 08:30:00', TRUE, '2025-10-15 08:45:00'),
+(2, 'jeon001', '2025-10-15 08:30:00', TRUE, '2025-10-15 10:20:00'),
+(2, 'kim001', '2025-10-15 08:30:00', FALSE, NULL);
+
+COMMIT;
+
+-- =====================================================
+-- 확인 쿼리
+-- =====================================================
+
+-- 서비스 목록
+SELECT SERVICE_ID, SERVICE_CODE, SERVICE_NAME, SERVICE_CATEGORY 
+FROM SERVICE_MASTER 
+WHERE IS_ACTIVE = TRUE 
+ORDER BY DISPLAY_ORDER;
+
+-- 법인 목록
+SELECT CORP_ID, CORP_CODE, CORP_NAME 
+FROM CORPORATION_MASTER 
+WHERE IS_ACTIVE = TRUE 
+ORDER BY DISPLAY_ORDER;
+
+-- 조직 목록
+SELECT ORG_UNIT_ID, ORG_UNIT_CODE, ORG_UNIT_NAME, 
+       (SELECT CORP_NAME FROM CORPORATION_MASTER WHERE CORP_ID = o.CORP_ID) AS CORP_NAME
+FROM ORGANIZATION_MASTER o
+WHERE IS_ACTIVE = TRUE 
+ORDER BY DISPLAY_ORDER;
+
+-- 사용자 목록
+SELECT USER_ID, USER_KO_NM, EMAIL, POSITION,
+       (SELECT ORG_UNIT_NAME FROM ORGANIZATION_MASTER WHERE ORG_UNIT_ID = u.ORG_UNIT_ID) AS ORG_NAME
+FROM USER_MASTER u
+WHERE IS_ACTIVE = TRUE;
+
+-- 공지 목록 (서비스명 포함)
+SELECT n.NOTICE_ID, n.TITLE, n.NOTICE_LEVEL, n.NOTICE_STATUS,
+       s.SERVICE_NAME, n.SENDER_ORG_UNIT_NAME, n.CREATED_AT
+FROM NOTICE_BASE n
+LEFT JOIN SERVICE_MASTER s ON s.SERVICE_ID = n.AFFECTED_SERVICE_ID
+ORDER BY n.CREATED_AT DESC;
+
+-- 공지별 수신 대상
+SELECT n.TITLE, nt.TARGET_TYPE, nt.TARGET_NAME
+FROM NOTICE_BASE n
+JOIN NOTICE_TARGET nt ON nt.NOTICE_ID = n.NOTICE_ID
+ORDER BY n.NOTICE_ID, nt.TARGET_ID;
+
+-- 사용자별 수신 공지 (읽음 여부 포함)
+SELECT u.USER_KO_NM, n.TITLE, nr.SENT_AT, nr.IS_READ, nr.READ_AT
+FROM NOTICE_RECIPIENT nr
+JOIN USER_MASTER u ON u.USER_ID = nr.USER_ID
+JOIN NOTICE_BASE n ON n.NOTICE_ID = nr.NOTICE_ID
+ORDER BY nr.SENT_AT DESC;

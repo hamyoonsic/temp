@@ -1,0 +1,394 @@
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT 공지관리 시스템 WBS - 최적화</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Malgun Gothic',sans-serif;background:#f5f5f5;padding:20px;font-size:12px}
+.container{max-width:100%;background:white;padding:30px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.header{border-bottom:3px solid #2c3e50;padding-bottom:20px;margin-bottom:20px}
+h1{font-size:26px;color:#2c3e50;margin-bottom:15px}
+.info{font-size:13px;line-height:1.8;color:#555;margin-bottom:10px}
+.box{padding:15px;margin-bottom:15px;border-radius:5px;font-size:12px}
+.summary-box{background:#e8f5e9;border-left:4px solid #4caf50}
+.milestone-box{background:#fff3cd;border-left:4px solid #ffc107}
+
+.filter-panel{background:#f8f9fa;border:1px solid #dee2e6;border-radius:5px;padding:15px;margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.filter-panel label{font-weight:600;margin-right:5px}
+.filter-panel select, .filter-panel input{padding:5px 10px;border:1px solid #ced4da;border-radius:3px;font-size:11px}
+.filter-panel button{padding:5px 15px;background:#007bff;color:white;border:none;border-radius:3px;cursor:pointer;font-weight:600;font-size:11px}
+
+.progress-box{background:#e3f2fd;border-left:4px solid #2196f3;display:flex;justify-content:space-around;align-items:center;flex-wrap:wrap;gap:10px}
+.progress-item{text-align:center;min-width:150px}
+.progress-label{font-size:11px;color:#555;margin-bottom:5px}
+.progress-value{font-size:20px;font-weight:700;color:#1976d2}
+
+.wrapper{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 450px);min-height:600px;border:1px solid #ddd;border-radius:5px;position:relative}
+table{border-collapse:collapse;width:100%;min-width:2200px;font-size:10.5px}
+thead{background:#2c3e50;color:white;position:sticky;top:0;z-index:10}
+th,td{border:1px solid #ddd;padding:6px;text-align:center;vertical-align:middle;line-height:1.3}
+th{font-weight:600;padding:8px 6px;font-size:11px;color:white}
+tbody tr:hover{background:#f8f9fa}
+
+td[contenteditable="true"]{cursor:text}
+td[contenteditable="true"]:hover{background:#e3f2fd !important}
+td[contenteditable="true"]:focus{background:#fff9c4 !important;outline:2px solid #2196f3}
+
+.delete-btn{background:#dc3545;color:white;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:10px}
+.delete-btn:hover{background:#c82333}
+
+.ms{background:#fff3cd!important;font-weight:700;text-align:center}
+.ms td{border-top:3px solid #ffc107;border-bottom:3px solid #ffc107;padding:10px;font-size:12px}
+.c1{width:50px;text-align:center;background:#ecf0f1;font-weight:600}
+.c2{width:70px;text-align:center;background:#e3f2fd;color:#1565c0;font-weight:600}
+.c3{width:80px;text-align:center}
+.c4{width:200px;text-align:left;font-weight:500}
+.c5{width:280px;text-align:left}
+.c6{width:280px;text-align:left}
+.c7{width:60px;text-align:center;font-size:9px}
+.c8{width:50px;text-align:center;font-weight:600}
+.c9{width:50px;text-align:center;font-weight:500}
+.c10{width:75px;text-align:center;font-size:10.5px}
+.c11{width:75px;text-align:center;font-size:10.5px}
+.c12{width:50px;text-align:center;font-weight:500}
+.c13{width:65px;text-align:center}
+.c14{width:130px;text-align:left;font-size:9px}
+.c15{width:150px;text-align:left;font-size:9px;color:#856404;background:#fffbf0}
+.c16{width:120px;text-align:left;font-size:10.5px;color:#6c757d}
+.c17{width:60px;text-align:center}
+.high{color:#dc3545}
+.mid{color:#fd7e14}
+.low{color:#28a745}
+
+.status-complete{background:#d4edda;color:#155724;font-weight:600}
+.status-progress{background:#fff3cd;color:#856404;font-weight:600}
+.status-pending{background:#f8f9fa;color:#6c757d}
+.status-excluded{background:#e2e3e5;color:#383d41;font-weight:600;text-decoration:line-through}
+
+.scroll-hint{background:#e3f2fd;padding:8px;text-align:center;font-size:11px;color:#1565c0;border-radius:5px 5px 0 0;margin-bottom:-1px}
+tr.hidden{display:none !important}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>IT 공지관리 시스템 WBS </h1>
+<div class="info">
+기간: 2025-12-18 ~ 2026-02-28<br>
+환경: JAVA 필수 / Spring Boot + PostgreSQL (개인노트북) | 인력: 단독개발
+</div>
+</div>
+
+<div class="box progress-box">
+<div class="progress-item"><div class="progress-label">요구분석</div><div class="progress-value" id="progress-analysis" style="color: rgb(76, 175, 80);">100%</div></div>
+<div class="progress-item"><div class="progress-label">설계</div><div class="progress-value" id="progress-design" style="color: rgb(255, 152, 0);">11%</div></div>
+<div class="progress-item"><div class="progress-label">개발</div><div class="progress-value" id="progress-develop" style="color: rgb(25, 118, 210);">0%</div></div>
+<div class="progress-item"><div class="progress-label">테스트</div><div class="progress-value" id="progress-test" style="color: rgb(25, 118, 210);">0%</div></div>
+<div class="progress-item"><div class="progress-label">이행</div><div class="progress-value" id="progress-deploy" style="color: rgb(25, 118, 210);">0%</div></div>
+<div class="progress-item"><div class="progress-label">전체 진행률</div><div class="progress-value" id="progress-total" style="color: rgb(255, 152, 0); font-size: 24px;">17%</div></div>
+</div>
+
+<div class="filter-panel">
+<div><label>단계:</label><select id="filterPhase" onchange="applyFilters()"><option value="">전체</option><option value="요구분석">요구분석</option><option value="설계">설계</option><option value="개발">개발</option><option value="테스트">테스트</option><option value="이행">이행</option></select></div>
+<div><label>상태:</label><select id="filterStatus" onchange="applyFilters()"><option value="">전체</option><option value="완료">완료</option><option value="진행중">진행중</option><option value="미착수">미착수</option><option value="개발제외">개발제외</option></select></div>
+<div><label>난이도:</label><select id="filterDifficulty" onchange="applyFilters()"><option value="">전체</option><option value="상">상</option><option value="중">중</option><option value="하">하</option></select></div>
+<div><label>검색:</label><input type="text" id="filterSearch" placeholder="작업명..." onkeyup="applyFilters()" style="width:200px;"></div>
+<button onclick="clearFilters()">🔄 초기화</button>
+</div>
+
+<div class="scroll-hint">
+    <!-- ✏️ 모든 셀 편집 가능 (클릭하여 수정) →  -->
+    <!-- <button onclick="addNewRow()" style="font-size:11.5px;margin-left:20px;padding:5px 15px;background:#28a745;color:white;border:none;border-radius:3px;cursor:pointer;font-weight:600;">행 추가</button> -->
+    <button onclick="saveAllData()" style="font-size:11.5px;margin-left:10px;padding:5px 15px;background:#3d7b9e;color:white;border:none;border-radius:3px;cursor:pointer;font-weight:600;">저장</button>
+    <!-- <button onclick="loadAllData()" style="font-size:11.5px;margin-left:10px;padding:5px 15px;background:#1f5c8d;color:white;border:none;border-radius:3px;cursor:pointer;font-weight:600;">불러오기</button> -->
+    <!-- <button onclick="exportToExcel()" style="font-size:11.5px;margin-left:10px;padding:5px 15px;background:#227958;color:white;border:none;border-radius:3px;cursor:pointer;font-weight:600;">Excel</button> -->
+</div>
+
+<div class="wrapper">
+<table id="wbsTable">
+<thead>
+<tr>
+<th class="c1">WBS</th><th class="c2">단계</th><th class="c3">영역</th><th class="c4">세부작업</th><th class="c5">범위/설명</th><th class="c6">산정근거</th><th class="c7">선행</th><th class="c8">난이도</th><th class="c9">예상공수</th><th class="c10">시작일</th><th class="c11">종료일</th><th class="c12">총공수</th><th class="c13">상태</th><th class="c14">산출물</th><th class="c15">리스크/의존성</th><th class="c16">비고</th><th class="c17">삭제</th>
+</tr>
+</thead>
+<tbody id="wbsBody">
+<tr data-phase="요구분석"><td class="c1" contenteditable="true">1</td><td class="c2" contenteditable="true">요구분석</td><td class="c3" contenteditable="true">전체</td><td class="c4" contenteditable="true">과제 이해 및 WBS 작성</td><td class="c5" contenteditable="true">프로젝트 목적/범위, WBS 작성</td><td class="c6" contenteditable="true">검토(2h)+작성(2h)</td><td class="c7" contenteditable="true">-</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1</td><td class="c10" contenteditable="true">2025-12-18</td><td class="c11" contenteditable="true">2025-12-19</td><td class="c12" contenteditable="true">2</td><td class="c13 status-complete" contenteditable="true">완료</td><td class="c14" contenteditable="true">WBS</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="요구분석"><td class="c1" contenteditable="true">1.1</td><td class="c2" contenteditable="true">요구분석</td><td class="c3" contenteditable="true">제안서</td><td class="c4" contenteditable="true">제안서 리뷰 및 요구사항 추출</td><td class="c5" contenteditable="true">PDF 분석, 기능 목록화</td><td class="c6" contenteditable="true">조사(2h)+추출(2h)</td><td class="c7" contenteditable="true">1</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1</td><td class="c10" contenteditable="true">2026-01-02</td><td class="c11" contenteditable="true">2026-01-02</td><td class="c12" contenteditable="true">1</td><td class="c13 status-complete" contenteditable="true">완료</td><td class="c14" contenteditable="true">기능목록</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="요구분석"><td class="c1" contenteditable="true">1.2</td><td class="c2" contenteditable="true">요구분석</td><td class="c3" contenteditable="true">현황조사</td><td class="c4" contenteditable="true">기존 채널 조사</td><td class="c5" contenteditable="true">메일/Teams/포털 현황</td><td class="c6" contenteditable="true">조사(2h)+정리(1h)</td><td class="c7" contenteditable="true">-</td><td class="c8 low" contenteditable="true">하</td><td class="c9" contenteditable="true">0.3</td><td class="c10" contenteditable="true"><br></td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-excluded" contenteditable="true">제외</td><td class="c14" contenteditable="true">현황문서</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="요구분석"><td class="c1" contenteditable="true">1.3</td><td class="c2" contenteditable="true">요구분석</td><td class="c3" contenteditable="true">인터뷰</td><td class="c4" contenteditable="true">팀장 Q&amp;A</td><td class="c5" contenteditable="true">질문 준비, 미팅, 회의록</td><td class="c6" contenteditable="true">준비(1h)+미팅(1h)+정리(1h)</td><td class="c7" contenteditable="true">1.1</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">0.5</td><td class="c10" contenteditable="true"><br></td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-excluded" contenteditable="true">제외</td><td class="c14" contenteditable="true">회의록</td><td class="c15" contenteditable="true">⚠️팀장일정</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="요구분석"><td class="c1" contenteditable="true">1.4</td><td class="c2" contenteditable="true">요구분석</td><td class="c3" contenteditable="true">정리</td><td class="c4" contenteditable="true">요구사항 확정</td><td class="c5" contenteditable="true">통합 정리, 우선순위</td><td class="c6" contenteditable="true">통합(2h)+검토(2h)</td><td class="c7" contenteditable="true">1.1-1.3</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">0.5</td><td class="c10" contenteditable="true">2026-01-02</td><td class="c11" contenteditable="true">2026-01-02</td><td class="c12" contenteditable="true">1</td><td class="c13 status-complete" contenteditable="true">완료</td><td class="c14" contenteditable="true">요구정의서</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">설계기준</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr class="ms"><td colspan="16">M1: 2026-01-02 요구사항 분석 완료</td></tr>
+<tr data-phase="설계"><td class="c1" contenteditable="true">2</td><td class="c2" contenteditable="true">설계</td><td class="c3" contenteditable="true">도메인</td><td class="c4" contenteditable="true">도메인 모델</td><td class="c5" contenteditable="true">Notice/Recipient/History</td><td class="c6" contenteditable="true">모델링(4h)+검증(2h)</td><td class="c7" contenteditable="true">1.4</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1</td><td class="c10" contenteditable="true">2026-01-02</td><td class="c11" contenteditable="true">2026-01-02</td><td class="c12" contenteditable="true">1</td><td class="c13 status-complete" contenteditable="true">완료</td><td class="c14" contenteditable="true">도메인모델</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">DDD</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="설계"><td class="c1" contenteditable="true">2.1</td><td class="c2" contenteditable="true">설계</td><td class="c3" contenteditable="true">DB</td><td class="c4" contenteditable="true">테이블 설계</td><td class="c5" contenteditable="true">공지/수신/이력 테이블</td><td class="c6" contenteditable="true">설계(6h)+검증(2h)</td><td class="c7" contenteditable="true">2</td><td class="c8 high" contenteditable="true">상</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-01-05</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">ERD</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">PG</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="설계"><td class="c1" contenteditable="true">2.2</td><td class="c2" contenteditable="true">설계</td><td class="c3" contenteditable="true">DB</td><td class="c4" contenteditable="true">인덱스/제약</td><td class="c5" contenteditable="true">PK/FK/Index</td><td class="c6" contenteditable="true">설계(3h)+최적화(1h)</td><td class="c7" contenteditable="true">2.1</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">0.5</td><td class="c10" contenteditable="true">2026-01-06</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">DB설계서</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">성능</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="설계"><td class="c1" contenteditable="true">2.3</td><td class="c2" contenteditable="true">설계</td><td class="c3" contenteditable="true">화면</td><td class="c4" contenteditable="true">화면설계(등록/발송)</td><td class="c5" contenteditable="true">공지등록, 발송관리 UI</td><td class="c6" contenteditable="true">스케치(4h)+검증(2h)</td><td class="c7" contenteditable="true">1.4</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1</td><td class="c10" contenteditable="true">2026-01-07</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">화면설계서</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="설계"><td class="c1" contenteditable="true">2.4</td><td class="c2" contenteditable="true">설계</td><td class="c3" contenteditable="true">화면</td><td class="c4" contenteditable="true">화면설계(캘린더/대시보드)</td><td class="c5" contenteditable="true">캘린더, 대시보드 UI</td><td class="c6" contenteditable="true">스케치(3h)+검증(1h)</td><td class="c7" contenteditable="true">1.4</td><td class="c8 low" contenteditable="true">하</td><td class="c9" contenteditable="true">0.5</td><td class="c10" contenteditable="true">2026-01-08</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">화면설계서</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">라이브러리</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="설계"><td class="c1" contenteditable="true">2.5</td><td class="c2" contenteditable="true">설계</td><td class="c3" contenteditable="true">플로우</td><td class="c4" contenteditable="true">상태전이/승인플로우</td><td class="c5" contenteditable="true">작성→승인→발송→완료</td><td class="c6" contenteditable="true">플로우(3h)+검증(1h)</td><td class="c7" contenteditable="true">1.4</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">0.5</td><td class="c10" contenteditable="true">2026-01-09</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">플로우도</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="설계"><td class="c1" contenteditable="true">2.6</td><td class="c2" contenteditable="true">설계</td><td class="c3" contenteditable="true">연동</td><td class="c4" contenteditable="true">Graph API 설계</td><td class="c5" contenteditable="true">메일/캘린더 API 설계</td><td class="c6" contenteditable="true">API조사(4h)+설계(4h)</td><td class="c7" contenteditable="true">1.4</td><td class="c8 high" contenteditable="true">상</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-01-12</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">API설계서</td><td class="c15" contenteditable="true">⚠️권한필요</td><td class="c16" contenteditable="true">토큰</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="설계"><td class="c1" contenteditable="true">2.7</td><td class="c2" contenteditable="true">설계</td><td class="c3" contenteditable="true">템플릿</td><td class="c4" contenteditable="true">메일 템플릿</td><td class="c5" contenteditable="true">유형별 템플릿 설계</td><td class="c6" contenteditable="true">포맷(2h)+HTML(2h)</td><td class="c7" contenteditable="true">2.6</td><td class="c8 low" contenteditable="true">하</td><td class="c9" contenteditable="true">0.5</td><td class="c10" contenteditable="true">2026-01-13</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">템플릿</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="설계"><td class="c1" contenteditable="true">2.8</td><td class="c2" contenteditable="true">설계</td><td class="c3" contenteditable="true">테스트</td><td class="c4" contenteditable="true">테스트 전략</td><td class="c5" contenteditable="true">단위/통합 시나리오</td><td class="c6" contenteditable="true">전략수립(3h)+케이스(3h)</td><td class="c7" contenteditable="true">2.1-2.5</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1</td><td class="c10" contenteditable="true">2026-01-14</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">테스트전략</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr class="ms"><td colspan="16">M2: 2026-01-14 설계 완료</td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">환경</td><td class="c4" contenteditable="true">프로젝트 세팅</td><td class="c5" contenteditable="true">Spring Boot+PostgreSQL</td><td class="c6" contenteditable="true">프로젝트(2h)+DB(2h)</td><td class="c7" contenteditable="true">2.1,2.2</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">0.5</td><td class="c10" contenteditable="true">2026-01-15</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">프로젝트</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">노트북</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.1</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">도메인</td><td class="c4" contenteditable="true">엔티티/Repository</td><td class="c5" contenteditable="true">JPA 엔티티, Repository</td><td class="c6" contenteditable="true">구현(8h)+테스트(4h)</td><td class="c7" contenteditable="true">3,2</td><td class="c8 high" contenteditable="true">상</td><td class="c9" contenteditable="true">2</td><td class="c10" contenteditable="true">2026-01-16</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">도메인코드</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">JPA</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.2</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">공통</td><td class="c4" contenteditable="true">공통 모듈</td><td class="c5" contenteditable="true">예외/로깅/응답</td><td class="c6" contenteditable="true">구현(4h)+검증(2h)</td><td class="c7" contenteditable="true">3</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1</td><td class="c10" contenteditable="true">2026-01-20</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">공통모듈</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.3</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">공지</td><td class="c4" contenteditable="true">공지 CRUD</td><td class="c5" contenteditable="true">등록/수정/조회/삭제</td><td class="c6" contenteditable="true">API(6h)+검증(2h)+테스트(4h)</td><td class="c7" contenteditable="true">3.1,3.2</td><td class="c8 high" contenteditable="true">상</td><td class="c9" contenteditable="true">2</td><td class="c10" contenteditable="true">2026-01-21</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">공지API</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">핵심</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.4</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">조직도</td><td class="c4" contenteditable="true">조직도 연동</td><td class="c5" contenteditable="true">법인/부서 멀티셀렉트</td><td class="c6" contenteditable="true">API(4h)+트리(2h)+테스트(2h)</td><td class="c7" contenteditable="true">3.3</td><td class="c8 high" contenteditable="true">상</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-01-23</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">조직도API</td><td class="c15" contenteditable="true">🔗조직도</td><td class="c16" contenteditable="true">캐싱</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.5</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">발송</td><td class="c4" contenteditable="true">승인 플로우</td><td class="c5" contenteditable="true">승인요청/승인/반려</td><td class="c6" contenteditable="true">구현(6h)+테스트(2h)</td><td class="c7" contenteditable="true">3.3,2.5</td><td class="c8 high" contenteditable="true">상</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-01-27</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">승인로직</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">핵심</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.6</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">발송</td><td class="c4" contenteditable="true">상태전이/이력</td><td class="c5" contenteditable="true">상태관리, History</td><td class="c6" contenteditable="true">전이(4h)+이력(2h)+테스트(2h)</td><td class="c7" contenteditable="true">3.5</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-01-29</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">상태관리</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.7</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">Graph</td><td class="c4" contenteditable="true">Graph 메일 발송</td><td class="c5" contenteditable="true">메일 발송 API</td><td class="c6" contenteditable="true">구현(6h)+토큰(2h)+테스트(4h)</td><td class="c7" contenteditable="true">2.6,3.5</td><td class="c8 high" contenteditable="true">상</td><td class="c9" contenteditable="true">2</td><td class="c10" contenteditable="true">2026-01-31</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">메일발송</td><td class="c15" contenteditable="true">⚠️권한</td><td class="c16" contenteditable="true">핵심</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.8</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">발송엔진</td><td class="c4" contenteditable="true">발송엔진(정기/즉시)</td><td class="c5" contenteditable="true">스케줄러, 즉시발송</td><td class="c6" contenteditable="true">스케줄러(4h)+즉시(2h)+테스트(2h)</td><td class="c7" contenteditable="true">3.7</td><td class="c8 high" contenteditable="true">상</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-02-04</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">발송엔진</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.9</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">발송엔진</td><td class="c4" contenteditable="true">수신자 매핑/재시도</td><td class="c5" contenteditable="true">매핑로직, 재시도</td><td class="c6" contenteditable="true">매핑(4h)+재시도(2h)+테스트(2h)</td><td class="c7" contenteditable="true">3.4,3.8</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-02-06</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">매핑/재시도</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.10</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">Graph</td><td class="c4" contenteditable="true">캘린더 연동</td><td class="c5" contenteditable="true">Outlook 캘린더 등록</td><td class="c6" contenteditable="true">구현(4h)+테스트(2h)</td><td class="c7" contenteditable="true">2.6,3.7</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1</td><td class="c10" contenteditable="true">2026-02-10</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">캘린더연동</td><td class="c15" contenteditable="true">⚠️자원ID</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.11</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">화면</td><td class="c4" contenteditable="true">공지등록 화면</td><td class="c5" contenteditable="true">등록폼, 미리보기</td><td class="c6" contenteditable="true">UI(4h)+검증(2h)+테스트(2h)</td><td class="c7" contenteditable="true">3.3,2.3</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-02-11</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">등록화면</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.12</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">화면</td><td class="c4" contenteditable="true">발송관리 화면</td><td class="c5" contenteditable="true">목록/검색/승인처리</td><td class="c6" contenteditable="true">UI(4h)+검증(2h)+테스트(2h)</td><td class="c7" contenteditable="true">3.5,2.3</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-02-13</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">발송화면</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.13</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">화면</td><td class="c4" contenteditable="true">캘린더 화면</td><td class="c5" contenteditable="true">월/주/일 View</td><td class="c6" contenteditable="true">UI(6h)+이벤트(2h)</td><td class="c7" contenteditable="true">3.10,2.4</td><td class="c8 low" contenteditable="true">하</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-02-19</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">캘린더화면</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">FullCalendar</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.14</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">화면</td><td class="c4" contenteditable="true">대시보드 화면</td><td class="c5" contenteditable="true">통계, 차트</td><td class="c6" contenteditable="true">위젯(4h)+차트(2h)+테스트(2h)</td><td class="c7" contenteditable="true">3.6,2.4</td><td class="c8 low" contenteditable="true">하</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-02-19</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">대시보드화면</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">Chart.js</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="개발"><td class="c1" contenteditable="true">3.15</td><td class="c2" contenteditable="true">개발</td><td class="c3" contenteditable="true">기타</td><td class="c4" contenteditable="true">완료공지/해시태그</td><td class="c5" contenteditable="true">완료처리, 태그</td><td class="c6" contenteditable="true">완료(2h)+태그(2h)+테스트(2h)</td><td class="c7" contenteditable="true">3.6</td><td class="c8 low" contenteditable="true">하</td><td class="c9" contenteditable="true">1</td><td class="c10" contenteditable="true">2026-02-20</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">부가기능</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr class="ms"><td colspan="16">M3: 2026-02-20 개발 완료</td></tr>
+<tr data-phase="테스트"><td class="c1" contenteditable="true">4</td><td class="c2" contenteditable="true">테스트</td><td class="c3" contenteditable="true">단위</td><td class="c4" contenteditable="true">단위 테스트</td><td class="c5" contenteditable="true">도메인/서비스 테스트</td><td class="c6" contenteditable="true">작성(6h)+실행(2h)</td><td class="c7" contenteditable="true">3.1-3.15</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-02-23</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">테스트코드</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="테스트"><td class="c1" contenteditable="true">4.1</td><td class="c2" contenteditable="true">테스트</td><td class="c3" contenteditable="true">통합</td><td class="c4" contenteditable="true">통합 테스트</td><td class="c5" contenteditable="true">전체 시나리오 테스트</td><td class="c6" contenteditable="true">시나리오(4h)+실행(4h)</td><td class="c7" contenteditable="true">4,3.11-3.14</td><td class="c8 high" contenteditable="true">상</td><td class="c9" contenteditable="true">1.5</td><td class="c10" contenteditable="true">2026-02-24</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">테스트결과</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">핵심</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="테스트"><td class="c1" contenteditable="true">4.2</td><td class="c2" contenteditable="true">테스트</td><td class="c3" contenteditable="true">수정</td><td class="c4" contenteditable="true">결함 수정</td><td class="c5" contenteditable="true">버그 수정 및 재테스트</td><td class="c6" contenteditable="true">수정(3h)+재테스트(1h)</td><td class="c7" contenteditable="true">4.1</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">0.5</td><td class="c10" contenteditable="true">2026-02-25</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">패치</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">-</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr class="ms"><td colspan="16">M4: 2026-02-25 테스트 완료</td></tr>
+<tr data-phase="이행"><td class="c1" contenteditable="true">5</td><td class="c2" contenteditable="true">이행</td><td class="c3" contenteditable="true">문서화</td><td class="c4" contenteditable="true">매뉴얼 작성</td><td class="c5" contenteditable="true">사용자/운영 매뉴얼</td><td class="c6" contenteditable="true">사용자(4h)+운영(2h)</td><td class="c7" contenteditable="true">4.2</td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true">1</td><td class="c10" contenteditable="true">2026-02-26</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">매뉴얼</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">WIKI</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+<tr data-phase="이행"><td class="c1" contenteditable="true">5.1</td><td class="c2" contenteditable="true">이행</td><td class="c3" contenteditable="true">정리</td><td class="c4" contenteditable="true">산출물 정리</td><td class="c5" contenteditable="true">문서/코드 정리</td><td class="c6" contenteditable="true">정리(4h)</td><td class="c7" contenteditable="true">5</td><td class="c8 low" contenteditable="true">하</td><td class="c9" contenteditable="true">1</td><td class="c10" contenteditable="true">2026-02-27</td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13 status-pending" contenteditable="true">미착수</td><td class="c14" contenteditable="true">최종산출물</td><td class="c15" contenteditable="true">-</td><td class="c16" contenteditable="true">인수인계</td><td class="c17"><button class="delete-btn">🗑️</button></td></tr>
+</tbody>
+</table>
+</div>
+
+<br>
+<div class="box milestone-box">
+<strong>마일스톤:</strong> M1 (01-02) 요구분석 | M2 (01-14) 설계 | M3 (02-20) 개발 | M4 (02-25) 테스트/이행
+</div>
+
+<div style="margin-top:20px;padding:15px;background:#fff3cd;border-left:4px solid#ffc107;border-radius:5px;font-size:11px">
+<strong>버전 관리</strong><br>
+- <strong>2025-12-18</strong> 최초 작성<br>
+- <strong>2026-01-05</strong> 버전 관리 추가 + 개발제외 상태 추가<br>
+</div>
+
+<div style="margin-top:20px;text-align:center;padding:20px;border-top:2px solid #e0e0e0">
+<div style="font-size:11px;color:#666">
+IT 공지관리 시스템 WBS | 작성일: 2025-12-18 | 총 27개 작업
+</div>
+</div>
+</div>
+
+<script>
+const holidays = ['2025-12-22','2025-12-23','2025-12-25','2025-12-26','2026-01-01','2026-01-28','2026-01-29','2026-01-30'];
+function parseDate(dateStr){const parts=dateStr.split('-');return new Date(parts[0],parts[1]-1,parts[2])}
+function formatDate(date){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
+function isWorkingDay(date){const day=date.getDay();if(day===0||day===6)return false;if(holidays.includes(formatDate(date)))return false;return true}
+function calculateWorkingDays(startDate,endDate){let current=new Date(startDate);let end=new Date(endDate);let workingDays=0;while(current<=end){if(isWorkingDay(current))workingDays++;current.setDate(current.getDate()+1)}return workingDays}
+
+function makeAllCellsEditable(){
+    const rows=document.querySelectorAll('#wbsTable tbody tr:not(.ms)');
+    rows.forEach(row=>{
+        const cells=row.querySelectorAll('td:not(.c17)');
+        cells.forEach(cell=>{
+            cell.contentEditable=true;
+            cell.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();this.blur()}});
+            cell.addEventListener('blur',function(){calculateProgress();autoCalculate()});
+        });
+        addDeleteButton(row);
+    });
+}
+
+function addDeleteButton(row){
+    if(row.querySelector('.c17'))return;
+    const deleteCell=document.createElement('td');
+    deleteCell.className='c17';
+    const deleteBtn=document.createElement('button');
+    deleteBtn.className='delete-btn';
+    deleteBtn.textContent='🗑️';
+    deleteBtn.onclick=function(){if(confirm('삭제하시겠습니까?')){row.remove();calculateProgress()}};
+    deleteCell.appendChild(deleteBtn);
+    row.appendChild(deleteCell);
+}
+
+function addNewRow(){
+    const tbody=document.getElementById('wbsBody');
+    const newRow=document.createElement('tr');
+    newRow.setAttribute('data-phase','요구분석');
+    newRow.innerHTML=`<td class="c1" contenteditable="true"></td><td class="c2" contenteditable="true">요구분석</td><td class="c3" contenteditable="true"></td><td class="c4" contenteditable="true"></td><td class="c5" contenteditable="true"></td><td class="c6" contenteditable="true"></td><td class="c7" contenteditable="true"></td><td class="c8 mid" contenteditable="true">중</td><td class="c9" contenteditable="true"></td><td class="c10" contenteditable="true"></td><td class="c11" contenteditable="true"></td><td class="c12" contenteditable="true"></td><td class="c13" contenteditable="true">미착수</td><td class="c14" contenteditable="true"></td><td class="c15" contenteditable="true"></td><td class="c16" contenteditable="true"></td>`;
+    tbody.appendChild(newRow);
+    addDeleteButton(newRow);
+    makeRowEditable(newRow);
+    alert('✅ 새 행 추가됨');
+}
+
+function makeRowEditable(row){
+    const cells=row.querySelectorAll('td:not(.c17)');
+    cells.forEach(cell=>{
+        cell.contentEditable=true;
+        cell.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();this.blur()}});
+        cell.addEventListener('blur',function(){calculateProgress();autoCalculate()});
+    });
+}
+
+function autoCalculate(){
+    const rows=document.querySelectorAll('#wbsTable tbody tr:not(.ms)');
+    rows.forEach(row=>{
+        const statusCell=row.querySelector('.c13');
+        const startDateCell=row.querySelector('.c10');
+        const endDateCell=row.querySelector('.c11');
+        const actualEffortCell=row.querySelector('.c12');
+        if(!statusCell||!startDateCell||!endDateCell||!actualEffortCell)return;
+        const status=statusCell.textContent.trim();
+        const startDateStr=startDateCell.textContent.trim();
+        const endDateStr=endDateCell.textContent.trim();
+        
+        // 상태별 스타일 적용
+        if(status==='완료'){
+            statusCell.className='c13 status-complete';
+            if(startDateStr&&endDateStr){
+                const startDate=parseDate(startDateStr);
+                const endDate=parseDate(endDateStr);
+                const actualDays=calculateWorkingDays(startDate,endDate);
+                actualEffortCell.textContent=actualDays;
+            }
+        }else if(status==='진행중'){
+            statusCell.className='c13 status-progress';
+        }else if(status==='제외'){
+            statusCell.className='c13 status-excluded';
+        }else{
+            statusCell.className='c13 status-pending';
+        }
+    });
+}
+
+function calculateProgress(){
+    const phases={'요구분석':{total:0,completed:0},'설계':{total:0,completed:0},'개발':{total:0,completed:0},'테스트':{total:0,completed:0},'이행':{total:0,completed:0}};
+    const rows=document.querySelectorAll('#wbsTable tbody tr:not(.ms):not(.hidden)');
+    rows.forEach(row=>{
+        const phase=row.getAttribute('data-phase');
+        const statusCell=row.querySelector('.c13');
+        if(!phase||!statusCell)return;
+        const status=statusCell.textContent.trim();
+        if(phases[phase]){
+            phases[phase].total++;
+            // '완료' 또는 '개발제외' 모두 완료로 간주
+            if(status==='완료'||status==='제외')phases[phase].completed++;
+        }
+    });
+    let totalTasks=0,totalCompleted=0;
+    Object.keys(phases).forEach(phase=>{
+        const data=phases[phase];
+        const percentage=data.total>0?Math.round((data.completed/data.total)*100):0;
+        totalTasks+=data.total;
+        totalCompleted+=data.completed;
+        let elementId='';
+        switch(phase){
+            case '요구분석':elementId='progress-analysis';break;
+            case '설계':elementId='progress-design';break;
+            case '개발':elementId='progress-develop';break;
+            case '테스트':elementId='progress-test';break;
+            case '이행':elementId='progress-deploy';break;
+        }
+        const element=document.getElementById(elementId);
+        if(element){
+            element.textContent=percentage+'%';
+            element.style.color=percentage===100?'#4caf50':(percentage>0?'#ff9800':'#1976d2');
+        }
+    });
+    const totalPercentage=totalTasks>0?Math.round((totalCompleted/totalTasks)*100):0;
+    const totalElement=document.getElementById('progress-total');
+    if(totalElement){
+        totalElement.textContent=totalPercentage+'%';
+        totalElement.style.color=totalPercentage===100?'#4caf50':(totalPercentage>0?'#ff9800':'#1976d2');
+        totalElement.style.fontSize='24px';
+    }
+}
+
+function applyFilters(){
+    const phaseFilter=document.getElementById('filterPhase').value;
+    const statusFilter=document.getElementById('filterStatus').value;
+    const difficultyFilter=document.getElementById('filterDifficulty').value;
+    const searchFilter=document.getElementById('filterSearch').value.toLowerCase();
+    const rows=document.querySelectorAll('#wbsTable tbody tr:not(.ms)');
+    rows.forEach(row=>{
+        let show=true;
+        if(phaseFilter&&row.getAttribute('data-phase')!==phaseFilter)show=false;
+        if(statusFilter){const statusCell=row.querySelector('.c13');if(statusCell&&statusCell.textContent.trim()!==statusFilter)show=false}
+        if(difficultyFilter){const diffCell=row.querySelector('.c8');if(diffCell&&diffCell.textContent.trim()!==difficultyFilter)show=false}
+        if(searchFilter){const taskCell=row.querySelector('.c4');if(taskCell&&!taskCell.textContent.toLowerCase().includes(searchFilter))show=false}
+        if(show)row.classList.remove('hidden');else row.classList.add('hidden');
+    });
+    calculateProgress();
+}
+
+function clearFilters(){
+    document.getElementById('filterPhase').value='';
+    document.getElementById('filterStatus').value='';
+    document.getElementById('filterDifficulty').value='';
+    document.getElementById('filterSearch').value='';
+    applyFilters();
+}
+
+function saveAllData(){
+    const updatedHTML = document.documentElement.outerHTML;
+
+    // Blob 생성
+    const blob = new Blob([updatedHTML], { type: "text/html;charset=utf-8" });
+
+    // 다운로드 링크 생성
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+
+    // 파일명: 날짜 기반 자동 부여
+    const fileName = "WBS_updated_" + new Date().toISOString().slice(0,10) + ".html";
+    link.download = fileName;
+
+    // 다운로드 트리거
+    link.click();
+
+    // 메모리 해제
+    URL.revokeObjectURL(link.href);
+    alert('✅ 저장 완료!\n'+new Date().toLocaleString('ko-KR'));
+}
+
+function loadAllData(){
+    const savedData=localStorage.getItem('wbs_tight_v1.0');
+    if(!savedData){alert('⚠️ 저장된 데이터 없음');return}
+    try{
+        const data=JSON.parse(savedData);
+        const tbody=document.getElementById('wbsBody');
+        tbody.innerHTML=data.html;
+        makeAllCellsEditable();
+        calculateProgress();
+        autoCalculate();
+        alert('✅ 불러오기 완료!\n'+new Date(data.timestamp).toLocaleString('ko-KR'));
+    }catch(e){alert('❌ 로딩 실패: '+e.message)}
+}
+
+function exportToExcel(){
+    const rows=document.querySelectorAll('#wbsTable tr:not(.hidden)');
+    let csv='\uFEFF';
+    rows.forEach(row=>{
+        const cells=row.querySelectorAll('th:not(.c17), td:not(.c17)');
+        const rowData=[];
+        cells.forEach(cell=>{
+            let text=cell.textContent.trim();
+            if(text.includes(',')||text.includes('\n'))text='"'+text.replace(/"/g,'""')+'"';
+            rowData.push(text);
+        });
+        csv+=rowData.join(',')+'\n';
+    });
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const link=document.createElement('a');
+    const url=URL.createObjectURL(blob);
+    link.setAttribute('href',url);
+    link.setAttribute('download','WBS_최적화_'+new Date().toISOString().split('T')[0]+'.csv');
+    link.style.visibility='hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    alert('✅ CSV 다운로드 완료!');
+}
+
+window.addEventListener('DOMContentLoaded',function(){
+    makeAllCellsEditable();
+    calculateProgress();
+});
+</script>
+
+</body></html>

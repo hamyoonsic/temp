@@ -1,0 +1,1279 @@
+<html lang="ko"><head>
+    <meta charset="UTF-8">
+    <title>IT 공지관리 시스템 WBS (version 1.0)</title>
+    <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Malgun Gothic', sans-serif;
+      background-color: #ffffff;
+      color: #222;
+      padding: 24px;
+    }
+        /* 제목 영역 개선 */
+    .wbs-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #222;
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+    
+    /* 부제(기간/기술 설명) 개선 */
+    .wbs-subtitle {
+      font-size: 13px;
+      color: #555;
+      line-height: 1.4;
+      margin-bottom: 18px;
+      white-space: nowrap;
+    }
+    
+    /* 화면 줄어들어도 테이블은 가로 스크롤로 처리 */
+    .wbs-wrapper {
+      width: 100%;
+      margin: 0 auto;
+      overflow-x: auto;
+    }
+    
+    /* 테이블이 내용 기준으로 넓어지도록 */
+    table.wbs-table {
+      border-collapse: collapse;
+      width: max-content;       /* 내용 길이에 맞게, 화면보다 넓으면 스크롤 */
+      min-width: 2000px;        /* 너무 쪼그라들지 않도록 최소 폭 */
+      table-layout: fixed;
+      font-size: 11px;
+    }
+    
+    table.wbs-table thead tr {
+      background: #f5f5f7;
+    }
+    
+    table.wbs-table th,
+    table.wbs-table td {
+      padding: 6px 8px;
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+      border-right: 1px solid #e3e3e3;
+    }
+    
+    table.wbs-table th {
+      font-weight: 600;
+      border-bottom: 1px solid #d0d0d5;
+    }
+    
+    table.wbs-table tbody tr + tr td {
+      border-top: 1px solid #f0f0f3;
+    }
+    
+    /* WBS 번호 컬럼 */
+    table.wbs-table th:nth-child(1),
+    table.wbs-table td:nth-child(1) {
+      width: 60px;
+      text-align: center;
+      font-weight: 600;
+      background: #fafafe;
+    }
+    
+    /* 단계 컬럼 은은한 색상 */
+    table.wbs-table th:nth-child(2) {
+      width: 90px;
+    }
+    table.wbs-table td:nth-child(2) {
+      background: #f2f6ff;
+      font-weight: 600;
+      color: #274472;
+    }
+    
+    /* 기능영역 컬럼 (조금만) */
+    table.wbs-table th:nth-child(3),
+    table.wbs-table td:nth-child(3) {
+      width: 90px;
+    }
+    
+    /* 세부작업 컬럼 넓게 */
+    table.wbs-table th:nth-child(4),
+    table.wbs-table td:nth-child(4) {
+      width: 240px;
+    }
+    
+    /* 범위/설명 컬럼 더 넓게 */
+    table.wbs-table th:nth-child(5),
+    table.wbs-table td:nth-child(5) {
+      width: 320px;
+    }
+    
+    /* 산정 근거 컬럼 더 넓게 */
+    table.wbs-table th:nth-child(6),
+    table.wbs-table td:nth-child(6) {
+      width: 320px;
+    }
+    
+    /* 선행작업 */
+    table.wbs-table th:nth-child(7),
+    table.wbs-table td:nth-child(7) {
+      width: 80px;
+    }
+    
+    /* 난이도 */
+    table.wbs-table th:nth-child(8),
+    table.wbs-table td:nth-child(8) {
+      width: 60px;
+      text-align: center;
+    }
+    
+    /* 숫자/공수 계열 컬럼 오른쪽 정렬 */
+    table.wbs-table th:nth-child(9),
+    table.wbs-table th:nth-child(10),
+    table.wbs-table td:nth-child(9),
+    table.wbs-table td:nth-child(10) {
+      width: 70px;
+      text-align: right;
+    }
+    
+    /* 시작일/종료일 */
+    table.wbs-table th:nth-child(11),
+    table.wbs-table td:nth-child(11),
+    table.wbs-table th:nth-child(12),
+    table.wbs-table td:nth-child(12) {
+      width: 110px;
+    }
+    
+    /* 상태 컬럼 */
+    table.wbs-table th:nth-child(13),
+    table.wbs-table td:nth-child(13) {
+      width: 80px;
+      text-align: center;
+    }
+    
+    /* 산출물 */
+    table.wbs-table th:nth-child(14),
+    table.wbs-table td:nth-child(14) {
+      width: 140px;
+    }
+    
+    /* 참고/비고 */
+    table.wbs-table th:nth-child(15),
+    table.wbs-table td:nth-child(15) {
+      width: 140px;
+    }
+    </style>
+    </head>
+    <body>
+    <div class="wbs-wrapper">
+      <div class="wbs-title">IT 공지관리 웹시스템 WBS (Version 1.0)</div>
+      <div class="wbs-subtitle">
+        기간: 2024-12-18 ~ 2025-02-28 · 개발언어: Java · DB: PostgreSQL · 단독 개발 · WIKI 사용자 매뉴얼 포함
+      </div>
+      <table class="wbs-table">
+        <thead>
+          <tr>
+            <th>WBS</th>
+            <th>단계</th>
+            <th>기능영역</th>
+            <th>세부작업</th>
+            <th>범위/설명</th>
+            <th>산정 근거(핵심 활동)</th>
+            <th>선행작업</th>
+            <th>난이도</th>
+            <th>예상공수(일)</th>
+            <th>총 공수(일)</th>
+            <th>시작일</th>
+            <th>종료일</th>
+            <th>상태</th>
+            <th>산출물</th>
+            <th>참고/비고</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>요구분석</td>
+            <td>전체</td>
+            <td>공지관리 과제 이해</td>
+            <td>과제 목적/범위 재정의, 기존 공지 문제점 정리</td>
+            <td>제안서, 기획 미팅 사전 공유 자료 검토</td>
+            <td></td>
+            <td>중</td>
+            <td>0.5</td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>과제 개요 메모</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>1.1</td>
+            <td>요구분석</td>
+            <td>제안서</td>
+            <td>제안서 1차 전체 리뷰</td>
+            <td>PDF 제안서 10p 전체 구조 파악, 화면/기능 리스트업</td>
+            <td>제안서 문서 정독 및 핵심 기능 하이라이트</td>
+            <td>1</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>요구사항 요약 노트</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>1.2</td>
+            <td>요구분석</td>
+            <td>제안서</td>
+            <td>요구사항 항목 추출</td>
+            <td>화면1~4, 확장기능, 알림채널, Graph API 등 기능 단위 요구사항 목록화</td>
+            <td>제안서 각 페이지별 기능 단위로 분해</td>
+            <td>1.1</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>기능 요구사항 목록</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>1.3</td>
+            <td>요구분석</td>
+            <td>현황파악</td>
+            <td>기존 공지 채널/방식 정리</td>
+            <td>현재 메일 공지 방식, 팀즈 사용 여부, KZ이음·포털·GW 등 현황 파악</td>
+            <td>내부 담당자 구두 확인 및 간단 인터뷰</td>
+            <td></td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>현행 공지 프로세스 메모</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>1.4</td>
+            <td>요구분석</td>
+            <td>요구 인터뷰</td>
+            <td>요구사항 Q&amp;A 준비</td>
+            <td>김호장 팀장님과 질의할 리스트 정리, 모호한 요구사항 목록화</td>
+            <td>제안서/정리본 기반으로 질문 리스트 정리</td>
+            <td>1.2</td>
+            <td>중</td>
+            <td>0.5</td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>질문 리스트</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>1.5</td>
+            <td>요구분석</td>
+            <td>요구 인터뷰</td>
+            <td>요구사항 미팅(질의응답) 진행</td>
+            <td>제안서 설명 이후 질의응답, 추가 요구 및 제약사항 청취</td>
+            <td>회의 일정 조율 후 1시간 내외 미팅</td>
+            <td>1.4</td>
+            <td>상</td>
+            <td>1</td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>회의 녹취/회의록 초안</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>1.6</td>
+            <td>요구분석</td>
+            <td>회의록</td>
+            <td>회의록 작성 및 정리</td>
+            <td>녹화파일/전화/메일/유선 내용까지 반영한 회의록 작성, 일자·참석자 포함</td>
+            <td>메모장/문서로 회의 내용 정리 및 보완</td>
+            <td>1.5</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>회의록 v1.0</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>1.7</td>
+            <td>요구분석</td>
+            <td>요구정리</td>
+            <td>화면1~4 요구사항 상세 정리</td>
+            <td>공지등록, 발송관리, IT 캘린더, 대시보드 화면별 필수/옵션 요구사항 정리</td>
+            <td>제안서 화면 구성 + 미팅 내용을 기능 단위로 매핑</td>
+            <td>1.2,1.5</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>화면별 요구사항 정의</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>1.8</td>
+            <td>요구분석</td>
+            <td>확장기능</td>
+            <td>완료공지/알림채널 요구사항 정리</td>
+            <td>완료공지 등록 플로우, 색상 변경, 알림채널(KZ이음/포털/GW) 연계 요구사항 정리</td>
+            <td>PDF 8~9p 기준으로 Flow 도식화</td>
+            <td>1.2,1.5</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>확장기능 요구사항 정의</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>1.9</td>
+            <td>요구분석</td>
+            <td>비기능</td>
+            <td>비기능 요구사항(NFR) 정의</td>
+            <td>성능(발송 처리량), 로그/이력 보관, 권한, 장애 시 동작 등 비기능 요구사항 정리</td>
+            <td>인터뷰 및 경험 기반으로 최소 NFR 명시</td>
+            <td>1.5</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>NFR 정리 문서</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>1.10</td>
+            <td>요구분석</td>
+            <td>요구정리</td>
+            <td>요구사항 정의서 확정</td>
+            <td>전체 요구사항을 문서로 통합하고 변경 이력 포함</td>
+            <td>1.6~1.9 내용 취합 후 정리</td>
+            <td>1.6-1.9</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>요구사항 정의서 v1.0</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>설계</td>
+            <td>전체</td>
+            <td>설계 단계 계획</td>
+            <td>DB/화면/연동·상태·테스트·이행 설계 범위 확정 및 산출물 목록 정의</td>
+            <td>요구사항 정의서를 기준으로 설계 범위 체크리스트 작성</td>
+            <td>1.10</td>
+            <td>중</td>
+            <td>0.5</td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>설계 범위 체크리스트</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.1</td>
+            <td>설계</td>
+            <td>도메인</td>
+            <td>도메인 모델 정의</td>
+            <td>공지, 공지수신대상, 공지이력, 발송로그, 캘린더이벤트, 해시태그, 알림연계 도메인 정의</td>
+            <td>요구사항에 등장하는 실체들을 엔티티/값객체로 분류</td>
+            <td>1.10</td>
+            <td>상</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>도메인 모델 다이어그램</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.2</td>
+            <td>설계</td>
+            <td>DB</td>
+            <td>공지/공지이력 테이블 설계</td>
+            <td>공지 기본정보, 상태, 중요도, 유형, 일정, 완료 플래그, 이력 테이블 구조 정의</td>
+            <td>요구사항 + 유지보수 용이성 고려한 정규화</td>
+            <td>2.1</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>ERD(공지/이력)</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.3</td>
+            <td>설계</td>
+            <td>DB</td>
+            <td>수신대상/캘린더/해시태그/알림연계 테이블 설계</td>
+            <td>수신 법인/부서 매핑, Outlook 캘린더 연동, 해시태그 통계, 알림채널 연계용 테이블 설계</td>
+            <td>Graph API 및 확장 연계를 고려한 키 설계</td>
+            <td>2.1</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>ERD(수신/캘린더/연계)</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.4</td>
+            <td>설계</td>
+            <td>DB</td>
+            <td>DB 인덱스/키/제약 조건 설계</td>
+            <td>조회/통계/History 추적을 위한 PK/FK/Index 설계</td>
+            <td>주요 조회 패턴 예상하여 인덱스 후보 정의</td>
+            <td>2.2,2.3</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>DB 설계서</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.5</td>
+            <td>설계</td>
+            <td>화면설계</td>
+            <td>화면1 공지등록 설계</td>
+            <td>입력항목, 멀티셀렉트, 해시태그, 일정, 완료 플래그, 메일 미리보기 UI 정의</td>
+            <td>PDF 4p 기반, 사용성 고려 화면 스케치</td>
+            <td>1.7</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>화면설계서(공지등록)</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.6</td>
+            <td>설계</td>
+            <td>화면설계</td>
+            <td>화면2 발송관리/승인 설계</td>
+            <td>승인대기/반려/발송대기/실패/완료 상태 표시, History 리스트/상세 설계</td>
+            <td>PDF 5p 기반, 업무통제 플로우 반영</td>
+            <td>1.7</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>화면설계서(발송관리)</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.7</td>
+            <td>설계</td>
+            <td>화면설계</td>
+            <td>화면3 IT 공지 캘린더 설계</td>
+            <td>월/주/일 View, 중요도 색상, 다건 more, 최근 공지/점검일정 연동 UI 설계</td>
+            <td>PDF 6p 기반 레이아웃 정의</td>
+            <td>1.7</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>화면설계서(캘린더)</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.8</td>
+            <td>설계</td>
+            <td>화면설계</td>
+            <td>화면4 대시보드 설계</td>
+            <td>결재대기/발송예정/실패/완료 카드, 통계, 부서별 수신현황, 최근 공지·점검일정 UI 설계</td>
+            <td>PDF 7p 기반 위젯 구성 정의</td>
+            <td>1.7</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>화면설계서(대시보드)</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.9</td>
+            <td>설계</td>
+            <td>상태/플로우</td>
+            <td>상태 전이/업무 플로우 설계</td>
+            <td>공지 상태(작성→승인대기→발송대기→발송완료/실패→완료공지) 다이어그램 정의</td>
+            <td>승인체계 및 History 요구사항 반영</td>
+            <td>1.7,1.8</td>
+            <td>상</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>상태전이 다이어그램</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.10</td>
+            <td>설계</td>
+            <td>연동</td>
+            <td>Graph API 연동 설계</td>
+            <td>Outlook 메일 발송 및 자원 캘린더 등록에 필요한 API, 권한, 토큰 관리 설계</td>
+            <td>Microsoft Graph 문서 및 현행 Mail 연동 제약사항 검토</td>
+            <td>1.6,1.8</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>연동 설계서(Graph API)</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.11</td>
+            <td>설계</td>
+            <td>템플릿</td>
+            <td>메일 템플릿 구조 설계</td>
+            <td>공지 유형/중요도/문의처/해시태그를 포함한 표준 본문 템플릿 정의</td>
+            <td>PDF 예시 메일 포맷 및 사내 메일 관례 참고</td>
+            <td>1.7</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>메일 템플릿 설계</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>2.12</td>
+            <td>설계</td>
+            <td>테스트</td>
+            <td>테스트 전략/시나리오 초안 작성</td>
+            <td>단위/통합 테스트 범위, 주요 시나리오(정기/즉시/실패/재시도 등) 초안 작성</td>
+            <td>요구사항 기반의 주요 성공/실패 플로우 도출</td>
+            <td>1.10</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>테스트 전략 초안</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>개발</td>
+            <td>공통</td>
+            <td>개발환경/프로젝트 구조 세팅</td>
+            <td>Java + PostgreSQL 기반 Spring Boot 프로젝트 생성, 공통 설정 구성</td>
+            <td>로컬 개발 환경에서 빌드/실행 검증</td>
+            <td>2.2-2.4</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>프로젝트 뼈대 코드</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.1</td>
+            <td>개발</td>
+            <td>공통</td>
+            <td>도메인/리포지토리 기본 구현</td>
+            <td>공지·수신대상·이력·발송로그 등 JPA 엔티티/리포지토리 구현</td>
+            <td>DB 설계서 기반 엔티티 매핑</td>
+            <td>3,2.2,2.3</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>도메인 코드</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.2</td>
+            <td>개발</td>
+            <td>공통</td>
+            <td>예외/로깅/응답 공통 모듈 구현</td>
+            <td>에러 처리, 공통 응답 포맷, 로깅 정책 구현</td>
+            <td>운영 시 분석이 용이한 로그 구조 설계</td>
+            <td>3</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>공통 모듈 코드</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.3</td>
+            <td>개발</td>
+            <td>공지등록</td>
+            <td>공지등록 기본 CRUD API</td>
+            <td>공지 생성/수정/상세조회/목록조회 API 구현</td>
+            <td>요구사항 정의에 따른 필드 매핑</td>
+            <td>3.1</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>공지등록 API</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.4</td>
+            <td>개발</td>
+            <td>공지등록</td>
+            <td>공지 유형/서비스 멀티셀렉트 구현</td>
+            <td>ASKME 서비스 목록 기반 공지유형/영향서비스 멀티 선택 기능</td>
+            <td>기존 조직도/서비스 코드 연동 설계 적용</td>
+            <td>3.3,2.5</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>멀티셀렉트 UI/로직</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.5</td>
+            <td>개발</td>
+            <td>공지등록</td>
+            <td>수신 법인/부서 선택 UI/로직</td>
+            <td>조직도 기반 수신 법인/부서 멀티 선택 기능 구현</td>
+            <td>조직 코드/권한체계 참고</td>
+            <td>3.3,2.5</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>수신대상 선택 기능</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.6</td>
+            <td>개발</td>
+            <td>공지등록</td>
+            <td>해시태그 등록/관리 기능</td>
+            <td>인프라작업 등 해시태그 입력 및 저장, 통계용 구조 포함</td>
+            <td>해시태그별 월간 건수 집계 고려</td>
+            <td>3.3,2.5</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>해시태그 기능</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.7</td>
+            <td>개발</td>
+            <td>공지등록</td>
+            <td>일정/완료 플래그 입력</td>
+            <td>점검/장애 공지의 시작/종료일, 완료 플래그 입력 필드 구현</td>
+            <td>완료공지 기능과의 연계 고려</td>
+            <td>3.3,2.5</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>일정/완료 필드</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.8</td>
+            <td>개발</td>
+            <td>공지등록</td>
+            <td>메일 템플릿 미리보기/에디터 연동</td>
+            <td>입력한 공지 내용을 메일 본문 템플릿에 미리보기, 간단한 에디터 연동</td>
+            <td>메일 템플릿 설계안 적용</td>
+            <td>3.3,2.11</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>미리보기/에디터</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.9</td>
+            <td>개발</td>
+            <td>발송/승인</td>
+            <td>공지등록 시 승인요청 트리거</td>
+            <td>공지 저장 후 담당자에게 승인요청 메일 발송 트리거 구현</td>
+            <td>Graph API 또는 기존 메일 시스템 사용</td>
+            <td>3.3,2.10</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>승인요청 트리거</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.10</td>
+            <td>개발</td>
+            <td>발송/승인</td>
+            <td>발송관리 목록/검색 기능</td>
+            <td>승인대기/반려/발송대기/실패/완료 상태별 목록/검색 구현</td>
+            <td>PDF 5p 로그/History UI 기준</td>
+            <td>3.1,2.6</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>발송관리 목록 화면</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.11</td>
+            <td>개발</td>
+            <td>발송/승인</td>
+            <td>승인 상세/승인·반려 처리</td>
+            <td>상세 보기, 코멘트(선택), 승인/반려 버튼 및 이력 저장</td>
+            <td>업무 통제의 핵심 흐름 구현</td>
+            <td>3.10,2.9</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>승인 상세/처리 로직</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.12</td>
+            <td>개발</td>
+            <td>발송/상태</td>
+            <td>상태 전이 로직 구현</td>
+            <td>승인대기→발송대기/반려, 반려 후 수정→재요청 등 상태 전이 로직 구현</td>
+            <td>상태 다이어그램과 데이터 제약 조건 반영</td>
+            <td>3.11,2.9</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>상태 전이 코드</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.13</td>
+            <td>개발</td>
+            <td>발송/History</td>
+            <td>발송History/로그 관리</td>
+            <td>발송 로그, 상태 변경 이력 저장 및 조회 기능 구현</td>
+            <td>트러블슈팅 및 감사 목적으로 충분한 필드 구성</td>
+            <td>3.10,3.12</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>History 저장/조회 기능</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.14</td>
+            <td>개발</td>
+            <td>발송엔진</td>
+            <td>정기발송(예약) 처리</td>
+            <td>발송일시 기준 정기 발송 스케줄링 구현(예: 12/15 오전 일괄 발송)</td>
+            <td>스케줄러/배치 기반 구현</td>
+            <td>3.12,2.10</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>정기발송 모듈</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.15</td>
+            <td>개발</td>
+            <td>발송엔진</td>
+            <td>긴급공지 즉시발송 처리</td>
+            <td>긴급 공지는 승인 후 즉시 발송되도록 처리</td>
+            <td>일반 공지와 분기 처리 및 UI 표시</td>
+            <td>3.12,2.10</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>즉시발송 모듈</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.16</td>
+            <td>개발</td>
+            <td>발송엔진</td>
+            <td>수신 대상 매핑(법인/부서→메일주소/그룹)</td>
+            <td>수신 법인/부서를 메일 그룹 또는 개별 주소로 매핑하는 로직 구현</td>
+            <td>조직도·메일 주소 정책 파악</td>
+            <td>3.5,2.3</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>수신자 매핑 로직</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.17</td>
+            <td>개발</td>
+            <td>발송엔진</td>
+            <td>발송 실패/재시도 로직</td>
+            <td>발송 실패 시 재시도/포기 정책 및 실패 사유 저장</td>
+            <td>네트워크/Graph 오류 케이스 분류</td>
+            <td>3.14,3.15</td>
+            <td>상</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>재시도 처리 모듈</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.18</td>
+            <td>개발</td>
+            <td>GraphAPI</td>
+            <td>Graph API 연동 구현(메일 발송)</td>
+            <td>Graph API를 통한 메일 발송 로직 및 토큰 관리 구현</td>
+            <td>연동 설계서/샘플 코드 기반</td>
+            <td>2.10,3.14</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>메일 발송 연동 코드</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.19</td>
+            <td>개발</td>
+            <td>GraphAPI</td>
+            <td>Outlook 공지 자원 캘린더 등록</td>
+            <td>발송된 공지를 Outlook 공지 자원 캘린더에 일정으로 등록</td>
+            <td>자원 캘린더 ID 및 시간대 처리 구현</td>
+            <td>2.10,3.18</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>캘린더 등록 코드</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.20</td>
+            <td>개발</td>
+            <td>캘린더</td>
+            <td>IT 공지 캘린더 UI/조회 구현</td>
+            <td>월/주/일 View, 중요도 색상, 여러 공지 more 표시 구현</td>
+            <td>화면 설계서와 데이터 구조 반영</td>
+            <td>2.7,3.19</td>
+            <td>중</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>캘린더 화면/API</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.21</td>
+            <td>개발</td>
+            <td>캘린더</td>
+            <td>최근 공지/시스템점검 일정 연동</td>
+            <td>캘린더 옆 최근 공지목록·점검일정 리스트 구현</td>
+            <td>공지/점검 유형 필터링 로직</td>
+            <td>3.20,2.7</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>보조 리스트 UI</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.22</td>
+            <td>개발</td>
+            <td>대시보드</td>
+            <td>공지 발송 대시보드 카드/통계 구현</td>
+            <td>결재대기/발송예정/실패/완료 카드, 공지유형 통계 그래프 구현</td>
+            <td>통계 집계 쿼리/캐싱 전략 설계</td>
+            <td>2.8,3.13</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>대시보드 위젯</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.23</td>
+            <td>개발</td>
+            <td>대시보드</td>
+            <td>부서별 공지 수신현황 구현</td>
+            <td>부서별 수신 건수를 집계하여 그래프/표로 표시</td>
+            <td>수신대상/발송로그 조인 쿼리 작성</td>
+            <td>3.16,3.22</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>수신현황 통계</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.24</td>
+            <td>개발</td>
+            <td>완료공지</td>
+            <td>완료공지 등록 UI/기능</td>
+            <td>장애/점검 공지에서 완료 공지를 신규 입력하는 화면/기능 구현</td>
+            <td>PDF 8p 완료공지 플로우 반영</td>
+            <td>3.7,2.9</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>완료공지 화면</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.25</td>
+            <td>개발</td>
+            <td>완료공지</td>
+            <td>완료 상태·색상 변경/연계</td>
+            <td>완료 공지 등록 시 기존 공지를 완료 상태(녹색)로 변경, 대시보드/캘린더 반영</td>
+            <td>상태 전이 및 이벤트 처리 설계 사용</td>
+            <td>3.24,3.20,3.22</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>완료 상태 반영 로직</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.26</td>
+            <td>개발</td>
+            <td>알림채널</td>
+            <td>알림 연계 표준 API Spec 작성</td>
+            <td>KZ이음/포털/GW용 공지 알림 공통 API 규격 정의</td>
+            <td>PDF 9p 확장 연계 요구사항 반영</td>
+            <td>1.8,2.10</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>알림 API Spec v1</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>3.27</td>
+            <td>개발</td>
+            <td>알림채널</td>
+            <td>서비스별 샘플 페이로드/가이드 작성</td>
+            <td>각 서비스 담당자에게 제공할 샘플 요청/응답 JSON, 에러 케이스 정리</td>
+            <td>Spec 기반 예시 데이터 구성</td>
+            <td>3.26</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>연계 가이드 문서</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>테스트</td>
+            <td>단위테스트</td>
+            <td>단위 테스트 코드 작성</td>
+            <td>핵심 도메인/서비스/발송엔진에 대한 단위 테스트 코드 작성</td>
+            <td>주요 정상/에러 케이스 포함</td>
+            <td>3.1-3.27</td>
+            <td>중</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>단위 테스트 코드</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>4.1</td>
+            <td>테스트</td>
+            <td>단위테스트</td>
+            <td>단위 테스트 실행/리포트 정리</td>
+            <td>테스트 수행 후 실패 케이스 정리 및 수정 계획 수립</td>
+            <td>테스트 결과 리포트 간단 작성</td>
+            <td>4</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>단위 테스트 리포트</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>4.2</td>
+            <td>테스트</td>
+            <td>통합테스트</td>
+            <td>통합 테스트 시나리오 상세화</td>
+            <td>등록→승인→발송→캘린더→대시보드→완료공지 전체 플로우 시나리오 작성</td>
+            <td>테스트 전략 초안 구체화</td>
+            <td>2.12</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>통합 시나리오 문서</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>4.3</td>
+            <td>테스트</td>
+            <td>통합테스트</td>
+            <td>통합 테스트 수행(정상/예외)</td>
+            <td>실제 화면과 연동하여 시나리오대로 테스트 수행, 버그 리스팅</td>
+            <td>시나리오별 체크리스트로 검증</td>
+            <td>4.2,3.3-3.27</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>통합 테스트 결과</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>4.4</td>
+            <td>테스트</td>
+            <td>결함수정</td>
+            <td>결함 분석 및 수정 반영</td>
+            <td>주요 결함 우선순위 정하고 코드 수정, 재테스트</td>
+            <td>버그 리포트 기반 수정 작업</td>
+            <td>4.3</td>
+            <td>상</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>수정 내역/패치</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>이행</td>
+            <td>문서화</td>
+            <td>운영 관점 정리</td>
+            <td>운영 담당자 관점에서 필요한 버튼/화면/로그/권한 정리</td>
+            <td>요구사항/테스트 결과를 바탕으로 운영 포인트 정리</td>
+            <td>4.4</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>운영 포인트 목록</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>5.1</td>
+            <td>이행</td>
+            <td>문서화</td>
+            <td>사용자 매뉴얼(WIKI) 작성</td>
+            <td>공지등록, 승인, 정기/즉시발송, 완료공지, 캘린더, 대시보드 사용법 정리</td>
+            <td>실제 화면 캡처 및 단계별 설명 작성</td>
+            <td>3.3-3.25</td>
+            <td>중</td>
+            <td>2</td>
+            <td>2.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>WIKI 사용자 매뉴얼</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>5.2</td>
+            <td>이행</td>
+            <td>문서화</td>
+            <td>관리자/운영 가이드 작성</td>
+            <td>권한 관리, 장애 시 대응, 로그 보는 방법, 재시도 방법 등 정리</td>
+            <td>운영 관점에서 자주 발생할 수 있는 상황 가정</td>
+            <td>5,3.13,3.17</td>
+            <td>중</td>
+            <td>1.5</td>
+            <td>2</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>운영 가이드</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>5.3</td>
+            <td>이행</td>
+            <td>정리</td>
+            <td>잔여이슈/백로그 정리</td>
+            <td>시간 부족으로 미뤄진 항목/향후 개선사항 목록화</td>
+            <td>테스트/개발 중 메모된 TODO 모음</td>
+            <td>4.4</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>백로그 리스트</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>5.4</td>
+            <td>이행</td>
+            <td>정리</td>
+            <td>최종 산출물 패키징</td>
+            <td>요구사항/설계/코드/테스트/매뉴얼 등 산출물 경로/리스트 정리</td>
+            <td>문서/소스 경로 정리 및 README 작성</td>
+            <td>5.1-5.3</td>
+            <td>중</td>
+            <td>1</td>
+            <td>1.5</td>
+            <td></td>
+            <td></td>
+            <td>미착수</td>
+            <td>최종 산출물 목록</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <script>
+    // 단계별로 시작일/종료일 자동 세팅
+    (function() {
+      const phaseDateMap = {
+        "요구분석": ["2024-12-18", "2024-12-27"],
+        "설계":   ["2024-12-30", "2025-01-10"],
+        "개발":   ["2025-01-13", "2025-02-14"],
+        "테스트": ["2025-02-17", "2025-02-24"],
+        "이행":   ["2025-02-25", "2025-02-28"]
+      };
+    
+      const table = document.querySelector("table.wbs-table tbody");
+      if (!table) return;
+    
+      Array.from(table.rows).forEach(row => {
+        const phaseCell = row.cells[1];   // 단계
+        const startCell = row.cells[10];  // 시작일
+        const endCell   = row.cells[11];  // 종료일
+    
+        if (!phaseCell || !startCell || !endCell) return;
+    
+        const phase = phaseCell.textContent.trim();
+        const dates = phaseDateMap[phase];
+        if (!dates) return;
+    
+        if (!startCell.textContent.trim()) startCell.textContent = dates[0];
+        if (!endCell.textContent.trim())   endCell.textContent   = dates[1];
+      });
+    })();
+    </script>
+    
+    
+    
+    
+    </body></html>
