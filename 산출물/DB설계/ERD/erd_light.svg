@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <style>
+    .bg { fill: #ffffff; }
+    .table { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.2; rx: 10; ry: 10; }
+    .title { font: 600 14px "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+    .field { font: 12px "Segoe UI", Arial, sans-serif; fill: #334155; }
+    .note { font: 12px "Segoe UI", Arial, sans-serif; fill: #475569; }
+    .line { stroke: #475569; stroke-width: 1.2; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1200" height="700" />
+
+  <!-- Core table -->
+  <rect class="table" x="470" y="250" width="260" height="120" />
+  <text class="title" x="485" y="272">notice_base</text>
+  <text class="field" x="485" y="292">PK notice_id</text>
+  <text class="field" x="485" y="310">notice_status, notice_level</text>
+  <text class="field" x="485" y="328">publish_start_at, publish_end_at</text>
+  <text class="field" x="485" y="346">FK affected_service_id</text>
+  <text class="field" x="485" y="364">FK parent_notice_id</text>
+
+  <!-- Right column -->
+  <rect class="table" x="780" y="80" width="200" height="80" />
+  <text class="title" x="792" y="102">notice_approval</text>
+  <text class="field" x="792" y="122">PK approval_id</text>
+  <text class="field" x="792" y="140">FK notice_id</text>
+
+  <rect class="table" x="780" y="180" width="200" height="80" />
+  <text class="title" x="792" y="202">notice_send_plan</text>
+  <text class="field" x="792" y="222">PK send_plan_id</text>
+  <text class="field" x="792" y="240">FK notice_id</text>
+
+  <rect class="table" x="780" y="280" width="200" height="80" />
+  <text class="title" x="792" y="302">notice_attachment</text>
+  <text class="field" x="792" y="322">PK attachment_id</text>
+  <text class="field" x="792" y="340">FK notice_id</text>
+
+  <rect class="table" x="780" y="380" width="200" height="80" />
+  <text class="title" x="792" y="402">notice_tag</text>
+  <text class="field" x="792" y="422">PK tag_id</text>
+  <text class="field" x="792" y="440">FK notice_id</text>
+
+  <rect class="table" x="780" y="480" width="200" height="80" />
+  <text class="title" x="792" y="502">notice_target</text>
+  <text class="field" x="792" y="522">PK target_id</text>
+  <text class="field" x="792" y="540">FK notice_id</text>
+
+  <!-- Bottom row -->
+  <rect class="table" x="240" y="560" width="200" height="90" />
+  <text class="title" x="252" y="582">notice_recipient</text>
+  <text class="field" x="252" y="602">PK recipient_id</text>
+  <text class="field" x="252" y="620">FK notice_id</text>
+  <text class="field" x="252" y="638">FK user_id</text>
+
+  <rect class="table" x="480" y="560" width="230" height="90" />
+  <text class="title" x="492" y="582">notice_delivery_log</text>
+  <text class="field" x="492" y="602">PK delivery_id</text>
+  <text class="field" x="492" y="620">FK notice_id</text>
+  <text class="field" x="492" y="638">channel, delivery_status</text>
+
+  <rect class="table" x="740" y="560" width="240" height="90" />
+  <text class="title" x="752" y="582">notice_calendar_event</text>
+  <text class="field" x="752" y="602">PK calendar_event_id</text>
+  <text class="field" x="752" y="620">FK notice_id</text>
+  <text class="field" x="752" y="638">resource_mailbox</text>
+
+  <!-- Left column -->
+  <rect class="table" x="240" y="200" width="200" height="70" />
+  <text class="title" x="252" y="222">service_master</text>
+  <text class="field" x="252" y="242">PK service_id</text>
+
+  <rect class="table" x="20" y="300" width="200" height="90" />
+  <text class="title" x="32" y="322">corporation_master</text>
+  <text class="field" x="32" y="342">PK corp_id</text>
+  <text class="field" x="32" y="360">FK parent_corp_id</text>
+
+  <rect class="table" x="240" y="300" width="200" height="90" />
+  <text class="title" x="252" y="322">organization_master</text>
+  <text class="field" x="252" y="342">PK org_unit_id</text>
+  <text class="field" x="252" y="360">FK corp_id</text>
+  <text class="field" x="252" y="378">FK parent_org_unit_id</text>
+
+  <rect class="table" x="240" y="420" width="200" height="90" />
+  <text class="title" x="252" y="442">user_master</text>
+  <text class="field" x="252" y="462">PK user_id</text>
+  <text class="field" x="252" y="480">FK org_unit_id</text>
+  <text class="field" x="252" y="498">FK corp_id</text>
+
+  <!-- Audit / admin -->
+  <rect class="table" x="20" y="80" width="220" height="80" />
+  <text class="title" x="32" y="102">admin_delegation</text>
+  <text class="field" x="32" y="122">PK delegation_id</text>
+  <text class="field" x="32" y="140">delegator_user_id</text>
+
+  <rect class="table" x="20" y="180" width="220" height="80" />
+  <text class="title" x="32" y="202">audit_log</text>
+  <text class="field" x="32" y="222">PK log_id</text>
+  <text class="field" x="32" y="240">log_type, action</text>
+
+  <!-- Lines: notice_base to related tables -->
+  <line class="line" x1="730" y1="270" x2="780" y2="120" />
+  <line class="line" x1="730" y1="290" x2="780" y2="220" />
+  <line class="line" x1="730" y1="310" x2="780" y2="320" />
+  <line class="line" x1="730" y1="330" x2="780" y2="420" />
+  <line class="line" x1="730" y1="350" x2="780" y2="520" />
+
+  <line class="line" x1="560" y1="370" x2="340" y2="560" />
+  <line class="line" x1="600" y1="370" x2="580" y2="560" />
+  <line class="line" x1="640" y1="370" x2="860" y2="560" />
+
+  <line class="line" x1="470" y1="300" x2="440" y2="235" />
+
+  <!-- Lines: recipient to user, user/org/corp -->
+  <line class="line" x1="340" y1="560" x2="340" y2="510" />
+  <line class="line" x1="340" y1="510" x2="340" y2="420" />
+  <line class="line" x1="340" y1="420" x2="340" y2="390" />
+  <line class="line" x1="340" y1="390" x2="120" y2="390" />
+
+  <!-- Lines: org to corp -->
+  <line class="line" x1="240" y1="345" x2="220" y2="345" />
+
+  <!-- Notes -->
+  <text class="note" x="20" y="680">
+    Self-references: corporation_master.parent_corp_id, organization_master.parent_org_unit_id, notice_base.parent_notice_id
+  </text>
+</svg>

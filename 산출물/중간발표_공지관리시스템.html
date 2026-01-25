@@ -3,22 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>IT 공지관리시스템 중간발표</title>
+  <title>공지관리 시스템 중간발표</title>
   <style>
+    @import url("https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap");
+
     :root {
-      --bg: #f7f4ef;
-      --bg-2: #edf0f6;
-      --ink: #111217;
-      --muted: #5a6270;
-      --accent: #1f6feb;
-      --accent-2: #f05d23;
-      --accent-3: #2ca58d;
+      --bg: #f6f1ea;
+      --bg-2: #eef2f7;
+      --ink: #141622;
+      --muted: #5b6272;
+      --accent: #176b87;
+      --accent-2: #ff7a48;
+      --accent-3: #1f9d7a;
       --card: #ffffff;
-      --line: #d7dbe3;
-      --shadow: 0 18px 55px rgba(16, 24, 40, 0.16);
-      --title: "Black Han Sans", "Gowun Batang", "Malgun Gothic", sans-serif;
-      --body: "Gowun Dodum", "NanumSquareRound", "Malgun Gothic", sans-serif;
-      --mono: "Cascadia Mono", "Consolas", monospace;
+      --line: #d8dde7;
+      --shadow: 0 24px 60px rgba(18, 28, 45, 0.18);
+      --title: "Chakra Petch", "IBM Plex Sans KR", sans-serif;
+      --body: "IBM Plex Sans KR", "SUIT", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      --mono: "JetBrains Mono", "Cascadia Mono", "Consolas", monospace;
     }
 
     * { box-sizing: border-box; }
@@ -26,9 +28,9 @@
     body {
       font-family: var(--body);
       color: var(--ink);
-      background: radial-gradient(1200px 700px at 5% 10%, #ffe7d1 0%, transparent 60%),
-                  radial-gradient(900px 600px at 95% 15%, #d8e7ff 0%, transparent 65%),
-                  linear-gradient(160deg, var(--bg), var(--bg-2));
+      background: radial-gradient(1000px 700px at 8% 8%, rgba(255, 200, 151, 0.45) 0%, transparent 60%),
+                  radial-gradient(900px 520px at 88% 12%, rgba(141, 197, 255, 0.45) 0%, transparent 60%),
+                  linear-gradient(155deg, var(--bg), var(--bg-2));
       overflow: hidden;
     }
 
@@ -43,18 +45,18 @@
       pointer-events: none;
     }
     body::before {
-      width: 380px;
-      height: 380px;
-      background: #ff8d63;
-      top: -120px;
-      left: -120px;
+      width: 420px;
+      height: 420px;
+      background: #ffb281;
+      top: -140px;
+      left: -160px;
     }
     body::after {
-      width: 480px;
-      height: 480px;
-      background: #4ba3ff;
-      bottom: -200px;
-      right: -140px;
+      width: 520px;
+      height: 520px;
+      background: #6fb4ff;
+      bottom: -220px;
+      right: -180px;
     }
 
     #deck {
@@ -62,19 +64,19 @@
       height: 100vh;
       width: 100vw;
       z-index: 1;
-      padding: 24px;
+      padding: 16px;
     }
 
     .slide {
       display: none;
-      height: calc(100vh - 48px);
+      height: calc(100vh - 32px);
       background: var(--card);
-      border-radius: 22px;
+      border-radius: 24px;
       box-shadow: var(--shadow);
-      padding: 46px 54px;
+      padding: 32px 36px;
       position: relative;
       overflow: hidden;
-      border: 1px solid rgba(31, 111, 235, 0.12);
+      border: 1px solid rgba(23, 107, 135, 0.18);
     }
 
     .slide.active {
@@ -94,9 +96,9 @@
     .slide::after {
       content: "";
       position: absolute;
-      inset: 18px;
-      border: 1px dashed rgba(31, 111, 235, 0.08);
-      border-radius: 18px;
+      inset: 16px;
+      border: 1px dashed rgba(23, 107, 135, 0.1);
+      border-radius: 20px;
       pointer-events: none;
     }
 
@@ -105,12 +107,12 @@
       align-items: baseline;
       justify-content: space-between;
       gap: 16px;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
     }
 
     .slide-title {
       font-family: var(--title);
-      font-size: 34px;
+      font-size: 38px;
       letter-spacing: 0.3px;
       margin: 0;
     }
@@ -118,7 +120,7 @@
     .slide-tag {
       font-size: 13px;
       color: var(--muted);
-      background: #f3f5f9;
+      background: #f1f5f9;
       border: 1px solid var(--line);
       padding: 6px 12px;
       border-radius: 999px;
@@ -127,21 +129,21 @@
     .lead {
       font-size: 20px;
       color: var(--muted);
-      margin: 8px 0 24px 0;
+      margin: 6px 0 14px 0;
     }
 
     .meta-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px;
-      margin-top: 18px;
+      gap: 10px;
+      margin-top: 10px;
     }
 
     .meta-card {
       padding: 14px 16px;
       border-radius: 14px;
       border: 1px solid var(--line);
-      background: #fbfcff;
+      background: #fbfbff;
       box-shadow: 0 8px 18px rgba(16, 24, 40, 0.08);
     }
 
@@ -159,7 +161,12 @@
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 18px;
+      gap: 12px;
+    }
+
+    .tight-row {
+      gap: 12px;
+      margin-top: 10px;
     }
 
     .card {
@@ -186,28 +193,28 @@
       padding: 6px 12px;
       border-radius: 999px;
       font-size: 12px;
-      background: #f0f7ff;
-      color: #1f4e89;
-      border: 1px solid #cfe3ff;
+      background: #e7f6ff;
+      color: #145c76;
+      border: 1px solid #bfe4f5;
     }
 
     .pill.warn {
-      background: #fff3ea;
-      color: #8a3a12;
-      border: 1px solid #ffd6bd;
+      background: #fff2ea;
+      color: #934023;
+      border: 1px solid #ffd0b8;
     }
 
     .timeline {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin-top: 16px;
+      gap: 10px;
+      margin-top: 10px;
     }
 
     .timeline .step {
       border-left: 4px solid var(--accent-3);
       padding: 10px 12px;
-      background: #f7fffb;
+      background: #f3fffb;
       border-radius: 10px;
       font-size: 14px;
     }
@@ -215,8 +222,36 @@
     .progress-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .progress-grid.compact {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      margin-top: 12px;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .control-card {
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #f9fbff;
+      box-shadow: 0 6px 16px rgba(16, 24, 40, 0.06);
+      font-size: 13px;
+    }
+
+    .control-card b {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--accent);
+      font-size: 14px;
     }
 
     .progress-card {
@@ -255,22 +290,22 @@
     .diagram {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 16px;
-      margin-top: 10px;
+      gap: 12px;
+      margin-top: 8px;
     }
 
     .diagram .box {
       padding: 14px;
       border-radius: 14px;
       border: 1px solid var(--line);
-      background: #f6f8ff;
-      box-shadow: 0 6px 20px rgba(31, 111, 235, 0.08);
+      background: #f2f7ff;
+      box-shadow: 0 6px 20px rgba(23, 107, 135, 0.1);
     }
 
     .diagram .box h4 {
       margin: 0 0 6px 0;
       font-size: 15px;
-      color: #1f4e89;
+      color: #165472;
     }
 
     .diagram .box p { margin: 0; font-size: 13px; color: var(--muted); }
@@ -278,15 +313,15 @@
     .flow {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 8px;
       align-items: center;
-      margin-top: 16px;
+      margin-top: 10px;
     }
 
     .flow .node {
       padding: 10px 14px;
       border-radius: 999px;
-      background: #f3f5f9;
+      background: #f3f6fb;
       border: 1px solid var(--line);
       font-size: 14px;
     }
@@ -296,8 +331,8 @@
     .image-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px;
-      margin-top: 12px;
+      gap: 10px;
+      margin-top: 8px;
     }
 
     .image-grid figure {
@@ -325,13 +360,13 @@
 
     .big-image {
       width: 100%;
-      height: 320px;
+      height: 260px;
       border-radius: 16px;
       border: 1px solid var(--line);
       overflow: hidden;
       background: #ffffff;
       box-shadow: 0 12px 30px rgba(16, 24, 40, 0.1);
-      margin-top: 14px;
+      margin-top: 10px;
     }
 
     .big-image img {
@@ -343,8 +378,8 @@
 
     .footer {
       position: absolute;
-      bottom: 18px;
-      right: 32px;
+      bottom: 12px;
+      right: 20px;
       font-size: 12px;
       color: var(--muted);
     }
@@ -361,7 +396,7 @@
 
     #controls button {
       border: none;
-      background: #111827;
+      background: #12233b;
       color: #fff;
       padding: 8px 12px;
       border-radius: 10px;
@@ -379,11 +414,11 @@
     }
 
     .callout {
-      margin-top: 12px;
+      margin-top: 8px;
       padding: 12px 14px;
       border-radius: 12px;
-      background: #fff8f2;
-      border: 1px solid #ffd9c4;
+      background: #fff6ef;
+      border: 1px solid #ffd2bb;
       font-size: 14px;
     }
 
@@ -394,82 +429,266 @@
       align-items: start;
     }
 
+    .intro-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 18px;
+      align-items: start;
+      min-height: calc(100% - 120px);
+    }
+
+    .intro-left .meta-grid {
+      margin-top: 14px;
+    }
+
+    .intro-right {
+      display: grid;
+      gap: 14px;
+      align-content: stretch;
+      grid-auto-rows: 1fr;
+    }
+
+    .overview-wrap {
+      display: grid;
+      gap: 16px;
+    }
+
+    .overview-title {
+      font-size: 18px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .step-flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(140px, 1fr));
+      gap: 14px;
+      align-items: center;
+    }
+
+    .step-item {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #ffffff;
+      box-shadow: 0 8px 18px rgba(16, 24, 40, 0.06);
+      padding: 14px 12px;
+      text-align: left;
+    }
+
+    .step-label {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .step-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0 0 6px 0;
+    }
+
+    .step-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .graph-layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .graph-left {
+      display: grid;
+      gap: 14px;
+    }
+
+    .graph-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .graph-node {
+      flex: 1 1 180px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #f7f8fc;
+      padding: 14px;
+      text-align: center;
+      box-shadow: 0 8px 18px rgba(16, 24, 40, 0.06);
+      font-size: 13px;
+    }
+
+    .graph-node .node-title {
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .graph-plus {
+      font-size: 22px;
+      color: var(--accent);
+      font-weight: 700;
+      padding: 0 4px;
+    }
+
+    .graph-pill {
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      background: #ffffff;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .graph-right {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #f2f6fb;
+      padding: 16px;
+      box-shadow: 0 10px 22px rgba(16, 24, 40, 0.08);
+    }
+
+    .mock-window {
+      background: #ffffff;
+      border-radius: 14px;
+      border: 1px solid #cbd5e1;
+      padding: 14px;
+      min-height: 210px;
+    }
+
+    .mock-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mock-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .mock-card {
+      background: #eef2ff;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 12px;
+      color: #1f2a44;
+    }
+
+    .mock-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .mock-actions span {
+      display: inline-flex;
+      justify-content: center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #1f4e89;
+      color: #fff;
+      font-size: 12px;
+    }
+
     @media (max-width: 960px) {
-      .slide { padding: 36px 28px; }
+      .slide { padding: 28px 20px; }
       .columns { grid-template-columns: 1fr; }
-      .big-image { height: 220px; }
+      .intro-grid { grid-template-columns: 1fr; }
+      .big-image { height: 200px; }
     }
   </style>
 </head>
 <body>
   <div id="deck">
-    <section class="slide active" data-title="인트로">
+    <section class="slide intro-slide active" data-title="인트로">
       <div class="slide-header">
-        <h1 class="slide-title">IT 공지관리시스템 중간발표</h1>
-        <span class="slide-tag">2026-01</span>
+        <h1 class="slide-title">공지관리 시스템 중간발표</h1>
+        <span class="slide-tag">2026-01-08 기준</span>
       </div>
-      <p class="lead">공지 등록·승인·발송을 표준 프로세스로 통합하고, 메일/캘린더까지 자동 연동하는 업무 개선 프로젝트입니다.</p>
-      <div class="meta-grid">
-        <div class="meta-card">
-          <b>과제명</b>
-          <span>IT 공지관리시스템</span>
-        </div>
-        <div class="meta-card">
-          <b>담당 범위</b>
-          <span><span class="pill warn">편집 필요</span> 백엔드·연동 중심</span>
-        </div>
-        <div class="meta-card">
-          <b>기간</b>
-          <span>2025-12-18 ~ 2026-02-28</span>
-        </div>
-        <div class="meta-card">
-          <b>WBS 위치 요약</b>
-          <span>요구사항 완료, 설계 진행 중, 개발 착수 단계</span>
+      <div class="overview-wrap">
+        <p class="overview-title">공지 관리를 위한 웹 시스템을 신규 구축하여, MS Graph API를 활용한 Outlook 연동 공지 발송 체계 수립</p>
+        <div class="step-flow">
+          <div class="step-item">
+            <div class="step-label">Step.1</div>
+            <p class="step-title">공지 관리 시스템 구축 및 아웃룩 연동</p>
+          </div>
+          <div class="step-item">
+            <div class="step-label">Step.2</div>
+            <p class="step-title">아웃룩 내 계열사 별 공지 자원 생성</p>
+          </div>
+          <div class="step-item">
+            <div class="step-label">Step.3</div>
+            <p class="step-title">공지관리 시스템을 통한 공지사항 등록</p>
+          </div>
+          <div class="step-item">
+            <div class="step-label">Step.4</div>
+            <p class="step-title">담당매니저 승인 및 공지내용 발송</p>
+          </div>
+          <div class="step-item">
+            <div class="step-label">Step.5</div>
+            <p class="step-title">공지 내용 메일 발송 및 공지 캘린더 일정 등록</p>
+          </div>
+          <div class="step-item">
+            <div class="step-label">Step.6</div>
+            <p class="step-title">발송 History 및 Dashboard 데이터 집계</p>
+          </div>
         </div>
       </div>
       <div class="footer">Intro · 30초</div>
     </section>
 
-    <section class="slide" data-title="목적과 범위">
+    <section class="slide" data-title="Graph API">
       <div class="slide-header">
-        <h2 class="slide-title">1. 프로젝트 목적과 범위</h2>
-        <span class="slide-tag">Why 중심</span>
+        <h2 class="slide-title">2. MS Graph API를 통한 시스템 및 연동 체계 구축</h2>
+        <span class="slide-tag">Integration</span>
       </div>
-      <div class="grid-2">
-        <div class="card">
-          <h3>핵심 문제</h3>
-          <ul>
-            <li>공지 메일이 분산되어 승인·이력 관리가 어렵다.</li>
-            <li>발송 일정/대상 관리가 수작업이라 오류 가능성이 높다.</li>
-            <li>캘린더 공유/공지 추적이 체계화되어 있지 않다.</li>
-          </ul>
+      <div class="graph-layout">
+        <div class="graph-left">
+          <div class="graph-row">
+            <div class="graph-node">
+              <div class="node-title">공지관리 시스템 구축</div>
+              <div>웹 기반 공지 등록/승인 프로세스</div>
+            </div>
+            <div class="graph-plus">+</div>
+            <div class="graph-node">
+              <div class="node-title">MS Graph API 연동</div>
+              <div>Outlook 메일/캘린더 연동</div>
+            </div>
+          </div>
+          <div class="graph-pill">
+            아웃룩 내 "IT 공지일정" 자원 등록
+          </div>
         </div>
-        <div class="card">
-          <h3>기대 효과</h3>
-          <ul>
-            <li>조직 표준 프로세스 정착 (승인·감사 추적)</li>
-            <li>메일/캘린더 자동화로 업무 시간 절감</li>
-            <li>발송 결과와 이력 조회로 운영 투명성 강화</li>
-          </ul>
-        </div>
-      </div>
-      <div class="grid-2" style="margin-top:16px;">
-        <div class="card">
-          <h3>포함 기능</h3>
-          <ul>
-            <li>공지 등록/승인/발송/조회</li>
-            <li>발송 스케줄러</li>
-            <li>메일·캘린더 연동</li>
-            <li>첨부파일 처리 및 송신 이력</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h3>제외 기능</h3>
-          <ul>
-            <li>앱 환경 구축 의무 없음</li>
-            <li>외부 시스템 운영/관리 기능 제외</li>
-          </ul>
-          <div class="callout">범위 기준: 기존 사내 표준(GW/메일/캘린더)과의 일관성 유지</div>
+        <div class="graph-right">
+          <div class="mock-window">
+            <div class="mock-header">
+              <span>Outlook</span>
+              <span>Mailbox</span>
+            </div>
+            <div class="mock-body">
+              <div class="mock-card">11:00 AM<br>[ERP 시스템 점검]</div>
+              <div class="mock-card">12:00 PM<br>[IT 공지 서비스]</div>
+            </div>
+            <div class="mock-actions">
+              <span>아웃룩 공지자원 일정 등록</span>
+              <span>아웃룩 메일 발송</span>
+            </div>
+          </div>
+          <div class="callout" style="margin-top:10px;">
+            "IT 공지 자원을 통한 일정 공유 방식으로 개인의 아웃룩 일정에 영향을 주지않음"
+          </div>
         </div>
       </div>
       <div class="footer">1분</div>
@@ -477,14 +696,32 @@
 
     <section class="slide" data-title="WBS">
       <div class="slide-header">
-        <h2 class="slide-title">2. 전체 일정 구조(WBS)</h2>
-        <span class="slide-tag">계획 vs 실적</span>
+        <h2 class="slide-title">3. 전체 일정 구조(WBS)</h2>
+        <span class="slide-tag">WBS 2026-01-08</span>
+      </div>
+      <div class="meta-grid">
+        <div class="meta-card">
+          <b>기간</b>
+          <span>2025-12-15 ~ 2026-02-28 (7/11주차)</span>
+        </div>
+        <div class="meta-card">
+          <b>기술 환경</b>
+          <span>Spring Boot + PostgreSQL / React SPA</span>
+        </div>
+        <div class="meta-card">
+          <b>진척 요약</b>
+          <span>요구 100% · 설계 78% · 개발 58% · 테스트 0%</span>
+        </div>
+        <div class="meta-card">
+          <b>전체 진척</b>
+          <span>계획 64% · 실제 58%</span>
+        </div>
       </div>
       <div class="timeline">
-        <div class="step"><b>요구사항 분석</b><br>범위 확정, 요구사항 정의서 v1.1 완료</div>
-        <div class="step"><b>설계</b><br>도메인/DB/화면 설계 진행 중</div>
-        <div class="step"><b>개발</b><br>공지/승인/발송 API 착수 준비</div>
-        <div class="step"><b>테스트 및 이행</b><br>통합 테스트 계획 수립 예정</div>
+        <div class="step"><b>요구분석</b><br>WBS 작성, 요구사항 정의서 v1.1 완료</div>
+        <div class="step"><b>설계</b><br>도메인 모델/ERD 완료, 화면·플로우·Graph API 진행 중</div>
+        <div class="step"><b>개발</b><br>프로젝트 세팅 및 공지/승인/발송/연동 API 착수 예정</div>
+        <div class="step"><b>테스트·이행</b><br>단위·통합 테스트 및 매뉴얼/산출물 정리 예정</div>
       </div>
       <div class="progress-grid">
         <div class="progress-card">
@@ -494,13 +731,13 @@
         </div>
         <div class="progress-card">
           <div class="label">설계</div>
-          <div class="progress-bar"><span style="width:33%"></span></div>
-          <div class="progress-value">33%</div>
+          <div class="progress-bar"><span style="width:78%"></span></div>
+          <div class="progress-value">78%</div>
         </div>
         <div class="progress-card">
           <div class="label">개발</div>
-          <div class="progress-bar"><span style="width:0%"></span></div>
-          <div class="progress-value">0%</div>
+          <div class="progress-bar"><span style="width:58%"></span></div>
+          <div class="progress-value">58%</div>
         </div>
         <div class="progress-card">
           <div class="label">테스트</div>
@@ -513,175 +750,223 @@
           <div class="progress-value">0%</div>
         </div>
         <div class="progress-card">
-          <div class="label">전체 진척</div>
-          <div class="progress-bar"><span style="width:23%"></span></div>
-          <div class="progress-value">23%</div>
+          <div class="label">전체 진척(계획)</div>
+          <div class="progress-bar"><span style="width:64%"></span></div>
+          <div class="progress-value">64%</div>
+        </div>
+        <div class="progress-card">
+          <div class="label">전체 진척(실제)</div>
+          <div class="progress-bar"><span style="width:58%"></span></div>
+          <div class="progress-value">58%</div>
         </div>
       </div>
-      <div class="callout">일정 변동: 현재까지 큰 변경 없음 (변동 시 WBS 즉시 업데이트)</div>
-      <div class="footer">2분</div>
-    </section>
-
-    <section class="slide" data-title="아키텍처">
-      <div class="slide-header">
-        <h2 class="slide-title">3. 아키텍처 및 기술 구조</h2>
-        <span class="slide-tag">표준 환경 준수</span>
-      </div>
-      <div class="columns">
-        <div>
-          <div class="diagram">
-            <div class="box">
-              <h4>React SPA</h4>
-              <p>공지 등록/승인/이력 화면 제공</p>
-            </div>
-            <div class="box">
-              <h4>Spring 백엔드</h4>
-              <p>공지/승인/발송 API, 스케줄러</p>
-            </div>
-            <div class="box">
-              <h4>PostgreSQL</h4>
-              <p>public 스키마 · notice_xxx 모델</p>
-            </div>
-            <div class="box">
-              <h4>외부 연동</h4>
-              <p>SSO, 메일 발송 API, 캘린더 API</p>
-            </div>
-          </div>
-          <div class="callout">표준 환경 준수 이유: 기존 조직의 인증 구조와 운영 정책과 일관성을 맞추기 위해 표준 환경을 따랐습니다.</div>
+      <div class="control-grid">
+        <div class="control-card">
+          <b>WBS 기준선(Baseline)</b>
+          <div>요구사항 확정 후 변경은 버전관리로 이력 정리</div>
         </div>
-        <div>
-          <div class="card">
-            <h3>핵심 연동 흐름</h3>
-            <ul>
-              <li>SSO 로그인 → 권한/부서 기반 접근 제어</li>
-              <li>외부 연동은 앱 전용 토큰(client_credentials), 내부 API는 사용자 위임 토큰(authorization_code)</li>
-              <li>메일 발송 API → 승인 완료 공지 자동 발송</li>
-              <li>캘린더 등록 API → Outlook 일정 자동 생성</li>
-              <li>첨부파일 처리 → 파일 서버 업로드 및 링크 관리</li>
-            </ul>
-          </div>
+        <div class="control-card">
+          <b>주간 점검</b>
+          <div>매주 진척/리스크 업데이트 및 공유</div>
+        </div>
+        <div class="control-card">
+          <b>변경 관리</b>
+          <div>변경사항은 버전관리로 정리 후 공유</div>
+        </div>
+        <div class="control-card">
+          <b>검수 게이트</b>
+          <div>설계 완료 → 개발 착수 → 테스트 착수 기준 엄수</div>
         </div>
       </div>
+      <div class="callout">마일스톤: M1(01-02) 요구분석 완료 · M2(01-14) 설계 · M3(02-20) 개발 · M4(02-25) 테스트/이행</div>
       <div class="footer">2분</div>
     </section>
 
     <section class="slide" data-title="기능 흐름">
       <div class="slide-header">
-        <h2 class="slide-title">4. 주요 기능 및 시나리오 흐름</h2>
-        <span class="slide-tag">End-to-End</span>
+        <h2 class="slide-title">4. 주요 기능 한눈에 보기</h2>
+        <span class="slide-tag">End-to-End 정리</span>
       </div>
-      <div class="flow">
-        <div class="node">공지 등록</div>
-        <div class="arrow">→</div>
-        <div class="node">승인</div>
-        <div class="arrow">→</div>
-        <div class="node">스케줄러 발송</div>
-        <div class="arrow">→</div>
-        <div class="node">메일/캘린더 발송</div>
-        <div class="arrow">→</div>
-        <div class="node">송신 이력 확인</div>
-      </div>
-      <div class="card" style="margin-top:14px;">
-        <h3>상태 관리</h3>
-        <div class="flow">
-          <div class="node">DRAFT</div>
-          <div class="arrow">→</div>
-          <div class="node">PENDING</div>
-          <div class="arrow">→</div>
-          <div class="node">APPROVED</div>
-          <div class="arrow">→</div>
-          <div class="node">SENT</div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>End-to-End 흐름</h3>
+          <div class="flow">
+            <div class="node">공지 등록</div>
+            <div class="arrow">→</div>
+            <div class="node">승인</div>
+            <div class="arrow">→</div>
+            <div class="node">발송 모드 결정</div>
+            <div class="arrow">→</div>
+            <div class="node">메일 발송</div>
+            <div class="arrow">→</div>
+            <div class="node">캘린더 등록</div>
+            <div class="arrow">→</div>
+            <div class="node">이력 저장</div>
+          </div>
+          <div class="callout">승인 전 발송 불가, 반려 시 수정 후 재승인</div>
+        </div>
+        <div class="card">
+          <h3>상태 전이</h3>
+          <div class="flow">
+            <div class="node">DRAFT</div>
+            <div class="arrow">→</div>
+            <div class="node">PENDING</div>
+            <div class="arrow">→</div>
+            <div class="node">APPROVED</div>
+            <div class="arrow">→</div>
+            <div class="node">SENT</div>
+          </div>
+          <div class="flow" style="margin-top:10px;">
+            <div class="node">REJECTED</div>
+            <div class="arrow">→</div>
+            <div class="node">수정</div>
+            <div class="arrow">→</div>
+            <div class="node">재승인(예정)</div>
+          </div>
         </div>
       </div>
-      <div class="big-image">
-        <img src="플로우도/untitled_diagram.png" alt="공지 발송 플로우도">
+      <div class="grid-2" style="margin-top:12px;">
+        <div class="card">
+          <h3>핵심 기능 모듈</h3>
+          <ul>
+            <li>공지 등록/수정: 유형, 대상, 일정, 해시태그, 첨부</li>
+            <li>승인 관리: 승인/반려 처리 및 이력 기록</li>
+            <li>발송 계획: 즉시/정기/지정 시간 스케줄</li>
+            <li>발송 결과: 성공/실패 및 재시도 기준</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>연동 &amp; 자동화</h3>
+          <ul>
+            <li>메일 발송 API: <code>POST /v1/mail/{sender}</code></li>
+            <li>Graph 캘린더 API: <code>POST /users/{mailboxEmail}/events</code></li>
+            <li>정기 발송 시간: 09:00 / 13:00 / 17:00</li>
+            <li>스케줄러 기반 묶음 발송 + 즉시 발송 지원</li>
+          </ul>
+        </div>
       </div>
+      <div class="grid-2" style="margin-top:12px;">
+        <div class="card">
+          <h3>포함 기능</h3>
+          <ul>
+            <li>공지 등록/수정 및 승인 관리</li>
+            <li>발송 계획(즉시/예약) 관리</li>
+            <li>메일 발송 및 Outlook 캘린더 등록</li>
+            <li>발송 결과 및 이력 조회</li>
+            <li>대시보드 제공</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>제외 기능</h3>
+          <ul>
+            <li>모바일 앱/모바일 전용 기능 구축</li>
+            <li>타 메신저는 연계 가이드만 제공 (실제 발송 구현 범위 아님)</li>
+            <li>외부 시스템 운영/관리 기능</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout">표준 프로세스 기반 워크플로우 + 스케줄러 발송 + 멀티 채널 확장 구조를 동시에 갖춘 설계</div>
       <div class="footer">2분</div>
     </section>
 
     <section class="slide" data-title="화면">
       <div class="slide-header">
-        <h2 class="slide-title">4-1. 화면별 핵심 기능</h2>
-        <span class="slide-tag">시연 기준</span>
+        <h2 class="slide-title">5. 화면별 핵심 기능</h2>
+        <span class="slide-tag">화면 설계서 기준</span>
       </div>
-      <div class="image-grid">
-        <figure>
-          <img src="화면설계서/공지대시보드.png" alt="Dashboard">
-          <figcaption>Dashboard: 전체 공지 현황, 승인/발송 요약</figcaption>
-        </figure>
-        <figure>
-          <img src="화면설계서/공지등록화면.png" alt="공지 등록">
-          <figcaption>공지 등록: 대상/일정/첨부 입력</figcaption>
-        </figure>
-        <figure>
-          <img src="화면설계서/공지발송결재.png" alt="공지 승인">
-          <figcaption>공지 승인: 승인/반려 처리</figcaption>
-        </figure>
-        <figure>
-          <img src="화면설계서/공지발송히스토리.png" alt="발송 히스토리">
-          <figcaption>발송 History: 상태/결과 조회</figcaption>
-        </figure>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Dashboard</h3>
+          <ul>
+            <li>결재대기/발송예정/실패/완료 통계 카드</li>
+            <li>캘린더 월/주/일 뷰 전환 + 일정 클릭 상세</li>
+            <li>시스템 점검 일정 리스트(승인된 공지)</li>
+            <li>공지 유형 통계(도넛) · 부서별 수신 현황(바)</li>
+            <li>최근 공지 목록 + 점검 완료 공지 등록 모달</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>공지 등록</h3>
+          <ul>
+            <li>공지 유형 선택(일반/점검/보안/인프라)</li>
+            <li>완료 공지 모드(제목/유형/대상 자동 설정)</li>
+            <li>수신 대상 선택(서비스/법인/부서) + 법인 전체 발송</li>
+            <li>공지 내용 입력 + 해시태그 등록</li>
+            <li>발송일시(오전/오후 정기, 시간 직접, 즉시)</li>
+            <li>Outlook 일정 등록(선택, 날짜/시간)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>공지 승인</h3>
+          <ul>
+            <li>승인/반려 처리(관리자만 가능)</li>
+            <li>반려 사유 입력 및 상세 모달</li>
+            <li>관리자 위임 설정 모달</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>발송 History</h3>
+          <ul>
+            <li>법인/상태/기간/검색어 필터</li>
+            <li>발송 로그 테이블</li>
+            <li>실패 건 재발송 요청 버튼</li>
+            <li>상태/중요도/대상/반려 사유 확인</li>
+          </ul>
+        </div>
       </div>
-      <div class="callout">이번 주 업데이트: 화면 설계 고도화 및 승인 플로우 정리</div>
+      <div class="callout">화면 설계서 4종 기준 핵심 기능만 요약</div>
       <div class="footer">2분</div>
     </section>
 
     <section class="slide" data-title="산출물">
       <div class="slide-header">
-        <h2 class="slide-title">5. 산출물 제출 현황</h2>
+        <h2 class="slide-title">6. 산출물 현황</h2>
         <span class="slide-tag">확인용</span>
       </div>
       <div class="grid-2">
         <div class="card">
           <h3>제출 완료</h3>
           <ul>
-            <li>요구사항 정의서</li>
-            <li>WBS (버전 이력 포함)</li>
-            <li>ERD/DB 정의서</li>
+            <li>요구사항 정의서 v1.1</li>
+            <li>WBS (2026-01-08)</li>
+            <li>도메인 모델</li>
+            <li>ERD/DB 설계서</li>
             <li>화면 설계서(4종)</li>
-            <li>API 명세서</li>
+            <li>메일/캘린더 API 설계서</li>
           </ul>
         </div>
         <div class="card">
           <h3>시연 정보</h3>
           <ul>
-            <li>시연 URL(DEV): <code>https://notice-dev.koreazinc.co.kr</code></li>
+            <li>시연 URL(DEV): <code>http://172.20.80.224:5173</code></li>
             <li>접속 경로: SSO 인증 후 접근</li>
           </ul>
-          <div class="callout">다음 제출 예정: 사용자 가이드 초안, 테스트 케이스</div>
+          <div class="callout">다음 제출 예정: 사용자/운영 매뉴얼, 테스트 케이스 및 결과</div>
         </div>
-      </div>
-      <div class="image-grid" style="margin-top:16px;">
-        <figure>
-          <img src="DB설계/ERD/erd.png" alt="ERD">
-          <figcaption>DB ERD 스냅샷</figcaption>
-        </figure>
-        <figure>
-          <img src="화면설계서/공지대시보드.png" alt="Dashboard">
-          <figcaption>화면 설계서 예시 (Dashboard)</figcaption>
-        </figure>
       </div>
       <div class="footer">1분</div>
     </section>
 
     <section class="slide" data-title="리스크">
       <div class="slide-header">
-        <h2 class="slide-title">6. 리스크 및 의사결정 요청</h2>
+        <h2 class="slide-title">7. 리스크 및 의사결정 요청</h2>
         <span class="slide-tag">요약 보고</span>
       </div>
       <div class="card">
         <h3>리스크</h3>
         <ul>
-          <li>현재까지는 일정 대비 주요 리스크는 발견되지 않았습니다.</li>
-          <li>SSO/API 응답 시간 변동 가능성</li>
-          <li>승인 정책 확정 후 경계값 재정의 필요 가능성</li>
+          <li>Graph API/메일 발송 API 권한 및 토큰 발급 정보 확보</li>
+          <li>Outlook 자원 캘린더 mailboxEmail/resourceId 확정 필요</li>
+          <li>조직도/수신자 데이터 연동 정확성 검증 필요</li>
+          <li>XSS 대응을 위한 인증 토큰 전달 구조 개선 검토</li>
+          <li>대량 발송 시 성능/중복 방지 기준 합의 필요</li>
         </ul>
       </div>
       <div class="card" style="margin-top:12px;">
         <h3>의사결정 요청</h3>
         <ul>
-          <li>현 단계에서는 별도 요청 없음</li>
-          <li>변경 사항 발생 시 즉시 공유 예정</li>
+          <li>긴급공지(L3) 승인 예외 정책 적용 여부 확정</li>
+          <li>Graph API 권한 범위 및 캘린더 자원 계정 지정</li>
         </ul>
       </div>
       <div class="footer">1분</div>
@@ -689,28 +974,28 @@
 
     <section class="slide" data-title="향후 계획">
       <div class="slide-header">
-        <h2 class="slide-title">7. 마무리 및 향후 계획</h2>
+        <h2 class="slide-title">8. 마무리 및 향후 계획</h2>
         <span class="slide-tag">Next</span>
       </div>
       <div class="grid-2">
         <div class="card">
           <h3>다음 주 목표</h3>
           <ul>
-            <li>공지 CRUD/승인 API 착수</li>
-            <li>메일/캘린더 연동 테스트 진행</li>
-            <li>발송 스케줄러 기본 동작 확인</li>
+            <li>Graph API 설계 완료 및 권한 확보</li>
+            <li>승인/상태전이 플로우 정리</li>
+            <li>프로젝트 세팅 착수 (Spring Boot + PostgreSQL)</li>
           </ul>
         </div>
         <div class="card">
           <h3>다음 마일스톤</h3>
           <ul>
-            <li>개발 80% → 100% 완료</li>
-            <li>통합 테스트 착수</li>
-            <li>주간 WBS 최신화 및 공유</li>
+            <li>M2: 01-14 설계 완료</li>
+            <li>M3: 02-20 개발 완료</li>
+            <li>M4: 02-25 테스트/이행 완료</li>
           </ul>
         </div>
       </div>
-      <div class="callout">계획 대비 실적 기준으로 WBS를 매주 최신화하고, 변동 발생 시 즉시 공유하겠습니다.</div>
+      <div class="callout">계획 대비 실적 기준으로 WBS를 주간 최신화하고, 변동 발생 시 즉시 공유하겠습니다.</div>
       <div class="footer">30초</div>
     </section>
 
