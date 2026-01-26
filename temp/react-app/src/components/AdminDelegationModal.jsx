@@ -349,23 +349,21 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
               </div>
             )}
           </div>
-        </div>
-
-          {/* Received delegations */}
+          {/* 위임받은 내역 */}
           <div className="delegation-list-section">
-            <h4>Received Delegations</h4>
+            <h4>위임받은 내역</h4>
             {receivedDelegations.length === 0 ? (
-              <p className="no-data">No received delegations.</p>
+              <p className="no-data">위임받은 내역이 없습니다.</p>
             ) : (
               <div className="delegation-table-wrapper">
                 <table className="delegation-table">
                   <thead>
                     <tr>
-                      <th>Delegator</th>
-                      <th>Start</th>
-                      <th>End</th>
-                      <th>Reason</th>
-                      <th>Status</th>
+                      <th>위임자</th>
+                      <th>시작일시</th>
+                      <th>종료일시</th>
+                      <th>사유</th>
+                      <th>상태</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -377,11 +375,11 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
                         <td className="reason-cell">{delegation.reason || '-'}</td>
                         <td>
                           {delegation.isCurrentlyValid ? (
-                            <span className="status-badge active">Active</span>
+                            <span className="status-badge active">진행중</span>
                           ) : delegation.isActive ? (
-                            <span className="status-badge scheduled">Scheduled</span>
+                            <span className="status-badge scheduled">예정</span>
                           ) : (
-                            <span className="status-badge inactive">Inactive</span>
+                            <span className="status-badge inactive">종료</span>
                           )}
                         </td>
                       </tr>
@@ -391,6 +389,7 @@ const AdminDelegationModal = ({ isOpen, onClose, currentUserId, currentUserName 
               </div>
             )}
           </div>
+        </div>
 
         <div className="modal-footer">
           <button className="btn-secondary" onClick={onClose}>닫기</button>

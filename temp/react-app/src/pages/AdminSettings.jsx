@@ -139,13 +139,13 @@ const AdminSettings = () => {
             className={`tab-button ${activeTab === 'delegation' ? 'active' : ''}`}
             onClick={() => setActiveTab('delegation')}
           >
-            👥 권한 위임 관리
+             권한 위임 관리
           </button>
           <button
             className={`tab-button ${activeTab === 'schedule' ? 'active' : ''}`}
             onClick={() => setActiveTab('schedule')}
           >
-            📅 발송 시간 설정
+             발송 시간 설정
           </button>
           <button
             className={`tab-button ${activeTab === 'system' ? 'active' : ''}`}

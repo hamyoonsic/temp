@@ -1,12 +1,12 @@
 // NoticeRegistration.jsx - 완료 공지 등록 기능 추가
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import './NoticeRegistration.css';
 
-import { corporationApi, organizationApi, serviceApi, noticeApi } from '../api';
+import { corporationApi, organizationApi, serviceApi, noticeApi, templateApi, signatureApi } from '../api';
 
 import { CKEditor } from '@ckeditor/ckeditor5-react';
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import NoticeEditor from '../editor/NoticeEditor';
 
 // 개선된 모달 스크롤 제어 (스크롤 위치 완벽 유지)
 const openModal = () => {
@@ -54,21 +54,6 @@ const closeModal = () => {
   document.body.removeAttribute('data-scroll-x');
 };
 
-const editorConfiguration = {
-  toolbar: [
-    'heading', '|',
-    'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
-    'bold', 'italic', 'underline', 'strikethrough', '|',
-    'alignment', '|',
-    'numberedList', 'bulletedList', '|',
-    'outdent', 'indent', '|',
-    'link', 'blockQuote', 'insertTable', '|',
-    'undo', 'redo'
-  ],
-  licenseKey: 'GPL',
-  language: 'ko'
-};
-
 const NoticeRegistration = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -98,6 +83,16 @@ const NoticeRegistration = () => {
     orgUnitName: '서린정보기술',
     userName: '-'
   });
+
+  const editorRef = useRef(null);
+
+  const [templates, setTemplates] = useState([]);
+  const [signatures, setSignatures] = useState([]);
+  const [defaultSignature, setDefaultSignature] = useState(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [templateDraft, setTemplateDraft] = useState({ templateId: null, name: '', content: '' });
+  const [signatureDraft, setSignatureDraft] = useState({ signatureId: null, name: '', content: '', isDefault: true });
 
   const [formData, setFormData] = useState({
     noticeType: '시스템 점검안내',
@@ -149,8 +144,146 @@ const NoticeRegistration = () => {
   };
 
   //  모달 스크롤 제어
+
+  const resetTemplateDraft = () => {
+    setTemplateDraft({ templateId: null, name: '', content: '' });
+  };
+
+  const resetSignatureDraft = () => {
+    setSignatureDraft({ signatureId: null, name: '', content: '', isDefault: true });
+  };
+
+  const loadTemplates = async (userId) => {
+    if (!userId) return;
+    try {
+      const response = await templateApi.getList({ userId });
+      setTemplates(response.data?.data || response.data || []);
+    } catch (error) {
+      console.error('??? ?? ??:', error);
+    }
+  };
+
+  const loadSignatures = async (userId) => {
+    if (!userId) return;
+    try {
+      const response = await signatureApi.getList({ userId });
+      const list = response.data?.data || response.data || [];
+      setSignatures(list);
+      const defaultItem = list.find(item => item.isDefault);
+      setDefaultSignature(defaultItem || null);
+    } catch (error) {
+      console.error('?? ?? ??:', error);
+    }
+  };
+
+  const applyTemplate = (template) => {
+    if (!template) return;
+    setFormData(prev => ({
+      ...prev,
+      noticeContent: template.content || ''
+    }));
+    if (editorRef.current) {
+      editorRef.current.setData(template.content || '');
+    }
+    setShowTemplateModal(false);
+  };
+
+  const applySignatureToEditor = (signature) => {
+    if (!signature) return;
+    setDefaultSignature(signature);
+    setFormData(prev => ({
+      ...prev,
+      noticeContent: appendSignature(prev.noticeContent, signature)
+    }));
+    if (editorRef.current) {
+      editorRef.current.setData(appendSignature(editorRef.current.getData(), signature));
+    }
+  };
+
+  const saveTemplate = async () => {
+    if (!templateDraft.name.trim()) return;
+    const payload = {
+      userId: userInfo.userId,
+      name: templateDraft.name.trim(),
+      content: templateDraft.content || ''
+    };
+    try {
+      if (templateDraft.templateId) {
+        await templateApi.update(templateDraft.templateId, payload);
+      } else {
+        await templateApi.create(payload);
+      }
+      await loadTemplates(userInfo.userId);
+      resetTemplateDraft();
+    } catch (error) {
+      console.error('??? ?? ??:', error);
+    }
+  };
+
+  const saveSignature = async () => {
+    if (!signatureDraft.name.trim()) return;
+    const payload = {
+      userId: userInfo.userId,
+      name: signatureDraft.name.trim(),
+      content: signatureDraft.content || '',
+      isDefault: signatureDraft.isDefault
+    };
+    try {
+      if (signatureDraft.signatureId) {
+        await signatureApi.update(signatureDraft.signatureId, payload);
+      } else {
+        await signatureApi.create(payload);
+      }
+      await loadSignatures(userInfo.userId);
+      resetSignatureDraft();
+    } catch (error) {
+      console.error('?? ?? ??:', error);
+    }
+  };
+
+  const removeTemplate = async (templateId) => {
+    try {
+      await templateApi.delete(templateId, { userId: userInfo.userId });
+      await loadTemplates(userInfo.userId);
+    } catch (error) {
+      console.error('??? ?? ??:', error);
+    }
+  };
+
+  const removeSignature = async (signatureId) => {
+    try {
+      await signatureApi.delete(signatureId, { userId: userInfo.userId });
+      await loadSignatures(userInfo.userId);
+    } catch (error) {
+      console.error('?? ?? ??:', error);
+    }
+  };
+
+  const appendSignature = (content, signature) => {
+    if (!signature || !signature.content) return content || '';
+    let next = content || '';
+    next = next.replace(/<div class="notice-signature"[\s\S]*?<\/div>/gi, '');
+    const block = `<div class="notice-signature" data-signature-id="${signature.signatureId || ''}">${signature.content}</div>`;
+    return next + block;
+  };
+
+  const setDefaultSignatureById = async (signature) => {
+    if (!signature) return;
+    try {
+      await signatureApi.update(signature.signatureId, {
+        userId: userInfo.userId,
+        name: signature.name,
+        content: signature.content,
+        isDefault: true
+      });
+      await loadSignatures(userInfo.userId);
+    } catch (error) {
+      console.error('?? ?? ?? ??:', error);
+    }
+  };
+
   useEffect(() => {
-    const isAnyModalOpen = showServiceModal || showCorpModal || showOrgModal;
+    const isAnyModalOpen = showServiceModal || showCorpModal || showOrgModal || showTemplateModal || showSignatureModal;
 
     if (isAnyModalOpen) {
       openModal();
@@ -161,7 +294,7 @@ const NoticeRegistration = () => {
     return () => {
       closeModal();
     };
-  }, [showServiceModal, showCorpModal, showOrgModal]);
+  }, [showServiceModal, showCorpModal, showOrgModal, showTemplateModal, showSignatureModal]);
 
 
   useEffect(() => {
@@ -175,6 +308,12 @@ const NoticeRegistration = () => {
       initializeCompletionForm(location.state.originalNotice);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    if (!userInfo.userId) return;
+    loadTemplates(userInfo.userId);
+    loadSignatures(userInfo.userId);
+  }, [userInfo.userId]);
 
   useEffect(() => {
     if (formData.receiverCompanies.length === 0) {
@@ -539,9 +678,13 @@ const NoticeRegistration = () => {
       targetName: d.orgUnitName
     }));
 
+    const contentWithSignature = defaultSignature
+      ? appendSignature(formData.noticeContent, defaultSignature)
+      : formData.noticeContent;
+
     const requestData = {
       title: formData.noticeTitle,
-      content: formData.noticeContent,
+      content: contentWithSignature,
       noticeLevel: formData.priority,
       affectedServiceId: formData.affectedServices[0]?.serviceId || null,
       publishStartAt: `${formData.sendDate}T${formData.sendTime}:00`,
@@ -884,9 +1027,19 @@ const NoticeRegistration = () => {
                     공지내용 <span className="required">*</span>
                   </label>
                   <CKEditor
-                    editor={ClassicEditor}
-                    config={editorConfiguration}
+                    editor={NoticeEditor}
                     data={formData.noticeContent}
+                    onReady={(editor) => {
+                      editorRef.current = editor;
+                      editor.on('openTemplateManager', () => {
+                        resetTemplateDraft();
+                        setShowTemplateModal(true);
+                      });
+                      editor.on('openSignatureManager', () => {
+                        resetSignatureDraft();
+                        setShowSignatureModal(true);
+                      });
+                    }}
                     onChange={(event, editor) => handleInputChange("noticeContent", editor.getData())}
                   />
                   {isCompletionNotice && (
@@ -1110,6 +1263,127 @@ const NoticeRegistration = () => {
               <button onClick={() => setShowOrgModal(false)} className="btn btn-submit">
                 확인 ({selectedOrgIds.length}개)
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTemplateModal && (
+        <div className="modal-overlay" onClick={() => setShowTemplateModal(false)}>
+          <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>??? ??</h3>
+              <button onClick={() => setShowTemplateModal(false)}>?</button>
+            </div>
+            <div className="modal-body">
+              <div className="template-manager">
+                <div className="template-list">
+                  <div className="template-list-header">
+                    <span>??? ???</span>
+                    <button type="button" className="btn btn-cancel" onClick={resetTemplateDraft}>? ???</button>
+                  </div>
+                  {templates.length === 0 && (
+                    <p className="empty-message">??? ???? ????.</p>
+                  )}
+                  {templates.map((template) => (
+                    <div key={template.templateId} className="template-item">
+                      <div className="template-name">{template.name}</div>
+                      <div className="template-actions">
+                        <button type="button" onClick={() => applyTemplate(template)}>??</button>
+                        <button type="button" onClick={() => setTemplateDraft(template)}>??</button>
+                        <button type="button" onClick={() => removeTemplate(template.templateId)}>??</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="template-editor">
+                  <label className="form-label">??? ??</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={templateDraft.name}
+                    onChange={(e) => setTemplateDraft(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="??? ??? ?????"
+                  />
+                  <label className="form-label">??? ??</label>
+                  <div className="template-editor-body">
+                    <CKEditor
+                      editor={NoticeEditor}
+                      data={templateDraft.content}
+                      onChange={(event, editor) => setTemplateDraft(prev => ({ ...prev, content: editor.getData() }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-cancel" onClick={() => setShowTemplateModal(false)}>??</button>
+              <button type="button" className="btn btn-submit" onClick={saveTemplate}>??</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSignatureModal && (
+        <div className="modal-overlay" onClick={() => setShowSignatureModal(false)}>
+          <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>?? ??</h3>
+              <button onClick={() => setShowSignatureModal(false)}>?</button>
+            </div>
+            <div className="modal-body">
+              <div className="template-manager">
+                <div className="template-list">
+                  <div className="template-list-header">
+                    <span>??? ??</span>
+                    <button type="button" className="btn btn-cancel" onClick={resetSignatureDraft}>? ??</button>
+                  </div>
+                  {signatures.length === 0 && (
+                    <p className="empty-message">??? ??? ????.</p>
+                  )}
+                  {signatures.map((signature) => (
+                    <div key={signature.signatureId} className="template-item">
+                      <div className="template-name">{signature.name}</div>
+                      <div className="template-actions">
+                        <button type="button" onClick={() => applySignatureToEditor(signature)}>??</button>
+                        <button type="button" onClick={() => setDefaultSignatureById(signature)}>{signature.isDefault ? '??' : '????'}</button>
+                        <button type="button" onClick={() => setSignatureDraft(signature)}>??</button>
+                        <button type="button" onClick={() => removeSignature(signature.signatureId)}>??</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="template-editor">
+                  <label className="form-label">?? ??</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={signatureDraft.name}
+                    onChange={(e) => setSignatureDraft(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="?? ??? ?????"
+                  />
+                  <label className="form-label">?? ??</label>
+                  <div className="template-editor-body">
+                    <CKEditor
+                      editor={NoticeEditor}
+                      data={signatureDraft.content}
+                      onChange={(event, editor) => setSignatureDraft(prev => ({ ...prev, content: editor.getData() }))}
+                    />
+                  </div>
+                  <label className="signature-default-toggle">
+                    <input
+                      type="checkbox"
+                      checked={signatureDraft.isDefault}
+                      onChange={(e) => setSignatureDraft(prev => ({ ...prev, isDefault: e.target.checked }))}
+                    />
+                    ?? ???? ??
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-cancel" onClick={() => setShowSignatureModal(false)}>??</button>
+              <button type="button" className="btn btn-submit" onClick={saveSignature}>??</button>
             </div>
           </div>
         </div>

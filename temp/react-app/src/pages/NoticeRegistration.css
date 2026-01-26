@@ -13,6 +13,9 @@
   border-radius: 8px 8px 0 0 !important;
   background: #f8fafc !important;
   border-bottom: 1px solid #e2e8f0 !important;
+  overflow: visible !important;
+  position: relative;
+  z-index: 2;
 }
 
 .ck.ck-editor__main {
@@ -22,6 +25,191 @@
 .ck.ck-editor {
   border-radius: 8px !important;
   border: 1px solid #e2e8f0 !important;
+  position: relative;
+  z-index: 1;
+}
+
+.ck.ck-dropdown,
+.ck.ck-dropdown.ck-reset_all,
+.ck-reset_all .ck.ck-dropdown {
+  position: relative !important;
+}
+
+.ck.ck-dropdown__panel,
+.ck.ck-balloon-panel {
+  z-index: 10000;
+}
+
+
+.ck-font-size-selection {
+  background: rgba(59, 130, 246, 0.25);
+}
+
+
+.ck.ck-color-grid {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.ck.ck-color-grid__tile {
+  width: 24px;
+  height: 24px;
+}
+
+.ck-font-size-input {
+  width: 64px;
+  min-width: 64px;
+}
+
+.ck-font-size-input input {
+  text-align: right;
+}
+
+.editor-action-row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.editor-action-btn {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #1e293b;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.editor-action-btn:hover {
+  border-color: #1e40af;
+  color: #1e40af;
+}
+
+.modal-content.modal-wide {
+  max-width: 900px;
+}
+
+.template-manager {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+}
+
+.template-list {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.template-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.template-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.template-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.template-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.template-actions button {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.template-actions button:hover {
+  border-color: #1e40af;
+  color: #1e40af;
+  background: #eff6ff;
+}
+
+.template-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.template-editor-body .ck-editor {
+  border-radius: 8px;
+}
+
+.signature-default-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+  margin-top: 8px;
+}
+
+.ck-table-cell-align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 8px;
+}
+
+.ck-table-cell-align-grid .ck-button {
+  min-width: 32px;
+  height: 28px;
+  padding: 0;
+  justify-content: center;
+}
+
+.ck.ck-button.ck-font-color__button .ck-button__icon,
+.ck.ck-button.ck-font-background-color__button .ck-button__icon {
+  display: none;
+}
+
+.ck.ck-button.ck-font-color__button::before,
+.ck.ck-button.ck-font-background-color__button::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.ck.ck-button.ck-font-color__button::before {
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 2.5c3.59 0 6.5 2.91 6.5 6.5S13.59 15.5 10 15.5 3.5 12.59 3.5 9 6.41 2.5 10 2.5Z' stroke='%232563eb' stroke-width='1.2'/%3E%3Cpath d='M10 4.5c2.48 0 4.5 2.02 4.5 4.5S12.48 13.5 10 13.5 5.5 11.48 5.5 9 7.52 4.5 10 4.5Z' fill='%2360a5fa'/%3E%3Cpath d='M2 18h16' stroke='%232563eb' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.ck.ck-button.ck-font-background-color__button::before {
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='3' y='3' width='14' height='10' rx='2' fill='%23fde68a' stroke='%23f59e0b' stroke-width='1.2'/%3E%3Cpath d='M2 18h16' stroke='%23f59e0b' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 /* 완료 공지 안내 배너 */

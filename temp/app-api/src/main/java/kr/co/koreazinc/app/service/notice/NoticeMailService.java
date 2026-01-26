@@ -16,6 +16,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 공지 메일 발송 서비스 (테스트 모드 적용)
@@ -191,15 +193,15 @@ public class NoticeMailService {
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         
         // 공지 기본 정보
-        log.info("📋 공지 ID: {}", notice.getNoticeId());
-        log.info("📋 공지 제목: {}", notice.getTitle());
-        log.info("📋 중요도: {}", notice.getNoticeLevel());
-        log.info("📋 공지 상태: {}", notice.getNoticeStatus());
+        log.info(" 공지 ID: {}", notice.getNoticeId());
+        log.info(" 공지 제목: {}", notice.getTitle());
+        log.info(" 중요도: {}", notice.getNoticeLevel());
+        log.info(" 공지 상태: {}", notice.getNoticeStatus());
         
         // 발신자 정보
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.info("👤 발신자 (FROM): {}", mailInfo.getFrom());
-        log.info("👤 발신자 (SENDER): {}", mailInfo.getSender());
+        log.info(" 발신자 (FROM): {}", mailInfo.getFrom());
+        log.info(" 발신자 (SENDER): {}", mailInfo.getSender());
         
         // 수신자 정보
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -220,7 +222,7 @@ public class NoticeMailService {
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         if (mailInfo.getCc() != null && !mailInfo.getCc().isEmpty()) {
             log.info(" 참조 (CC): {} 명", mailInfo.getCc().size());
-            mailInfo.getCc().forEach(email -> log.info("   📋 {}", email));
+            mailInfo.getCc().forEach(email -> log.info("    {}", email));
         } else {
             log.info(" 참조 (CC): 없음");
         }
@@ -229,7 +231,7 @@ public class NoticeMailService {
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         log.info("📝 제목: {}", mailInfo.getSubject());
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.info("📄 본문 내용 (처음 500자):");
+        log.info(" 본문 내용 (처음 500자):");
         String content = mailInfo.getContent();
         if (content.length() > 500) {
             log.info("{}", content.substring(0, 500) + "...");
@@ -242,7 +244,7 @@ public class NoticeMailService {
         if (mailInfo.getAttachments() != null && !mailInfo.getAttachments().isEmpty()) {
             log.info(" 첨부파일: {} 개", mailInfo.getAttachments().size());
             mailInfo.getAttachments().forEach(file -> 
-                log.info("   📄 {} ({} bytes)", file.getName(), file.length())
+                log.info("    {} ({} bytes)", file.getName(), file.length())
             );
         } else {
             log.info(" 첨부파일: 없음");
@@ -288,7 +290,7 @@ public class NoticeMailService {
             }
         }
         
-        log.info("📬 수신 대상자 수집 완료: noticeId={}, count={}", noticeId, emails.size());
+        log.info(" 수신 대상자 수집 완료: noticeId={}, count={}", noticeId, emails.size());
         return emails;
     }
     
@@ -363,14 +365,18 @@ public class NoticeMailService {
         String approverName = getUserName(approverId);
         String approverEmail = getUserEmail(approverId);
 
+        String senderLabel = null;
         if (senderDept != null && !senderDept.isBlank()) {
-            html.append("<p><strong>발신:</strong> ").append(escapeHtml(senderDept)).append("</p>");
+            senderLabel = senderDept;
         }
         if (creatorId != null && !creatorId.isBlank()) {
             String creatorLabel = creatorName != null && !creatorName.isBlank()
-                ? String.format("%s (%s)", creatorName, creatorId)
+                ? creatorName
                 : creatorId;
-            html.append("<p><strong>등록자:</strong> ").append(escapeHtml(creatorLabel)).append("</p>");
+            senderLabel = senderLabel != null ? senderLabel + " " + creatorLabel : creatorLabel;
+        }
+        if (senderLabel != null && !senderLabel.isBlank()) {
+            html.append("<p><strong>발신:</strong> ").append(escapeHtml(senderLabel)).append("</p>");
         }
         if (approverId != null && !approverId.isBlank()) {
             String approverLabel;
@@ -383,14 +389,21 @@ public class NoticeMailService {
                     ? String.format("%s (%s)", approverName, approverId)
                     : approverId;
             }
-            html.append("<p><strong>참조:</strong> ").append(escapeHtml(approverLabel)).append("</p>");
+            html.append("<p><strong>승인:</strong> ").append(escapeHtml(approverLabel)).append("</p>");
         }
         
         html.append("<hr style='border: 1px solid #e5e7eb;'>");
         
         // 본문
         html.append("<div style='margin-top: 20px; line-height: 1.6;'>");
-        html.append(notice.getContent().replace("\n", "<br>"));
+        String content = notice.getContent();
+        if (content != null) {
+            content = sanitizeEditorHtml(content);
+            content = normalizeTableBorders(content);
+            content = normalizeTableAlignment(content);
+            content = content.replace("\n", "<br>");
+            html.append(content);
+        }
         html.append("</div>");
         
         html.append("</body></html>");
@@ -408,6 +421,91 @@ public class NoticeMailService {
                    .replace(">", "&gt;")
                    .replace("\"", "&quot;")
                    .replace("'", "&#x27;");
+    }
+
+    private String normalizeTableBorders(String html) {
+        if (html == null || html.isBlank()) {
+            return html;
+        }
+        String updated = html;
+        updated = updated.replaceAll("(?i)<table(?![^>]*\\bstyle=)([^>]*)>",
+            "<table$1 style=\"border-collapse:collapse;\">");
+        updated = updated.replaceAll("(?i)<table([^>]*\\bstyle=\")([^\"]*)(\"[^>]*)>",
+            "<table$1$2; border-collapse:collapse;$3>");
+        updated = updated.replaceAll("(?i)<(td|th)(?![^>]*\\bstyle=)([^>]*)>",
+            "<$1$2 style=\"border:1px solid #999; padding:4px;\">");
+        updated = updated.replaceAll("(?i)<(td|th)([^>]*\\bstyle=\")([^\"]*)(\"[^>]*)>",
+            "<$1$2$3; border:1px solid #999; padding:4px;$4>");
+        return updated;
+    }
+
+    private String normalizeTableAlignment(String html) {
+        if (html == null || html.isBlank()) {
+            return html;
+        }
+        String updated = html.replaceAll("(?i)\\s+align=\"center\"", "");
+        Pattern pattern = Pattern.compile("(?i)<(table|figure)([^>]*\\bstyle=\")([^\"]*)(\"[^>]*)>");
+        Matcher matcher = pattern.matcher(updated);
+        StringBuffer sb = new StringBuffer();
+        while (matcher.find()) {
+            String style = matcher.group(3);
+            style = style.replaceAll("(?i)text-align\\s*:\\s*center\\s*;?", "");
+            style = style.replaceAll("(?i)margin\\s*:\\s*0\\s*auto\\s*;?", "");
+            String styleLower = style.toLowerCase();
+            boolean hasMarginLeftAuto = styleLower.matches("(?s).*margin-left\\s*:\\s*auto.*");
+            boolean hasMarginRightAuto = styleLower.matches("(?s).*margin-right\\s*:\\s*auto.*");
+            if (hasMarginLeftAuto && hasMarginRightAuto) {
+                style = style.replaceAll("(?i)margin-left\\s*:\\s*auto\\s*;?", "");
+                style = style.replaceAll("(?i)margin-right\\s*:\\s*auto\\s*;?", "");
+            }
+            String replacement = "<" + matcher.group(1) + matcher.group(2) + style + matcher.group(4);
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
+    }
+
+    private String sanitizeEditorHtml(String html) {
+        if (html == null || html.isBlank()) {
+            return html;
+        }
+        String cleaned = html;
+        cleaned = cleaned.replaceAll("(?is)<figure[^>]*class=\"[^\"]*table[^\"]*\"[^>]*>", "");
+        cleaned = cleaned.replaceAll("(?is)</figure>", "");
+        cleaned = cleaned.replaceAll("(?is)<div[^>]*class=\"[^\"]*ck-widget__selection-handle[^\"]*\"[^>]*>.*?</div>", "");
+        cleaned = cleaned.replaceAll("(?is)<div[^>]*class=\"[^\"]*ck-widget__type-around[^\"]*\"[^>]*>.*?</div>", "");
+        cleaned = cleaned.replaceAll("(?is)<span[^>]*class=\"[^\"]*ck-table-bogus-paragraph[^\"]*\"[^>]*>(.*?)</span>", "$1");
+        cleaned = cleaned.replaceAll("(?is)<span[^>]*class=\"[^\"]*ck-list-bogus-paragraph[^\"]*\"[^>]*>(.*?)</span>", "$1");
+        cleaned = cleaned.replaceAll("(?is)\\scontenteditable=\"[^\"]*\"", "");
+        cleaned = cleaned.replaceAll("(?is)\\stabindex=\"[^\"]*\"", "");
+        cleaned = cleaned.replaceAll("(?is)\\srole=\"[^\"]*\"", "");
+        cleaned = cleaned.replaceAll("(?is)\\saria-[a-z-]+=\"[^\"]*\"", "");
+        cleaned = cleaned.replaceAll("(?is)\\sdata-cke-[a-z-]+=\"[^\"]*\"", "");
+        cleaned = cleaned.replaceAll("(?is)\\sclass=\"[^\"]*ck-[^\"]*\"", "");
+        cleaned = stripInlineSizingStyles(cleaned);
+        return cleaned;
+    }
+
+    private String stripInlineSizingStyles(String html) {
+        Pattern pattern = Pattern.compile("(?is)\\sstyle=\"([^\"]*)\"");
+        Matcher matcher = pattern.matcher(html);
+        StringBuffer sb = new StringBuffer();
+        while (matcher.find()) {
+            String style = matcher.group(1);
+            String cleaned = style;
+            cleaned = cleaned.replaceAll("(?i)\\bwidth\\s*:\\s*[^;]+;?", "");
+            cleaned = cleaned.replaceAll("(?i)\\bheight\\s*:\\s*[^;]+;?", "");
+            cleaned = cleaned.replaceAll("(?i)\\bpadding\\s*:\\s*[^;]+;?", "");
+            cleaned = cleaned.replaceAll("(?i)\\bmargin\\s*:\\s*[^;]+;?", "");
+            cleaned = cleaned.replaceAll("(?i)\\s{2,}", " ").trim();
+            cleaned = cleaned.replaceAll("(?i)^;|;\\s*;", ";").trim();
+            String replacement = cleaned.isBlank()
+                ? ""
+                : " style=\"" + cleaned + "\"";
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
     
     /**

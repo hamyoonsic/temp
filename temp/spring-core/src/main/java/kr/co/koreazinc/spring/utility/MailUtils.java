@@ -34,6 +34,10 @@ public class MailUtils {
                     this.put("cc", String.join(";", sendMail.getCc()));
                     this.put("bcc", String.join(";", sendMail.getBcc()));
                     this.put("title", sendMail.getSubject());
+                    this.put("contentType", "HTML");
+                    this.put("bodyType", "HTML");
+                    this.put("isHtml", true);
+                    this.put("contentTypeAlt", "text/html");
                     this.put("content", sendMail.getContent());
                     if (sendMail.hasAttachment()) {
                         List<Map<String, String>> attachments = new ArrayList<>();

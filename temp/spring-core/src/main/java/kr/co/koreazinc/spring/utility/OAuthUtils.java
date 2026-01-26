@@ -52,7 +52,7 @@ public class OAuthUtils {
                     return response.bodyToMono(Map.class);
                 }).block();
 
-            log.error("OAuthUtils - issuedToken: responseBody = {}", responseBody);               
+            log.info("OAuthUtils - issuedToken: responseBody = {}", responseBody);               
 
             if (responseBody == null) {
                 log.error("OAuthUtils - issuedToken: Empty response");

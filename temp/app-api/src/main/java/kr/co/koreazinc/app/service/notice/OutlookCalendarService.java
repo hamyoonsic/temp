@@ -38,6 +38,7 @@ public class OutlookCalendarService {
     private final MailTestProperty mailTestProperty;  //  테스트 설정 추가
     
     private static final String GRAPH_API_BASE = "https://graph.microsoft.com/v1.0";
+    private static final String NOTICE_CALENDAR_NAME = "공지관리";
     
     /**
      * Outlook 캘린더 이벤트 생성
@@ -80,11 +81,12 @@ public class OutlookCalendarService {
                     logCalendarEventForTest(notice, eventStartAt, eventEndAt, List.of(mailboxEmail), mailboxEmail, eventBody);
                     eventId = "TEST_EVENT_" + UUID.randomUUID().toString();
                 } else {
+                    String calendarId = getOrCreateNoticeCalendarId(mailboxEmail, token);
                     Map<String, Object> response = WebClient.builder()
                         .baseUrl(GRAPH_API_BASE)
                         .build()
                         .post()
-                        .uri("/users/" + mailboxEmail + "/events")
+                        .uri("/users/" + mailboxEmail + "/calendars/" + calendarId + "/events")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(eventBody)
@@ -119,6 +121,56 @@ public class OutlookCalendarService {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private String getOrCreateNoticeCalendarId(String mailboxEmail, String token) {
+        Map<String, Object> response = WebClient.builder()
+            .baseUrl(GRAPH_API_BASE)
+            .build()
+            .get()
+            .uri(uriBuilder -> uriBuilder
+                .path("/users/{mailbox}/calendars")
+                .queryParam("$filter", "name eq '" + NOTICE_CALENDAR_NAME + "'")
+                .build(mailboxEmail))
+            .header("Authorization", "Bearer " + token)
+            .retrieve()
+            .bodyToMono(Map.class)
+            .block();
+
+        if (response != null) {
+            Object value = response.get("value");
+            if (value instanceof List<?> calendars && !calendars.isEmpty()) {
+                Object first = calendars.get(0);
+                if (first instanceof Map<?, ?> calendar) {
+                    Object id = calendar.get("id");
+                    if (id != null) {
+                        return String.valueOf(id);
+                    }
+                }
+            }
+        }
+
+        Map<String, Object> calendarBody = new HashMap<>();
+        calendarBody.put("name", NOTICE_CALENDAR_NAME);
+
+        Map<String, Object> created = WebClient.builder()
+            .baseUrl(GRAPH_API_BASE)
+            .build()
+            .post()
+            .uri("/users/" + mailboxEmail + "/calendars")
+            .header("Authorization", "Bearer " + token)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(calendarBody)
+            .retrieve()
+            .bodyToMono(Map.class)
+            .block();
+
+        if (created == null || created.get("id") == null) {
+            throw new RuntimeException("Calendar create failed for mailbox: " + mailboxEmail);
+        }
+
+        return String.valueOf(created.get("id"));
+    }
+
     private void logCalendarEventForTest(
             NoticeBase notice, 
             LocalDateTime startAt, 
@@ -132,33 +184,33 @@ public class OutlookCalendarService {
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         
         // 공지 기본 정보
-        log.info("📋 공지 ID: {}", notice.getNoticeId());
-        log.info("📋 공지 제목: {}", notice.getTitle());
-        log.info("📋 중요도: {}", notice.getNoticeLevel());
+        log.info(" 공지 ID: {}", notice.getNoticeId());
+        log.info(" 공지 제목: {}", notice.getTitle());
+        log.info(" 중요도: {}", notice.getNoticeLevel());
         
         // 이벤트 정보
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.info("📅 이벤트 제목: {}", eventBody.get("subject"));
-        log.info("📅 시작 시간: {}", formatDateTime(startAt));
-        log.info("📅 종료 시간: {}", formatDateTime(endAt));
-        log.info("📅 시간대: Asia/Seoul");
+        log.info(" 이벤트 제목: {}", eventBody.get("subject"));
+        log.info(" 시작 시간: {}", formatDateTime(startAt));
+        log.info(" 종료 시간: {}", formatDateTime(endAt));
+        log.info(" 시간대: Asia/Seoul");
         
         // 주최자 정보
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.info("👤 주최자 (Organizer): {}", senderEmail);
-        log.info("👤 캘린더 소유자: {}", senderEmail);
+        log.info(" 주최자 (Organizer): {}", senderEmail);
+        log.info(" 캘린더 소유자: {}", senderEmail);
         
         // 참석자 정보
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.info("👥 참석자 (Attendees): {} 명", attendeeEmails.size());
-        log.info("👥 참석자 목록:");
+        log.info(" 참석자 (Attendees): {} 명", attendeeEmails.size());
+        log.info(" 참석자 목록:");
         attendeeEmails.forEach(email -> log.info("    {}", email));
         
         // 이벤트 본문
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         Map<String, Object> bodyContent = (Map<String, Object>) eventBody.get("body");
         String content = (String) bodyContent.get("content");
-        log.info("📄 이벤트 본문 (처음 500자):");
+        log.info(" 이벤트 본문 (처음 500자):");
         if (content.length() > 500) {
             log.info("{}", content.substring(0, 500) + "...");
         } else {
@@ -168,14 +220,14 @@ public class OutlookCalendarService {
         // 알림 설정
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         if (eventBody.containsKey("isReminderOn") && (Boolean) eventBody.get("isReminderOn")) {
-            log.info("⏰ 알림: 15분 전");
+            log.info(" 알림: 15분 전");
         } else {
-            log.info("⏰ 알림: 없음");
+            log.info(" 알림: 없음");
         }
         
         // Graph API 엔드포인트
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.info("🔗 Graph API 엔드포인트:");
+        log.info(" Graph API 엔드포인트:");
         log.info("   POST {}/users/{}/events", GRAPH_API_BASE, senderEmail);
         
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -302,7 +354,7 @@ public class OutlookCalendarService {
             }
         }
         
-        log.info("📬 캘린더 참석자 수집 완료: noticeId={}, count={}", noticeId, emails.size());
+        log.info(" 캘린더 참석자 수집 완료: noticeId={}, count={}", noticeId, emails.size());
         return new ArrayList<>(emails);
     }
     
