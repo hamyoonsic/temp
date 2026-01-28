@@ -50,6 +50,7 @@ public class NoticeService {
     private final NoticeSendPlanRepository noticeSendPlanRepository;
     private final NoticeMailService noticeMailService;
     private final OutlookCalendarService outlookCalendarService;
+    private final UserMasterRepository userMasterRepository;
 
     
     /**
@@ -175,6 +176,8 @@ public class NoticeService {
             LocalDate startDate,
             LocalDate endDate,
             String search,
+            String receiverDept,
+            String createdBy,
             Pageable pageable) {
         
         List<Long> corpNoticeIds = null;
@@ -262,6 +265,37 @@ public class NoticeService {
                     "%" + search.toLowerCase() + "%"
                 ));
             }
+
+            // 작성자 검색 (ID/이름)
+            if (createdBy != null && !createdBy.trim().isEmpty()) {
+                String keyword = "%" + createdBy.toLowerCase() + "%";
+                Predicate byId = cb.like(cb.lower(root.get("createdBy")), keyword);
+                var userSubquery = query.subquery(String.class);
+                var userRoot = userSubquery.from(UserMaster.class);
+                userSubquery.select(userRoot.get("userId"))
+                    .where(cb.or(
+                        cb.like(cb.lower(userRoot.get("userKoNm")), keyword),
+                        cb.like(cb.lower(userRoot.get("userEnNm")), keyword),
+                        cb.like(cb.lower(userRoot.get("userId")), keyword)
+                    ));
+                Predicate byName = root.get("createdBy").in(userSubquery);
+                predicates.add(cb.or(byId, byName));
+            }
+
+            // 수신부서 검색 (ORG_UNIT 기준)
+            if (receiverDept != null && !receiverDept.trim().isEmpty()) {
+                var subquery = query.subquery(Long.class);
+                var target = subquery.from(NoticeTarget.class);
+                String keyword = "%" + receiverDept.toLowerCase() + "%";
+                subquery.select(target.get("noticeId")).where(
+                    cb.equal(target.get("targetType"), "ORG_UNIT"),
+                    cb.or(
+                        cb.like(cb.lower(target.get("targetName")), keyword),
+                        cb.like(cb.lower(target.get("targetKey")), keyword)
+                    )
+                );
+                predicates.add(root.get("noticeId").in(subquery));
+            }
             
             return cb.and(predicates.toArray(new Predicate[0]));
         };
@@ -290,8 +324,10 @@ public class NoticeService {
                     .add(targetDto);
         }
 
+        Map<String, String> userNameMap = buildUserNameMap(notices);
+
         return noticePage.map(notice -> {
-            NoticeResponseDto dto = convertToResponseDto(notice);
+            NoticeResponseDto dto = convertToResponseDto(notice, userNameMap);
             List<NoticeResponseDto.TargetDto> noticeTargets =
                     targetsByNoticeId.getOrDefault(notice.getNoticeId(), new ArrayList<>());
             dto.setTargets(noticeTargets);
@@ -396,6 +432,12 @@ public class NoticeService {
      * Entity -> DTO 변환 (기본)
      */
     private NoticeResponseDto convertToResponseDto(NoticeBase notice) {
+        return convertToResponseDto(notice, null);
+    }
+
+    private NoticeResponseDto convertToResponseDto(NoticeBase notice, Map<String, String> userNameMap) {
+        String createdByName = resolveUserName(notice.getCreatedBy(), userNameMap);
+        String updatedByName = resolveUserName(notice.getUpdatedBy(), userNameMap);
         NoticeResponseDto.NoticeResponseDtoBuilder builder = NoticeResponseDto.builder()
                 .noticeId(notice.getNoticeId())
                 .title(notice.getTitle())
@@ -417,8 +459,10 @@ public class NoticeService {
                 .rejectReason(notice.getRejectReason())
                 .createdAt(notice.getCreatedAt())
                 .createdBy(notice.getCreatedBy())
+                .createdByName(createdByName)
                 .updatedAt(notice.getUpdatedAt())
                 .updatedBy(notice.getUpdatedBy())
+                .updatedByName(updatedByName)
                 .parentNoticeId(notice.getParentNoticeId());
         
         // 서비스 정보 추가
@@ -479,6 +523,58 @@ public class NoticeService {
         return noticeBaseRepository.findTopByParentNoticeIdOrderByCreatedAtDesc(noticeId)
                 .map(this::convertToResponseDtoWithDetails)
                 .orElse(null);
+    }
+
+    private Map<String, String> buildUserNameMap(List<NoticeBase> notices) {
+        if (notices == null || notices.isEmpty()) {
+            return new HashMap<>();
+        }
+        Set<String> userIds = new HashSet<>();
+        for (NoticeBase notice : notices) {
+            if (notice.getCreatedBy() != null && !notice.getCreatedBy().isBlank()) {
+                userIds.add(notice.getCreatedBy());
+            }
+            if (notice.getUpdatedBy() != null && !notice.getUpdatedBy().isBlank()) {
+                userIds.add(notice.getUpdatedBy());
+            }
+        }
+        if (userIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        return userMasterRepository.findByUserIdIn(new ArrayList<>(userIds))
+            .stream()
+            .collect(Collectors.toMap(
+                UserMaster::getUserId,
+                user -> {
+                    if (user.getUserKoNm() != null && !user.getUserKoNm().isBlank()) {
+                        return user.getUserKoNm();
+                    }
+                    if (user.getUserEnNm() != null && !user.getUserEnNm().isBlank()) {
+                        return user.getUserEnNm();
+                    }
+                    return user.getUserId();
+                }
+            ));
+    }
+
+    private String resolveUserName(String userId, Map<String, String> userNameMap) {
+        if (userId == null || userId.isBlank()) {
+            return null;
+        }
+        if (userNameMap != null && userNameMap.containsKey(userId)) {
+            return userNameMap.get(userId);
+        }
+        return userMasterRepository.findById(userId)
+            .map(user -> {
+                if (user.getUserKoNm() != null && !user.getUserKoNm().isBlank()) {
+                    return user.getUserKoNm();
+                }
+                if (user.getUserEnNm() != null && !user.getUserEnNm().isBlank()) {
+                    return user.getUserEnNm();
+                }
+                return user.getUserId();
+            })
+            .orElse(userId);
     }
 
     private String normalizeTargetKey(String targetType, String targetKey) {

@@ -234,7 +234,7 @@ body {
   padding: 8px;
   min-height: 80px;
   background: #fafbfc;
-  font-size: 11px;
+  font-size: 12px;
   transition: all 0.2s ease;
 }
 
@@ -245,7 +245,7 @@ body {
 }
 
 .day-number {
-  font-size: 11px;
+  font-size: 12px;
   color: #94a3b8;
   margin-bottom: 4px;
   font-weight: 500;
@@ -253,7 +253,7 @@ body {
 
 .event-badge {
   color: white;
-  font-size: 9px;
+  font-size: 11px;
   padding: 4px 6px;
   border-radius: 4px;
   margin-bottom: 3px;
@@ -277,11 +277,11 @@ body {
 
 .event-dept {
   opacity: 0.9;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .event-more {
-  font-size: 9px;
+  font-size: 11px;
   color: #64748b;
   margin-top: 4px;
   text-align: center;
@@ -472,6 +472,21 @@ body {
   margin-bottom: 24px;
 }
 
+.three-column-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.85fr 1.35fr;
+  gap: 24px;
+  margin-bottom: 24px;
+  align-items: stretch;
+}
+
+.three-column-grid .content-card {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 /* 컨텐츠 카드 */
 .content-card {
   background: white;
@@ -482,10 +497,18 @@ body {
   margin-bottom: 24px;
 }
 
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 .card-title {
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 20px;
+  margin-bottom: 0;
   font-size: 16px;
   letter-spacing: -0.3px;
 }
@@ -581,7 +604,32 @@ body {
 }
 
 .donut-chart {
-  transform: rotate(-90deg);
+  transform: none;
+}
+
+.donut-segment {
+  cursor: pointer;
+  transition: transform 0.2s ease, stroke-width 0.2s ease, opacity 0.2s ease;
+  transform-origin: 100px 100px;
+  transform-box: fill-box;
+}
+
+.donut-segment:hover {
+  transform: scale(1.03);
+  stroke-width: 38;
+  opacity: 0.95;
+}
+
+.donut-label {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #1e293b;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 3px;
 }
 
 .chart-center {
@@ -606,6 +654,7 @@ body {
 
 /* 통계 리스트 */
 .stats-list {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -660,6 +709,7 @@ body {
 
 /* 공지 리스트 */
 .notices-list {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -671,6 +721,29 @@ body {
   margin-top: 12px;
 }
 
+.btn-more-icon {
+  width: 36px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-more-icon:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
 .btn-more {
   background: #f1f5f9;
   color: #1e293b;
@@ -755,8 +828,36 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   gap: 10px;
-  height: 200px;
+  height: 220px;
   padding-top: 24px;
+  padding-bottom: 32px;
+  position: relative;
+}
+
+.bar-chart::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.bar-chart::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  height: 100%;
+  background-image: linear-gradient(
+    to top,
+    rgba(226, 232, 240, 0.6) 1px,
+    transparent 1px
+  );
+  background-size: 100% 44px;
+  pointer-events: none;
 }
 
 .bar-item {
@@ -766,24 +867,28 @@ body {
   align-items: center;
   height: 100%;
   justify-content: flex-end;
+  position: relative;
+  z-index: 1;
 }
 
 .bar-column {
   width: 100%;
   background: linear-gradient(to top, #1e40af, #60a5fa);
-  border-radius: 8px 8px 0 0;
-  min-height: 20px;
+  border-radius: 10px 10px 4px 4px;
+  min-height: 16px;
   transition: all 0.3s ease;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 8px;
+  padding-top: 6px;
+  box-shadow: 0 6px 12px rgba(30, 64, 175, 0.18);
 }
 
 .bar-value {
   color: white;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .bar-item:hover .bar-column {
@@ -793,11 +898,15 @@ body {
 
 .bar-label {
   font-size: 11px;
-  color: #64748b;
-  margin-top: 10px;
+  color: #475569;
+  margin-top: 12px;
   text-align: center;
   word-break: keep-all;
-  line-height: 1.3;
+  line-height: 1.25;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .empty-message {
@@ -1061,6 +1170,36 @@ body {
   white-space: pre-wrap;
   line-height: 1.55;
   min-height: 80px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.content-box table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 12px 0;
+}
+
+.content-box th,
+.content-box td {
+  border: 1px solid #94a3b8;
+  padding: 8px 10px;
+  font-size: 0.875rem;
+  vertical-align: middle;
+}
+
+.content-box th {
+  background: #bcd0ee;
+  font-weight: 700;
+  text-align: center;
+  width: 18%;
+}
+
+.content-box td {
+  background: #fff;
 }
 
 .target-item {
@@ -1093,6 +1232,10 @@ body {
   }
 
   .two-column-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .three-column-grid {
     grid-template-columns: 1fr;
   }
 

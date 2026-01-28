@@ -36,6 +36,7 @@ public class OutlookCalendarService {
 
     private static final String GRAPH_API_BASE = "https://graph.microsoft.com/v1.0";
     private static final String NOTICE_CALENDAR_NAME = "NoticeCalendar";
+    private static final int PROVIDER_EVENT_ID_MAX = 120;
 
     /**
      * Create outlook calendar event.
@@ -103,7 +104,7 @@ public class OutlookCalendarService {
                     .eventEndAt(eventEndAt)
                     .attendees(String.join(";", attendeeEmails))
                     .resourceMailbox(mailboxEmail)
-                    .providerEventId(eventId)
+                    .providerEventId(truncateProviderEventId(eventId))
                     .build();
 
                 calendarEventRepository.save(calendarEvent);
@@ -113,8 +114,8 @@ public class OutlookCalendarService {
             return lastEventId;
 
         } catch (Exception e) {
-            log.error("Outlook calendar event create failed: noticeId={}, error={}", noticeId, e.getMessage(), e);
-            throw new RuntimeException("Calendar event create failed: " + e.getMessage(), e);
+            log.warn("Outlook calendar event create failed: noticeId={}, error={}", noticeId, e.getMessage(), e);
+            return null;
         }
     }
 
@@ -274,5 +275,11 @@ public class OutlookCalendarService {
 
     private String formatDateTime(LocalDateTime dateTime) {
         return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
+
+    private String truncateProviderEventId(String eventId) {
+        if (eventId == null) return null;
+        if (eventId.length() <= PROVIDER_EVENT_ID_MAX) return eventId;
+        return eventId.substring(0, PROVIDER_EVENT_ID_MAX);
     }
 }

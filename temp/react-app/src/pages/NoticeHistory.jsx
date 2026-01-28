@@ -58,7 +58,9 @@ const NoticeHistory = () => {
     status: defaultStatus,
     startDate: '',
     endDate: '',
-    searchTerm: ''
+    searchTerm: '',
+    receiverDept: '',
+    createdBy: ''
   });
 
   const [selectedNotice, setSelectedNotice] = useState(null);
@@ -138,6 +140,16 @@ const NoticeHistory = () => {
       if (currentFilters.startDate) params.startDate = formatDateInput(currentFilters.startDate);
       if (currentFilters.endDate) params.endDate = formatDateInput(currentFilters.endDate);
       if (currentFilters.searchTerm) params.search = currentFilters.searchTerm;
+      if (currentFilters.receiverDept) {
+        const raw = currentFilters.receiverDept.trim();
+        const normalized = raw.includes('_')
+          ? raw.split('_').pop().trim()
+          : raw.includes('/')
+            ? raw.split('/').pop().trim()
+            : raw;
+        if (normalized) params.receiverDept = normalized;
+      }
+      if (currentFilters.createdBy) params.createdBy = currentFilters.createdBy;
       
       const result = await noticeApi.getList(params);
       
@@ -261,7 +273,9 @@ const NoticeHistory = () => {
       status: defaultStatus,
       startDate: '',
       endDate: '',
-      searchTerm: ''
+      searchTerm: '',
+      receiverDept: '',
+      createdBy: ''
     };
     setFilters(resetFilters);
     setCurrentPage(0);
@@ -298,26 +312,49 @@ const NoticeHistory = () => {
 
   const getReceiverInfo = (targets) => {
     if (!targets || targets.length === 0) return { corps: '-', depts: '-' };
-    
-    const corps = targets
-      .filter(t => t.targetType === 'CORP')
-      .map(t => t.targetName)
+
+    const corpTargets = targets.filter(t => t.targetType === 'CORP');
+    const orgTargets = targets.filter(t => t.targetType === 'ORG_UNIT');
+
+    const corpNames = Array.from(new Set(
+      corpTargets
+        .map(t => t.targetName)
+        .filter(name => name && name.trim().length > 0)
+        .map(name => name.trim())
+    ));
+
+    const orgCorpNames = Array.from(new Set(
+      orgTargets
+        .map(t => t.targetName)
+        .filter(name => name && name.includes('/'))
+        .map(name => name.split('/')[0].trim())
+        .filter(name => name.length > 0)
+    ));
+
+    const corpNameForDept = corpNames.length === 1 ? corpNames[0] : '';
+
+    const depts = orgTargets
+      .map(t => t.targetName || '')
+      .map(name => name.trim())
+      .filter(name => name.length > 0)
+      .map(name => {
+        if (name.includes('/')) {
+          return name.replace(/\s*\/\s*/g, '_');
+        }
+        if (corpNameForDept) {
+          return `${corpNameForDept}_${name}`;
+        }
+        return name;
+      })
       .join(', ');
-    
-    const depts = targets
-      .filter(t => t.targetType === 'ORG_UNIT')
-      .map(t => t.targetName)
-      .join(', ');
-    
-    const inferredCorp = corps || (
-      depts && depts.includes('/')
-        ? depts.split('/')[0].trim()
-        : ''
-    );
+
+    const inferredCorp = corpNames.join(', ')
+      || orgCorpNames.join(', ')
+      || '-';
 
     return {
-      corps: inferredCorp || '-',
-      depts: depts || '-'
+      corps: inferredCorp,
+      depts: depts || '전체'
     };
   };
 
@@ -342,8 +379,10 @@ const NoticeHistory = () => {
     <div className="notice-history-page">
       <div className="notice-history-container">
         <div className="page-header">
-          <h1 className="page-title">공지 발송 History</h1>
-          <p className="page-description">공지 발송 이력을 조회하고 관리합니다</p>
+          <div>
+            <h1 className="page-title">공지 발송 History</h1>
+            <p className="page-description">공지 발송 이력을 조회하고 관리합니다</p>
+          </div>
         </div>
 
         <div className="filter-section">
@@ -413,6 +452,9 @@ const NoticeHistory = () => {
               </div>
             </div>
 
+          </div>
+
+          <div className="filter-row filter-row-secondary">
             <div className="filter-group flex-grow">
               <label>검색어</label>
               <input 
@@ -424,13 +466,37 @@ const NoticeHistory = () => {
                 placeholder="공지 제목으로 검색"
               />
             </div>
+
+            <div className="filter-group">
+              <label>수신부서</label>
+              <input
+                type="text"
+                value={filters.receiverDept}
+                onChange={(e) => setFilters({ ...filters, receiverDept: e.target.value })}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                className="filter-input"
+                placeholder="부서명 검색"
+              />
+            </div>
+
+            <div className="filter-group">
+              <label>작성자</label>
+              <input
+                type="text"
+                value={filters.createdBy}
+                onChange={(e) => setFilters({ ...filters, createdBy: e.target.value })}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                className="filter-input"
+                placeholder="작성자 ID"
+              />
+            </div>
             
             <div className="filter-actions">
               <button onClick={handleSearch} className="btn-search">
-                🔍 검색
+                검색
               </button>
               <button onClick={handleReset} className="btn-reset">
-                🔄 초기화
+                초기화
               </button>
             </div>
           </div>
@@ -483,7 +549,7 @@ const NoticeHistory = () => {
                   <th>작성자</th>
                   <th>등록일시</th>
                   <th>발송상태</th>
-                  <th>액션</th>
+                  <th>관리</th>
                 </tr>
               </thead>
               <tbody>
@@ -516,7 +582,7 @@ const NoticeHistory = () => {
                           </span>
                         </td>
                         <td>{item.senderOrgUnitName || '-'}</td>
-                        <td>{item.createdBy}</td>
+                        <td>{item.createdByName || item.createdBy}</td>
                         <td>{formatDateTime(item.createdAt)}</td>
                         <td>
                           <span 
@@ -690,7 +756,7 @@ const NoticeHistory = () => {
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">작성자</span>
-                    <span className="detail-value">{selectedNotice.createdBy}</span>
+                    <span className="detail-value">{selectedNotice.createdByName || selectedNotice.createdBy}</span>
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">수정일시</span>

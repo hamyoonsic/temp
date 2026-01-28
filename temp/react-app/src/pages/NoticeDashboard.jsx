@@ -6,6 +6,9 @@ import { dashboardApi, noticeApi, organizationApi } from '../api';
 
 //  모달 스크롤 제어 함수
 const openModal = () => {
+  if (document.body.getAttribute('data-scroll-y') !== null) {
+    return;
+  }
   const scrollY = window.scrollY;
   const scrollX = window.scrollX;
   const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
@@ -53,8 +56,6 @@ export default function NoticeDashboard() {
   const [modalTitle, setModalTitle] = useState('');
   
   const [viewMode, setViewMode] = useState('monthly');
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [selectedMaintenanceNotice, setSelectedMaintenanceNotice] = useState(null);
   const [showDayListModal, setShowDayListModal] = useState(false);
   const [dayListEvents, setDayListEvents] = useState([]);
   const [dayListTitle, setDayListTitle] = useState('');
@@ -89,13 +90,14 @@ export default function NoticeDashboard() {
 
   //  모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
   useEffect(() => {
-    if (showDetailModal || showCompletionModal || showDayListModal) {
+    if (showDetailModal || showDayListModal) {
       openModal();
     } else {
       closeModal();
     }
-    return () => closeModal();
-  }, [showDetailModal, showCompletionModal, showDayListModal]);
+  }, [showDetailModal, showDayListModal]);
+
+  useEffect(() => () => closeModal(), []);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -112,24 +114,29 @@ export default function NoticeDashboard() {
         });
       }
 
-        const noticesData = await noticeApi.getList({ page: 0, size: 100 });
+        const noticesData = await noticeApi.getList({ page: 0, size: 1000 });
         if (noticesData.success) {
           const allNotices = noticesData.data.data || noticesData.data;
-          const approvedNotices = Array.isArray(allNotices) 
+          const approvedNoticesAll = Array.isArray(allNotices) 
             ? allNotices.filter(n => 
               n.noticeStatus === 'APPROVED' || 
-              n.noticeStatus === 'SENT' ||
-              n.noticeStatus === 'FAILED'
-            ).slice(0, 10)
+              n.noticeStatus === 'SENT'
+            )
           : [];
-        setRecentNotices(approvedNotices);
-        calculateTypeStats(approvedNotices);
+          const approvedNotices = approvedNoticesAll.slice(0, 10);
+          setRecentNotices(approvedNotices);
+          calculateTypeStats(approvedNoticesAll);
       }
 
-      const scheduleData = await noticeApi.getList({ status: 'APPROVED', page: 0, size: 5 });
+      const scheduleData = await noticeApi.getList({ page: 0, size: 100, sort: 'createdAt,DESC' });
       if (scheduleData.success) {
         const scheduleList = scheduleData.data.data || scheduleData.data;
-        setSchedules(Array.isArray(scheduleList) ? scheduleList : []);
+        const allowedScheduleStatuses = new Set(['APPROVED', 'SENT']);
+        const filteredSchedules = (Array.isArray(scheduleList) ? scheduleList : [])
+          .filter(schedule => allowedScheduleStatuses.has(schedule.noticeStatus))
+          .filter(schedule => schedule.isMaintenance || schedule.parentNoticeId)
+          .slice(0, 5);
+        setSchedules(filteredSchedules);
       }
       
       await calculateDeptStatsWithAllDepts();
@@ -150,7 +157,7 @@ export default function NoticeDashboard() {
         const eventsByDate = {};
         const currentYear = currentDate.getFullYear();
         const currentMonth = currentDate.getMonth();
-        const allowedStatuses = new Set(['APPROVED', 'SENT', 'FAILED']);
+        const allowedStatuses = new Set(['APPROVED', 'SENT']);
 
         (Array.isArray(notices) ? notices : [])
           .filter((notice) => allowedStatuses.has(notice.noticeStatus))
@@ -173,10 +180,10 @@ export default function NoticeDashboard() {
             title: notice.title,
             dept: notice.senderOrgUnitName || '-',
             senderDept: notice.senderOrgUnitName || '-',
-            senderUser: notice.createdBy || '-',
+            senderUser: notice.createdByName || notice.createdBy || '-',
             noticeType: notice.noticeType || '-',
             level: notice.noticeLevel,
-            color: getPriorityColor(notice.noticeLevel),
+            color: getPriorityColor(notice.noticeLevel, notice.noticeType),
             dateKey
           });
         });
@@ -189,21 +196,54 @@ export default function NoticeDashboard() {
   };
 
   const calculateTypeStats = (notices) => {
-    const typeCounts = {};
-    let total = 0;
-    
+    const normalizeType = (rawType, isMaintenance) => {
+      const value = (rawType || '').trim();
+      if (!value) return isMaintenance ? '시스템 점검안내' : '일반공지';
+      if (value.includes('점검')) return '시스템 점검안내';
+      if (value.includes('장애')) return '시스템 장애안내';
+      if (value.includes('정상화')) return '시스템 정상화안내';
+      if (value.includes('보안')) return '보안 공지';
+      if (value.includes('인프라')) return '인프라 공지';
+      if (value.includes('일반')) return '일반공지';
+      return value;
+    };
+
+    const typeOrder = [
+      '시스템 정상화안내',
+      '시스템 점검안내',
+      '시스템 장애안내',
+      '보안 공지',
+      '인프라 공지',
+      '일반공지'
+    ];
+
+    const typeColors = {
+      '시스템 정상화안내': '#10B981',
+      '시스템 점검안내': '#F59E0B',
+      '시스템 장애안내': '#EF4444',
+      '보안 공지': '#6366F1',
+      '인프라 공지': '#0EA5E9',
+      '일반공지': '#94A3B8'
+    };
+
+    const counts = typeOrder.reduce((acc, type) => {
+      acc[type] = 0;
+      return acc;
+    }, {});
+
     notices.forEach(notice => {
-      const type = notice.isMaintenance ? '시스템 점검 안내' : '일반 공지';
-      typeCounts[type] = (typeCounts[type] || 0) + 1;
-      total++;
+      const type = normalizeType(notice.noticeType, notice.isMaintenance);
+      counts[type] = (counts[type] || 0) + 1;
     });
 
-    const stats = Object.entries(typeCounts).map(([type, count], idx) => ({
-      type,
-      count,
-      color: ['#10B981', '#6366F1', '#EF4444', '#F59E0B'][idx % 4],
-      percentage: total > 0 ? ((count / total) * 100).toFixed(1) : 0
-    }));
+    const total = Object.values(counts).reduce((sum, c) => sum + c, 0);
+    const stats = typeOrder
+      .map(type => ({
+        type,
+        count: counts[type] || 0,
+        color: typeColors[type] || '#64748B',
+        percentage: total > 0 ? ((counts[type] || 0) / total * 100).toFixed(1) : 0
+      }));
 
     setTypeStats(stats);
   };
@@ -284,7 +324,15 @@ export default function NoticeDashboard() {
     }
   };
 
-  const getPriorityColor = (level) => {
+  const isRecoveryType = (noticeType) => {
+    if (!noticeType) return false;
+    return noticeType.includes('정상화');
+  };
+
+  const getPriorityColor = (level, noticeType) => {
+    if (isRecoveryType(noticeType)) {
+      return '#10B981';
+    }
     const colors = {
       'L3': '#EF4444',
       'L2': '#F59E0B',
@@ -297,7 +345,10 @@ export default function NoticeDashboard() {
     return level === 'L3' ? '🚨' : '';
   };
 
-  const getNoticeIconBg = (level) => {
+  const getNoticeIconBg = (level, noticeType) => {
+    if (isRecoveryType(noticeType)) {
+      return '#d1fae5';
+    }
     const colors = {
       'L3': '#fee2e2',
       'L2': '#fef3c7',
@@ -306,7 +357,10 @@ export default function NoticeDashboard() {
     return colors[level] || '#d1fae5';
   };
 
-  const getNoticeBorderColor = (level) => {
+  const getNoticeBorderColor = (level, noticeType) => {
+    if (isRecoveryType(noticeType)) {
+      return '#6ee7b7';
+    }
     const colors = {
       'L3': '#fca5a5',
       'L2': '#fcd34d',
@@ -339,22 +393,49 @@ export default function NoticeDashboard() {
 
   const getReceiverInfo = (targets) => {
     if (!targets || targets.length === 0) return { corps: '-', depts: '-' };
-    const corps = targets
-      .filter(t => t.targetType === 'CORP')
-      .map(t => t.targetName)
+
+    const corpTargets = targets.filter(t => t.targetType === 'CORP');
+    const orgTargets = targets.filter(t => t.targetType === 'ORG_UNIT');
+
+    const corpNames = Array.from(new Set(
+      corpTargets
+        .map(t => t.targetName)
+        .filter(name => name && name.trim().length > 0)
+        .map(name => name.trim())
+    ));
+
+    const orgCorpNames = Array.from(new Set(
+      orgTargets
+        .map(t => t.targetName)
+        .filter(name => name && name.includes('/'))
+        .map(name => name.split('/')[0].trim())
+        .filter(name => name.length > 0)
+    ));
+
+    const corpNameForDept = corpNames.length === 1 ? corpNames[0] : '';
+
+    const depts = orgTargets
+      .map(t => t.targetName || '')
+      .map(name => name.trim())
+      .filter(name => name.length > 0)
+      .map(name => {
+        if (name.includes('/')) {
+          return name.replace(/\s*\/\s*/g, '_');
+        }
+        if (corpNameForDept) {
+          return `${corpNameForDept}_${name}`;
+        }
+        return name;
+      })
       .join(', ');
-    const depts = targets
-      .filter(t => t.targetType === 'ORG_UNIT')
-      .map(t => t.targetName)
-      .join(', ');
-    const inferredCorp = corps || (
-      depts && depts.includes('/')
-        ? depts.split('/')[0].trim()
-        : ''
-    );
+
+    const inferredCorp = corpNames.join(', ')
+      || orgCorpNames.join(', ')
+      || '-';
+
     return {
-      corps: inferredCorp || '-',
-      depts: depts || '-'
+      corps: inferredCorp,
+      depts: depts || '전체'
     };
   };
 
@@ -435,14 +516,7 @@ export default function NoticeDashboard() {
       if (result.success) {
         setSelectedNotice(result.data);
         
-        if (result.data.isMaintenance && 
-            result.data.noticeStatus === 'SENT' && 
-            !result.data.isCompleted) {
-          setSelectedMaintenanceNotice(result.data);
-          setShowCompletionModal(true);
-        } else {
-          setShowDetailModal(true);
-        }
+        setShowDetailModal(true);
       }
     } catch (error) {
       console.error('공지 상세 조회 실패:', error);
@@ -583,15 +657,6 @@ export default function NoticeDashboard() {
     );
   };
 
-  const handleRegisterCompletion = () => {
-    navigate('/notices/new', { 
-      state: { 
-        isCompletion: true,
-        originalNotice: selectedMaintenanceNotice 
-      } 
-    });
-    setShowCompletionModal(false);
-  };
 
   const handleCalendarRetry = async (noticeId) => {
     if (!window.confirm('캘린더를 재생성하시겠습니까?')) return;
@@ -788,11 +853,13 @@ export default function NoticeDashboard() {
           </div>
         </div>
 
-        {/* 하단 2컬럼 */}
-        <div className="two-column-grid">
+        {/* 하단 3컬럼 */}
+        <div className="three-column-grid">
           {/* 시스템 점검 일정 */}
           <div className="content-card">
-            <h3 className="card-title">시스템 점검 일정</h3>
+            <div className="card-header">
+              <h3 className="card-title">시스템 점검 일정</h3>
+            </div>
             <div className="schedule-list">
               {schedules.length === 0 ? (
                 <div className="empty-message">예정된 점검이 없습니다</div>
@@ -808,7 +875,7 @@ export default function NoticeDashboard() {
                     {scheduleIcon && (
                       <div
                         className="schedule-icon"
-                        style={{ background: getNoticeIconBg(schedule.noticeLevel) }}
+                        style={{ background: getNoticeIconBg(schedule.noticeLevel, schedule.noticeType) }}
                       >
                         {scheduleIcon}
                       </div>
@@ -825,7 +892,9 @@ export default function NoticeDashboard() {
                       <div className="schedule-date">{formatDate(schedule.createdAt)}</div>
                       <div className="schedule-details">
                         <div className="schedule-type">
-                          <span>{schedule.isMaintenance ? '시스템 점검' : '일반 공지'}</span>
+                          <span>
+                            {schedule.parentNoticeId ? '완료 공지' : schedule.isMaintenance ? '시스템 점검' : '일반 공지'}
+                          </span>
                           <span className="schedule-dept">{schedule.senderOrgUnitName}</span>
                         </div>
                         <div className="schedule-time">
@@ -841,32 +910,73 @@ export default function NoticeDashboard() {
           </div>
 
           {/* 공지 유형 통계 */}
-          <div className="content-card">
-            <h3 className="card-title">공지 유형 통계</h3>
+          <div className="content-card stats-card">
+            <div className="card-header">
+              <h3 className="card-title">공지 유형 통계</h3>
+            </div>
             
             <div className="chart-container">
               <svg viewBox="0 0 200 200" className="donut-chart">
-                {typeStats.map((stat, idx) => {
+                {(() => {
                   const total = typeStats.reduce((sum, s) => sum + s.count, 0);
-                  const startAngle = typeStats.slice(0, idx).reduce((sum, s) => 
-                    sum + (s.count / total) * 440, 0);
-                  const strokeDasharray = `${(stat.count / total) * 440} 440`;
-                  const strokeDashoffset = -startAngle;
-                  
+                  if (total === 0) return null;
+                  const segments = typeStats.map((stat, idx) => {
+                    const startAngle = typeStats.slice(0, idx).reduce((sum, s) => 
+                      sum + (s.count / total) * 440, 0);
+                    const fraction = stat.count / total;
+                    const strokeDasharray = `${fraction * 440} 440`;
+                    const strokeDashoffset = -startAngle;
+                    const midFraction = typeStats
+                      .slice(0, idx)
+                      .reduce((sum, s) => sum + (s.count / total), 0) + (fraction / 2);
+                    const midAngle = (midFraction * 360) - 90;
+                    const radians = (midAngle * Math.PI) / 180;
+                    const labelRadius = 92;
+                    const labelX = 100 + Math.cos(radians) * labelRadius;
+                    const labelY = 100 + Math.sin(radians) * labelRadius;
+                    const percent = (fraction * 100).toFixed(1);
+                    return {
+                      key: idx,
+                      color: stat.color,
+                      strokeDasharray,
+                      strokeDashoffset,
+                      labelX,
+                      labelY,
+                      percent
+                    };
+                  });
+
                   return (
-                    <circle 
-                      key={idx}
-                      cx="100" 
-                      cy="100" 
-                      r="70" 
-                      fill="none" 
-                      stroke={stat.color} 
-                      strokeWidth="35" 
-                      strokeDasharray={strokeDasharray}
-                      strokeDashoffset={strokeDashoffset}
-                    />
+                    <>
+                      <g transform="rotate(-90 100 100)">
+                        {segments.map(segment => (
+                          <circle 
+                            key={segment.key}
+                            className="donut-segment"
+                            cx="100" 
+                            cy="100" 
+                            r="70" 
+                            fill="none" 
+                            stroke={segment.color} 
+                            strokeWidth="35" 
+                            strokeDasharray={segment.strokeDasharray}
+                            strokeDashoffset={segment.strokeDashoffset}
+                          />
+                        ))}
+                      </g>
+                      {segments.map(segment => (
+                        <text
+                          key={`label-${segment.key}`}
+                          className="donut-label"
+                          x={segment.labelX}
+                          y={segment.labelY}
+                        >
+                          {segment.percent}%
+                        </text>
+                      ))}
+                    </>
                   );
-                })}
+                })()}
               </svg>
               <div className="chart-center">
                 <div className="chart-total">
@@ -891,53 +1001,56 @@ export default function NoticeDashboard() {
               ))}
             </div>
           </div>
-        </div>
 
-        {/* 최근 공지 목록 */}
-        <div className="content-card">
-          <h3 className="card-title">최근 공지 목록</h3>
-          <div className="notices-list">
-            {recentNotices.length === 0 ? (
-              <div className="empty-message">최근 공지가 없습니다</div>
-            ) : (
-              recentNotices.map((notice, idx) => {
-                const noticeIcon = getNoticeIcon(notice.noticeLevel);
-                return (
-                <div 
-                  key={idx} 
-                  className="notice-item" 
-                  style={{
-                    background: getNoticeIconBg(notice.noticeLevel),
-                    borderColor: getNoticeBorderColor(notice.noticeLevel)
-                  }}
-                  onClick={() => openDetailModal(notice.noticeId)}
-                >
-                  {noticeIcon && <div className="notice-icon">{noticeIcon}</div>}
-                  <div className="notice-content">
-                    <div className="notice-grid">
-                      <div className="notice-title">{notice.title}</div>
-                      <div className="notice-dept">{notice.senderOrgUnitName}</div>
-                      <div className="notice-sender">{notice.createdBy}</div>
-                      <div className="notice-type">
-                        {notice.isMaintenance ? '시스템 점검 안내' : '일반 공지'}
+          {/* 최근 공지 목록 */}
+          <div className="content-card">
+            <div className="card-header">
+              <h3 className="card-title">최근 공지 목록</h3>
+              <button
+                type="button"
+                className="btn-more-icon"
+                onClick={() => navigate('/notices/history', { state: { status: 'APPROVED' } })}
+                aria-label="더보기"
+                title="더보기"
+              >
+                &hellip;
+              </button>
+            </div>
+            <div className="notices-list">
+              {recentNotices.length === 0 ? (
+                <div className="empty-message">최근 공지가 없습니다</div>
+              ) : (
+                recentNotices.map((notice, idx) => {
+                  const noticeIcon = getNoticeIcon(notice.noticeLevel);
+                  return (
+                  <div 
+                    key={idx} 
+                    className="notice-item" 
+                    style={{
+                      background: getNoticeIconBg(notice.noticeLevel, notice.noticeType),
+                      borderColor: getNoticeBorderColor(notice.noticeLevel, notice.noticeType)
+                    }}
+                    onClick={() => openDetailModal(notice.noticeId)}
+                  >
+                    {noticeIcon && <div className="notice-icon">{noticeIcon}</div>}
+                    <div className="notice-content">
+                      <div className="notice-grid">
+                        <div className="notice-title">{notice.title}</div>
+                        <div className="notice-dept">{notice.senderOrgUnitName}</div>
+                        <div className="notice-sender">{notice.createdByName || notice.createdBy}</div>
+                        <div className="notice-type">
+                          {notice.isMaintenance ? '시스템 점검 안내' : '일반 공지'}
+                        </div>
+                        <div className="notice-receivers">
+                          {notice.affectedService?.serviceName || '전체'}
+                        </div>
                       </div>
-                      <div className="notice-receivers">
-                        {notice.affectedService?.serviceName || '전체'}
-                      </div>
+                      <div className="notice-date">{formatDate(notice.createdAt)}</div>
                     </div>
-                    <div className="notice-date">{formatDate(notice.createdAt)}</div>
                   </div>
-                </div>
-              )})
-            )}
-          </div>
-          <div className="recent-actions">
-            <button
-              className="btn-more"
-              onClick={() => navigate('/notices/history', { state: { status: 'APPROVED' } })}
-            >
-              더보기
-            </button>
+                )})
+              )}
+            </div>
           </div>
         </div>
 
@@ -949,84 +1062,29 @@ export default function NoticeDashboard() {
             {deptStats.length === 0 ? (
               <div className="empty-message">통계 데이터가 없습니다</div>
             ) : (
-              deptStats.map((dept, idx) => {
+              (() => {
                 const maxCount = Math.max(...deptStats.map(d => d.count), 1);
-                const heightPercent = (dept.count / maxCount) * 100;
-                const minHeightPx = dept.count > 0 ? 18 : 0;
-                return (
-                  <div key={idx} className="bar-item">
-                    <div 
-                      className="bar-column" 
-                      style={{ height: `${heightPercent}%`, minHeight: `${minHeightPx}px` }}
-                    >
-                      <span className="bar-value">{dept.count}</span>
+                return deptStats.map((dept, idx) => {
+                  const heightPercent = (dept.count / maxCount) * 100;
+                  const minHeightPx = dept.count > 0 ? 18 : 0;
+                  return (
+                    <div key={idx} className="bar-item">
+                      <div 
+                        className="bar-column" 
+                        style={{ height: `${heightPercent}%`, minHeight: `${minHeightPx}px` }}
+                      >
+                        <span className="bar-value">{dept.count}</span>
+                      </div>
+                      <div className="bar-label" title={dept.dept}>{dept.dept}</div>
                     </div>
-                    <div className="bar-label">{dept.dept}</div>
-                  </div>
-                );
-              })
+                  );
+                });
+              })()
             )}
           </div>
         </div>
 
         {/*  추가: 완료 공지 등록 모달 */}
-        {showCompletionModal && selectedMaintenanceNotice && (
-          <div className="modal-overlay" onClick={() => setShowCompletionModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3> 시스템 점검 완료 공지</h3>
-                <button onClick={() => setShowCompletionModal(false)}>×</button>
-              </div>
-              
-              <div className="modal-body">
-                <p style={{ marginBottom: '16px', color: '#64748b' }}>
-                  "{selectedMaintenanceNotice.title}" 점검에 대한 완료 공지를 등록하시겠습니까?
-                </p>
-                
-                <div className="detail-section">
-                  <h4>원본 점검 공지 정보</h4>
-                  <div className="detail-item">
-                    <span className="detail-label">제목</span>
-                    <span className="detail-value">{selectedMaintenanceNotice.title}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">시작일시</span>
-                    <span className="detail-value">
-                      {formatDateTime(selectedMaintenanceNotice.publishStartAt)}
-                    </span>
-                  </div>
-                  {selectedMaintenanceNotice.publishEndAt && (
-                    <div className="detail-item">
-                      <span className="detail-label">종료일시</span>
-                      <span className="detail-value">
-                        {formatDateTime(selectedMaintenanceNotice.publishEndAt)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="completion-modal-actions">
-                  <button 
-                    className="completion-btn completion-btn-primary"
-                    onClick={handleRegisterCompletion}
-                  >
-                    완료 공지 등록하기
-                  </button>
-                  <button 
-                    className="completion-btn completion-btn-secondary"
-                    onClick={() => {
-                      setShowCompletionModal(false);
-                      setShowDetailModal(true);
-                    }}
-                  >
-                    상세 정보만 보기
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* 상세 모달 */}
         {showDetailModal && selectedNotice && (
           <div className="modal-overlay" onClick={() => setShowDetailModal(false)}>
@@ -1072,8 +1130,7 @@ export default function NoticeDashboard() {
                               완료 공지 보기
                             </button>
                           ) : (
-                            (selectedNotice.noticeStatus === 'APPROVED' &&
-                            currentUserId && selectedNotice.createdBy === currentUserId) && (
+                            (currentUserId && selectedNotice.createdBy === currentUserId) && (
                               <button
                                 type="button"
                                 className="btn btn-submit"
@@ -1155,7 +1212,7 @@ export default function NoticeDashboard() {
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">작성자</span>
-                      <span className="detail-value">{selectedNotice.createdBy}</span>
+                      <span className="detail-value">{selectedNotice.createdByName || selectedNotice.createdBy}</span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">수정일시</span>

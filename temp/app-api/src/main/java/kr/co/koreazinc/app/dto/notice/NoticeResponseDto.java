@@ -53,8 +53,10 @@ public class NoticeResponseDto {
     // 생성/수정 정보
     private LocalDateTime createdAt;
     private String createdBy;
+    private String createdByName;
     private LocalDateTime updatedAt;
     private String updatedBy;
+    private String updatedByName;
     
     // 수신 대상 (상세 조회 시)
     private List<TargetDto> targets;

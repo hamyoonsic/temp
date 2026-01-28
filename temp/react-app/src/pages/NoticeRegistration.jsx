@@ -1,4 +1,4 @@
-// NoticeRegistration.jsx - 완료 공지 등록 기능 추가
+﻿// NoticeRegistration.jsx - 완료 공지 등록 기능 추가
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import './NoticeRegistration.css';
@@ -457,23 +457,27 @@ const NoticeRegistration = () => {
     // 공지 유형: "시스템 정상화안내"로 고정
     const completionType = completionNoticeType;
     
-    // 서비스 자동 선택
-    if (original.affectedService) {
-      setSelectedServiceIds([original.affectedService.serviceId]);
+    // 서비스 자동 선택 (단일/다중)
+    const serviceIds = [];
+    if (Array.isArray(original.affectedServices)) {
+      original.affectedServices.forEach(service => {
+        if (service && service.serviceId) serviceIds.push(service.serviceId);
+      });
+    } else if (original.affectedService && original.affectedService.serviceId) {
+      serviceIds.push(original.affectedService.serviceId);
+    } else if (original.affectedServiceId) {
+      serviceIds.push(original.affectedServiceId);
+    }
+    if (serviceIds.length > 0) {
+      setSelectedServiceIds(serviceIds);
     }
     
     // 수신 대상 자동 선택 (원본 공지의 targets 사용)
     if (original.targets && original.targets.length > 0) {
-      const corpIds = original.targets
-        .filter(t => t.targetType === 'CORP')
-        .map(t => parseInt(t.targetKey));
-      
-      const orgIds = original.targets
-        .filter(t => t.targetType === 'ORG_UNIT')
-        .map(t => parseInt(t.targetKey));
-      
-      setSelectedCorpIds(corpIds);
-      setSelectedOrgIds(orgIds);
+      const corpIds = resolveCorpTargetIds(original.targets);
+      const orgIds = resolveOrgTargetIds(original.targets);
+      if (corpIds.length > 0) setSelectedCorpIds(corpIds);
+      if (orgIds.length > 0) setSelectedOrgIds(orgIds);
     }
     
     setFormData(prev => ({
@@ -481,10 +485,16 @@ const NoticeRegistration = () => {
       noticeType: completionType,
       noticeTitle: completionTitle,
       priority: original.noticeLevel || 'L2',
-      affectedServices: original.affectedService ? [{
-        serviceId: original.affectedService.serviceId,
-        serviceName: original.affectedService.serviceName
-      }] : [],
+      affectedServices: Array.isArray(original.affectedServices)
+        ? original.affectedServices
+            .filter(service => service && service.serviceId)
+            .map(service => ({ serviceId: service.serviceId, serviceName: service.serviceName || '' }))
+        : original.affectedService
+          ? [{
+              serviceId: original.affectedService.serviceId,
+              serviceName: original.affectedService.serviceName
+            }]
+          : [],
       // 내용은 비워둠 (사용자가 직접 작성)
       noticeContent: ''
     }));
@@ -607,21 +617,87 @@ const NoticeRegistration = () => {
     }
   }, [corporations, allOrganizations]);
 
+  // 마스터 데이터 로드 완료 후 서비스 복원
+  useEffect(() => {
+    if (isCompletionNotice && originalNotice && services.length > 0) {
+      restoreServices();
+    }
+  }, [services]);
+
+  const resolveCorpTargetIds = (targets) => {
+    if (!targets || targets.length === 0) return [];
+    const corpMap = new Map();
+    corporations.forEach(corp => {
+      if (corp.corpId != null) corpMap.set(String(corp.corpId), corp.corpId);
+      if (corp.corpCode) corpMap.set(String(corp.corpCode), corp.corpId);
+      if (corp.corpName) corpMap.set(String(corp.corpName), corp.corpId);
+    });
+    return targets
+      .filter(t => t.targetType === 'CORP')
+      .map(t => {
+        const key = t.targetKey != null ? String(t.targetKey).trim() : '';
+        const name = t.targetName != null ? String(t.targetName).trim() : '';
+        return corpMap.get(key) ?? corpMap.get(name);
+      })
+      .filter(id => id != null);
+  };
+
+  const resolveOrgTargetIds = (targets) => {
+    if (!targets || targets.length === 0) return [];
+    const orgMap = new Map();
+    allOrganizations.forEach(org => {
+      if (org.orgUnitId != null) orgMap.set(String(org.orgUnitId), org.orgUnitId);
+      if (org.orgUnitCode) orgMap.set(String(org.orgUnitCode), org.orgUnitId);
+      if (org.orgUnitName) orgMap.set(String(org.orgUnitName), org.orgUnitId);
+    });
+    return targets
+      .filter(t => t.targetType === 'ORG_UNIT')
+      .map(t => {
+        const key = t.targetKey != null ? String(t.targetKey).trim() : '';
+        let name = t.targetName != null ? String(t.targetName).trim() : '';
+        if (name.includes('/')) {
+          name = name.split('/').pop().trim();
+        }
+        return orgMap.get(key) ?? orgMap.get(name);
+      })
+      .filter(id => id != null);
+  };
+
+  const resolveServiceIds = (notice) => {
+    if (!notice) return [];
+    const ids = [];
+    if (Array.isArray(notice.affectedServices)) {
+      notice.affectedServices.forEach(service => {
+        if (service && service.serviceId) ids.push(service.serviceId);
+      });
+    } else if (notice.affectedService && notice.affectedService.serviceId) {
+      ids.push(notice.affectedService.serviceId);
+    } else if (notice.affectedServiceId) {
+      ids.push(notice.affectedServiceId);
+    }
+    return ids;
+  };
+
+  const restoreServices = () => {
+    const serviceIds = resolveServiceIds(originalNotice);
+    if (serviceIds.length === 0) return;
+    setSelectedServiceIds(serviceIds);
+    updateAffectedServices(serviceIds);
+  };
+
   const restoreTargets = () => {
     if (!originalNotice.targets || originalNotice.targets.length === 0) return;
     
     // 법인 복원
-    const corpTargets = originalNotice.targets.filter(t => t.targetType === 'CORP');
-    if (corpTargets.length > 0) {
-      const corpIds = corpTargets.map(t => parseInt(t.targetKey));
+    const corpIds = resolveCorpTargetIds(originalNotice.targets);
+    if (corpIds.length > 0) {
       updateReceiverCompanies(corpIds);
       filterOrganizationsByCorps(corpIds);
     }
     
     // 조직 복원
-    const orgTargets = originalNotice.targets.filter(t => t.targetType === 'ORG_UNIT');
-    if (orgTargets.length > 0) {
-      const orgIds = orgTargets.map(t => parseInt(t.targetKey));
+    const orgIds = resolveOrgTargetIds(originalNotice.targets);
+    if (orgIds.length > 0) {
       updateReceiverDepts(orgIds);
     }
   };

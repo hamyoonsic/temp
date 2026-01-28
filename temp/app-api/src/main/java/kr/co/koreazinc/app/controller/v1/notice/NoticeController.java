@@ -69,15 +69,18 @@ public class NoticeController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String receiverDept,
+            @RequestParam(required = false) String createdBy,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         
-        log.info("GET /v1/api/notices - 공지 목록 조회");
+        log.info("GET /v1/api/notices - 공지 목록 조회: status={}, level={}, corpId={}, startDate={}, endDate={}, search={}, receiverDept={}, createdBy={}",
+            status, noticeLevel, corpId, startDate, endDate, search, receiverDept, createdBy);
         
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         
         Page<NoticeResponseDto> noticePage = noticeService.getNotices(
-                status, noticeLevel, serviceId, corpId, startDate, endDate, search, pageable
+                status, noticeLevel, serviceId, corpId, startDate, endDate, search, receiverDept, createdBy, pageable
         );
         
         Map<String, Object> response = new HashMap<>();

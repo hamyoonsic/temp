@@ -170,7 +170,10 @@ public class NoticeMailService {
                 try {
                     LocalDateTime eventStartAt = notice.getCalendarEventAt();
                     LocalDateTime eventEndAt = eventStartAt.plusHours(1);
-                    outlookCalendarService.createCalendarEvent(noticeId, eventStartAt, eventEndAt);
+                    String eventId = outlookCalendarService.createCalendarEvent(noticeId, eventStartAt, eventEndAt);
+                    if (eventId == null || eventId.isBlank()) {
+                        log.warn(" Calendar event create skipped/failed: noticeId={}", noticeId);
+                    }
                 } catch (Exception calendarError) {
                     log.error(" Calendar event create failed: noticeId={}, error={}", noticeId, calendarError.getMessage(), calendarError);
                 }
@@ -412,8 +415,8 @@ public class NoticeMailService {
         String content = notice.getContent();
         if (content != null) {
             content = sanitizeEditorHtml(content);
-            content = normalizeTableBorders(content);
             content = normalizeTableAlignment(content);
+            content = normalizeTableBorders(content);
             content = content.replace("\n", "<br>");
             html.append(content);
         }
@@ -446,9 +449,9 @@ public class NoticeMailService {
         updated = updated.replaceAll("(?i)<table([^>]*\\bstyle=\")([^\"]*)(\"[^>]*)>",
             "<table$1$2; border-collapse:collapse;$3>");
         updated = updated.replaceAll("(?i)<(td|th)(?![^>]*\\bstyle=)([^>]*)>",
-            "<$1$2 style=\"border:1px solid #999; padding:8px 6px;\">");
+            "<$1$2 style=\"border:1px solid #999; padding:8px 10px; vertical-align:middle; word-break:break-word;\">");
         updated = updated.replaceAll("(?i)<(td|th)([^>]*\\bstyle=\")([^\"]*)(\"[^>]*)>",
-            "<$1$2$3; border:1px solid #999; padding:8px 6px;$4>");
+            "<$1$2$3; border:1px solid #999; padding:8px 10px; vertical-align:middle; word-break:break-word;$4>");
         return updated;
     }
 
@@ -463,7 +466,8 @@ public class NoticeMailService {
         while (matcher.find()) {
             String attrs = matcher.group(1);
             String updatedAttrs = attrs;
-            boolean hasWidthAttr = attrs.toLowerCase().contains("width=");
+            updatedAttrs = updatedAttrs.replaceAll("(?i)\\swidth=\"[^\"]*\"", "");
+            updatedAttrs = updatedAttrs.replaceAll("(?i)\\sheight=\"[^\"]*\"", "");
             if (!attrs.toLowerCase().contains("align=")) {
                 updatedAttrs += " align=\"center\"";
             }
@@ -473,6 +477,8 @@ public class NoticeMailService {
             if (styleMatcher.find()) {
                 String style = styleMatcher.group(1);
                 style = style.replaceAll("(?i)\\bfloat\\s*:\\s*[^;]+;?", "");
+                style = style.replaceAll("(?i)\\bwidth\\s*:\\s*[^;]+;?", "");
+                style = style.replaceAll("(?i)\\bheight\\s*:\\s*[^;]+;?", "");
                 if (!style.toLowerCase().contains("margin")) {
                     style = style.trim();
                     if (!style.isEmpty() && !style.endsWith(";")) {
@@ -480,27 +486,30 @@ public class NoticeMailService {
                     }
                     style += "margin:0 auto;";
                 }
-                if (!style.toLowerCase().contains("width")) {
-                    style = style.trim();
-                    if (!style.isEmpty() && !style.endsWith(";")) {
-                        style += ";";
-                    }
-                    style += "width:700px;";
+                style = style.trim();
+                if (!style.isEmpty() && !style.endsWith(";")) {
+                    style += ";";
                 }
+                style += "width:100%; table-layout:fixed;";
                 String rebuiltStyle = "style=\"" + style + "\"";
                 updatedAttrs = styleMatcher.replaceFirst(Matcher.quoteReplacement(rebuiltStyle));
             } else {
-                updatedAttrs += " style=\"margin:0 auto; width:700px;\"";
-            }
-
-            if (!hasWidthAttr) {
-                updatedAttrs += " width=\"700\"";
+                updatedAttrs += " style=\"margin:0 auto; width:100%; table-layout:fixed;\"";
             }
             String replacement = "<table" + updatedAttrs + ">";
             matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(sb);
-        return sb.toString();
+        updated = sb.toString();
+        updated = updated.replaceAll("(?i)<table(?![^>]*\\bcellpadding=)([^>]*)>",
+            "<table$1 cellpadding=\"6\">");
+        updated = updated.replaceAll("(?i)<table(?![^>]*\\bcellspacing=)([^>]*)>",
+            "<table$1 cellspacing=\"0\">");
+        updated = updated.replaceAll("(?i)<table(?![^>]*\\bborder=)([^>]*)>",
+            "<table$1 border=\"1\">");
+        updated = updated.replaceAll("(?i)<table(?![^>]*\\bwidth=)([^>]*)>",
+            "<table$1 width=\"100%\">");
+        return updated;
     }
 
     private String sanitizeEditorHtml(String html) {

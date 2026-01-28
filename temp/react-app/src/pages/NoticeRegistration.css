@@ -385,14 +385,24 @@
   }
 }
 
-.page-header {
+.notice-registration-page .page-header {
   margin-bottom: 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
 }
 
 .page-header-actions {
   display: flex;
   gap: 12px;
   align-items: center;
+  margin-left: auto;
+}
+
+.page-header-text {
+  min-width: 0;
 }
 
 .page-title {
@@ -473,6 +483,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 8px;
 }
 
 .form-group.full-width {

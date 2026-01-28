@@ -47,6 +47,7 @@ const NoticeApproval = () => {
   const [loading, setLoading] = useState(false);
   const [approvalList, setApprovalList] = useState([]);
   const [showDelegationModal, setShowDelegationModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('PENDING');
   
   //  AdminContext에서 관리자 상태 가져오기
   const { isAdmin, isDelegatedAdmin, userInfo } = useAdmin();
@@ -61,12 +62,15 @@ const NoticeApproval = () => {
   const [currentUserId, setCurrentUserId] = useState('');
 
   useEffect(() => {
-    loadApprovalList();
     const storedUserId = sessionStorage.getItem('userId');
     if (storedUserId) {
       setCurrentUserId(storedUserId);
     }
   }, []);
+
+  useEffect(() => {
+    loadApprovalList(activeTab);
+  }, [activeTab, currentUserId, isAdmin]);
 
   //  모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
   useEffect(() => {
@@ -78,14 +82,36 @@ const NoticeApproval = () => {
     return () => closeModal();
   }, [showDetailModal, showDelegationModal]);
 
-  const loadApprovalList = async () => {
+  const loadApprovalList = async (tab = activeTab) => {
     setLoading(true);
     try {
-      const result = await approvalApi.getPendingList({ page: 0, size: 100 });
-      
-      if (result.success) {
-        const notices = result.data.data || result.data;
-        setApprovalList(Array.isArray(notices) ? notices : []);
+      if (tab === 'PENDING') {
+        const result = await approvalApi.getPendingList({ page: 0, size: 200 });
+        if (result.success) {
+          const notices = result.data.data || result.data;
+          const list = Array.isArray(notices) ? notices : [];
+          const filtered = (!isAdmin && currentUserId)
+            ? list.filter(n => n.createdBy === currentUserId)
+            : list;
+          setApprovalList(filtered);
+        }
+      } else if (tab === 'MY_DECISIONS') {
+        const [approvedResult, rejectedResult, sentResult] = await Promise.all([
+          noticeApi.getList({ status: 'APPROVED', page: 0, size: 200, sort: 'updatedAt,DESC' }),
+          noticeApi.getList({ status: 'REJECTED', page: 0, size: 200, sort: 'updatedAt,DESC' }),
+          noticeApi.getList({ status: 'SENT', page: 0, size: 200, sort: 'updatedAt,DESC' })
+        ]);
+        const approved = approvedResult.success ? (approvedResult.data.data || approvedResult.data) : [];
+        const rejected = rejectedResult.success ? (rejectedResult.data.data || rejectedResult.data) : [];
+        const sent = sentResult.success ? (sentResult.data.data || sentResult.data) : [];
+        const merged = [
+          ...(Array.isArray(approved) ? approved : []),
+          ...(Array.isArray(rejected) ? rejected : []),
+          ...(Array.isArray(sent) ? sent : [])
+        ];
+        const mine = currentUserId ? merged.filter(n => n.updatedBy === currentUserId) : [];
+        const sorted = mine.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+        setApprovalList(sorted);
       }
     } catch (error) {
       console.error('승인 목록 로드 실패:', error);
@@ -220,22 +246,47 @@ const NoticeApproval = () => {
 
   const getReceiverInfo = (targets) => {
     if (!targets || targets.length === 0) return { corps: '-', depts: '-' };
-    const corps = targets
-      .filter(t => t.targetType === 'CORP')
-      .map(t => t.targetName)
+    const corpTargets = targets.filter(t => t.targetType === 'CORP');
+    const orgTargets = targets.filter(t => t.targetType === 'ORG_UNIT');
+
+    const corpNames = Array.from(new Set(
+      corpTargets
+        .map(t => t.targetName)
+        .filter(name => name && name.trim().length > 0)
+        .map(name => name.trim())
+    ));
+
+    const orgCorpNames = Array.from(new Set(
+      orgTargets
+        .map(t => t.targetName)
+        .filter(name => name && name.includes('/'))
+        .map(name => name.split('/')[0].trim())
+        .filter(name => name.length > 0)
+    ));
+
+    const corpNameForDept = corpNames.length === 1 ? corpNames[0] : '';
+
+    const depts = orgTargets
+      .map(t => t.targetName || '')
+      .map(name => name.trim())
+      .filter(name => name.length > 0)
+      .map(name => {
+        if (name.includes('/')) {
+          return name.replace(/\s*\/\s*/g, '_');
+        }
+        if (corpNameForDept) {
+          return `${corpNameForDept}_${name}`;
+        }
+        return name;
+      })
       .join(', ');
-    const depts = targets
-      .filter(t => t.targetType === 'ORG_UNIT')
-      .map(t => t.targetName)
-      .join(', ');
-    const inferredCorp = corps || (
-      depts && depts.includes('/')
-        ? depts.split('/')[0].trim()
-        : ''
-    );
+
+    const inferredCorp = corpNames.join(', ')
+      || orgCorpNames.join(', ')
+      || '-';
     return {
-      corps: inferredCorp || '-',
-      depts: depts || '-'
+      corps: inferredCorp,
+      depts: depts || '전체'
     };
   };
 
@@ -294,6 +345,24 @@ const NoticeApproval = () => {
 
         {/* 필터 영역 */}
         <div className="filter-section">
+          <div className="tab-row">
+            <button
+              type="button"
+              className={`tab-btn ${activeTab === 'PENDING' ? 'active' : ''}`}
+              onClick={() => setActiveTab('PENDING')}
+            >
+              승인 요청
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'MY_DECISIONS' ? 'active' : ''}`}
+                onClick={() => setActiveTab('MY_DECISIONS')}
+              >
+                승인/반려 목록
+              </button>
+            )}
+          </div>
           <div className="filter-row">
             <div className="filter-group flex-grow">
               <label>검색어</label>
@@ -306,7 +375,7 @@ const NoticeApproval = () => {
               />
             </div>
             <button 
-              onClick={loadApprovalList}
+              onClick={() => loadApprovalList(activeTab)}
               className="btn-refresh"
             >
               🔄 새로고침
@@ -317,7 +386,9 @@ const NoticeApproval = () => {
         {/* 승인 요청 목록 테이블 */}
         <div className="approval-list-section">
           <div className="section-header-row">
-            <h2 className="section-title">공지발송 승인 요청 목록</h2>
+            <h2 className="section-title">
+              {activeTab === 'PENDING' ? '공지발송 승인 요청 목록' : '승인/반려 목록'}
+            </h2>
             <span className="record-count">{filteredList.length}건</span>
           </div>
           
@@ -326,18 +397,20 @@ const NoticeApproval = () => {
               <thead>
                 <tr>
                   <th>공지ID</th>
+                  <th>수신법인</th>
+                  <th>수신부서</th>
                   <th>공지제목</th>
                   <th>중요도</th>
                   <th>발신부서</th>
                   <th>작성자</th>
                   <th>등록일시</th>
-                  <th>액션</th>
+                  <th>관리</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredList.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="no-data">
+                    <td colSpan="9" className="no-data">
                       승인 요청 건이 없습니다.
                     </td>
                   </tr>
@@ -345,6 +418,8 @@ const NoticeApproval = () => {
                   filteredList.map((item) => (
                     <tr key={item.noticeId}>
                       <td className="text-center">{item.noticeId}</td>
+                      <td>{getReceiverInfo(item.targets).corps}</td>
+                      <td>{getReceiverInfo(item.targets).depts}</td>
                       <td>
                         <button 
                           className="title-link"
@@ -359,29 +434,41 @@ const NoticeApproval = () => {
                         </span>
                       </td>
                       <td>{item.senderOrgUnitName || '-'}</td>
-                      <td>{item.createdBy}</td>
+                      <td>{item.createdByName || item.createdBy}</td>
                       <td>{formatDateTime(item.createdAt)}</td>
                       <td>
-                        <div className="action-buttons">
-                          {/*  승인 버튼 - 권한에 따라 활성화/비활성화 */}
-                          <button 
-                            className={`btn-approve ${!isAdmin ? 'disabled' : ''}`}
-                            onClick={() => handleApprove(item.noticeId)}
-                            disabled={!isAdmin}
-                            title={!isAdmin ? '승인 권한이 없습니다 (HR150138 권한 필요)' : ''}
+                        {activeTab === 'PENDING' ? (
+                          <div className="action-buttons">
+                            {/*  승인 버튼 - 권한에 따라 활성화/비활성화 */}
+                            <button 
+                              className={`btn-approve ${!isAdmin ? 'disabled' : ''}`}
+                              onClick={() => handleApprove(item.noticeId)}
+                              disabled={!isAdmin}
+                              title={!isAdmin ? '승인 권한이 없습니다 (HR150138 권한 필요)' : ''}
+                            >
+                              승인
+                            </button>
+                            {/*  반려 버튼 - 권한에 따라 활성화/비활성화 */}
+                            <button 
+                              className={`btn-reject ${!isAdmin ? 'disabled' : ''}`}
+                              onClick={() => handleReject(item.noticeId)}
+                              disabled={!isAdmin}
+                              title={!isAdmin ? '반려 권한이 없습니다 (HR150138 권한 필요)' : ''}
+                            >
+                              반려
+                            </button>
+                          </div>
+                        ) : (
+                          <span
+                            className={`status-badge status-${getStatusInfo(item.noticeStatus).class}`}
+                            style={{
+                              borderColor: getStatusInfo(item.noticeStatus).color,
+                              color: getStatusInfo(item.noticeStatus).color
+                            }}
                           >
-                            승인
-                          </button>
-                          {/*  반려 버튼 - 권한에 따라 활성화/비활성화 */}
-                          <button 
-                            className={`btn-reject ${!isAdmin ? 'disabled' : ''}`}
-                            onClick={() => handleReject(item.noticeId)}
-                            disabled={!isAdmin}
-                            title={!isAdmin ? '반려 권한이 없습니다 (HR150138 권한 필요)' : ''}
-                          >
-                            반려
-                          </button>
-                        </div>
+                            {getStatusInfo(item.noticeStatus).text}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -512,7 +599,7 @@ const NoticeApproval = () => {
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">작성자</span>
-                    <span className="detail-value">{selectedNotice.createdBy}</span>
+                    <span className="detail-value">{selectedNotice.createdByName || selectedNotice.createdBy}</span>
                   </div>
                 </div>
               </div>
