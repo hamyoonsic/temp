@@ -19,6 +19,7 @@
     "@ckeditor/ckeditor5-essentials": "^44.3.0",
     "@ckeditor/ckeditor5-font": "^44.3.0",
     "@ckeditor/ckeditor5-heading": "^44.3.0",
+    "@ckeditor/ckeditor5-image": "^44.3.0",
     "@ckeditor/ckeditor5-indent": "^44.3.0",
     "@ckeditor/ckeditor5-link": "^44.3.0",
     "@ckeditor/ckeditor5-list": "^44.3.0",
@@ -28,6 +29,7 @@
     "@ckeditor/ckeditor5-table": "^44.3.0",
     "@ckeditor/ckeditor5-theme-lark": "^44.3.0",
     "@ckeditor/ckeditor5-ui": "^44.3.0",
+    "@ckeditor/ckeditor5-upload": "^44.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.12.0"

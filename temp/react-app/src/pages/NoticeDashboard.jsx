@@ -47,6 +47,7 @@ export default function NoticeDashboard() {
 
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedNotice, setSelectedNotice] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState('');
   const [showListModal, setShowListModal] = useState(false);
   const [modalNotices, setModalNotices] = useState([]);
   const [modalTitle, setModalTitle] = useState('');
@@ -54,6 +55,10 @@ export default function NoticeDashboard() {
   const [viewMode, setViewMode] = useState('monthly');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [selectedMaintenanceNotice, setSelectedMaintenanceNotice] = useState(null);
+  const [showDayListModal, setShowDayListModal] = useState(false);
+  const [dayListEvents, setDayListEvents] = useState([]);
+  const [dayListTitle, setDayListTitle] = useState('');
+  const [returnToDayList, setReturnToDayList] = useState(false);
   
   const [stats, setStats] = useState({
     pendingApprovalCount: 0,
@@ -70,6 +75,10 @@ export default function NoticeDashboard() {
   useEffect(() => {
     const token = sessionStorage.getItem("access_token");
     if (!token) navigate("/login", { replace: true });
+    const storedUserId = sessionStorage.getItem('userId');
+    if (storedUserId) {
+      setCurrentUserId(storedUserId);
+    }
     
     loadDashboardData();
   }, [navigate]);
@@ -80,13 +89,13 @@ export default function NoticeDashboard() {
 
   //  모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
   useEffect(() => {
-    if (showDetailModal || showCompletionModal) {
+    if (showDetailModal || showCompletionModal || showDayListModal) {
       openModal();
     } else {
       closeModal();
     }
     return () => closeModal();
-  }, [showDetailModal, showCompletionModal]);
+  }, [showDetailModal, showCompletionModal, showDayListModal]);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -103,14 +112,14 @@ export default function NoticeDashboard() {
         });
       }
 
-      const noticesData = await noticeApi.getList({ page: 0, size: 100 });
-      if (noticesData.success) {
-        const allNotices = noticesData.data.data || noticesData.data;
-        const approvedNotices = Array.isArray(allNotices) 
-          ? allNotices.filter(n => 
+        const noticesData = await noticeApi.getList({ page: 0, size: 100 });
+        if (noticesData.success) {
+          const allNotices = noticesData.data.data || noticesData.data;
+          const approvedNotices = Array.isArray(allNotices) 
+            ? allNotices.filter(n => 
               n.noticeStatus === 'APPROVED' || 
-              n.noticeStatus === 'SENT' || 
-              n.noticeStatus === 'COMPLETED'
+              n.noticeStatus === 'SENT' ||
+              n.noticeStatus === 'FAILED'
             ).slice(0, 10)
           : [];
         setRecentNotices(approvedNotices);
@@ -141,7 +150,7 @@ export default function NoticeDashboard() {
         const eventsByDate = {};
         const currentYear = currentDate.getFullYear();
         const currentMonth = currentDate.getMonth();
-        const allowedStatuses = new Set(['APPROVED', 'SENT', 'COMPLETED']);
+        const allowedStatuses = new Set(['APPROVED', 'SENT', 'FAILED']);
 
         (Array.isArray(notices) ? notices : [])
           .filter((notice) => allowedStatuses.has(notice.noticeStatus))
@@ -163,6 +172,9 @@ export default function NoticeDashboard() {
             noticeId: notice.noticeId,
             title: notice.title,
             dept: notice.senderOrgUnitName || '-',
+            senderDept: notice.senderOrgUnitName || '-',
+            senderUser: notice.createdBy || '-',
+            noticeType: notice.noticeType || '-',
             level: notice.noticeLevel,
             color: getPriorityColor(notice.noticeLevel),
             dateKey
@@ -172,7 +184,7 @@ export default function NoticeDashboard() {
         setCalendarEvents(Object.values(eventsByDate).sort((a, b) => a.day - b.day));
       }
     } catch (error) {
-      console.error('??? ??? ?? ??:', error);
+      console.error('캘린더 데이터 로드 실패:', error);
     }
   };
 
@@ -201,7 +213,7 @@ export default function NoticeDashboard() {
       const orgsData = await organizationApi.getAll();
       
       if (!orgsData.success) {
-        console.error('???? ?? ??');
+        console.error('조직 목록 조회 실패');
         return;
       }
       
@@ -216,8 +228,8 @@ export default function NoticeDashboard() {
       const allNotices = noticesData.data.data || noticesData.data || [];
       const approvedNotices = allNotices.filter(n => 
         n.noticeStatus === 'APPROVED' || 
-        n.noticeStatus === 'SENT' || 
-        n.noticeStatus === 'COMPLETED'
+        n.noticeStatus === 'SENT' ||
+        n.noticeStatus === 'FAILED'
       );
       
       const deptCounts = {};
@@ -268,7 +280,7 @@ export default function NoticeDashboard() {
       
       setDeptStats(stats);
     } catch (error) {
-      console.error('??? ?? ?? ??:', error);
+      console.error('부서 통계 로드 실패:', error);
     }
   };
 
@@ -323,6 +335,27 @@ export default function NoticeDashboard() {
       'REJECTED': '반려됨'
     };
     return texts[status] || status;
+  };
+
+  const getReceiverInfo = (targets) => {
+    if (!targets || targets.length === 0) return { corps: '-', depts: '-' };
+    const corps = targets
+      .filter(t => t.targetType === 'CORP')
+      .map(t => t.targetName)
+      .join(', ');
+    const depts = targets
+      .filter(t => t.targetType === 'ORG_UNIT')
+      .map(t => t.targetName)
+      .join(', ');
+    const inferredCorp = corps || (
+      depts && depts.includes('/')
+        ? depts.split('/')[0].trim()
+        : ''
+    );
+    return {
+      corps: inferredCorp || '-',
+      depts: depts || '-'
+    };
   };
 
   const formatDate = (dateString) => {
@@ -413,6 +446,50 @@ export default function NoticeDashboard() {
       }
     } catch (error) {
       console.error('공지 상세 조회 실패:', error);
+    }
+  };
+
+  const openCompletionDetail = async (noticeId) => {
+    try {
+      const result = await noticeApi.getCompletion(noticeId);
+      if (result.success && result.data) {
+        setSelectedNotice(result.data);
+        setShowDetailModal(true);
+      } else {
+        alert('완료 공지가 없습니다.');
+      }
+    } catch (error) {
+      console.error('완료 공지 조회 실패:', error);
+      alert('완료 공지를 불러오지 못했습니다.');
+    }
+  };
+
+  const openOriginalDetail = async (noticeId) => {
+    try {
+      const result = await noticeApi.getById(noticeId);
+      if (result.success && result.data) {
+        setSelectedNotice(result.data);
+        setShowDetailModal(true);
+      }
+    } catch (error) {
+      console.error('원본 공지 조회 실패:', error);
+      alert('원본 공지를 불러오지 못했습니다.');
+    }
+  };
+
+  const openDayListModal = (date, events) => {
+    if (!events || events.length === 0) return;
+    setReturnToDayList(false);
+    setDayListEvents(events);
+    setDayListTitle(formatDate(date.toISOString()));
+    setShowDayListModal(true);
+  };
+
+  const closeDetailModal = () => {
+    setShowDetailModal(false);
+    if (returnToDayList) {
+      setReturnToDayList(false);
+      setShowDayListModal(true);
     }
   };
 
@@ -514,6 +591,20 @@ export default function NoticeDashboard() {
       } 
     });
     setShowCompletionModal(false);
+  };
+
+  const handleCalendarRetry = async (noticeId) => {
+    if (!window.confirm('캘린더를 재생성하시겠습니까?')) return;
+    setLoading(true);
+    try {
+      await noticeApi.retryCalendar(noticeId);
+      alert('캘린더 재생성 요청이 완료되었습니다.');
+    } catch (error) {
+      console.error('캘린더 재생성 실패:', error);
+      alert('캘린더 재생성 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openDetailModal = async (noticeId) => {
@@ -642,9 +733,14 @@ export default function NoticeDashboard() {
               {[...Array(getDaysInMonth())].map((_, idx) => {
                 const dayNum = idx + 1;
                 const eventDay = calendarEvents.find(e => e.day === dayNum);
+                const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum);
                 
                 return (
-                  <div key={idx} className="calendar-day">
+                  <div
+                    key={idx}
+                    className="calendar-day"
+                    onClick={() => openDayListModal(dayDate, eventDay ? eventDay.events : [])}
+                  >
                     <div className="day-number">{dayNum}</div>
                     {eventDay && eventDay.events.slice(0, 2).map((event, eventIdx) => (
                       <div 
@@ -653,6 +749,12 @@ export default function NoticeDashboard() {
                         style={{ background: event.color }}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (showDayListModal) {
+                            setReturnToDayList(true);
+                            setShowDayListModal(false);
+                          } else {
+                            setReturnToDayList(false);
+                          }
                           handleEventClick(event);
                         }}
                       >
@@ -928,51 +1030,181 @@ export default function NoticeDashboard() {
         {/* 상세 모달 */}
         {showDetailModal && selectedNotice && (
           <div className="modal-overlay" onClick={() => setShowDetailModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="modal-content dashboard-detail-modal"
+              style={{ maxWidth: '900px', width: '92vw' }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="modal-header">
                 <h3>공지 상세 정보</h3>
-                <button onClick={() => setShowDetailModal(false)}>×</button>
+                <button onClick={closeDetailModal}>×</button>
               </div>
               
               <div className="modal-body">
                 <div className="detail-section">
-                  <h4>기본 정보</h4>
-                  <div className="detail-item">
-                    <span className="detail-label">제목</span>
-                    <span className="detail-value">{selectedNotice.title}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">중요도</span>
-                    <span className="detail-value">{selectedNotice.noticeLevel}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">상태</span>
-                    <span className="detail-value" style={{ color: getStatusColor(selectedNotice.noticeStatus) }}>
+                  <h4>발송 상태</h4>
+                  <div className="status-info-row">
+                    <span className="status-badge-large" style={{ borderColor: getStatusColor(selectedNotice.noticeStatus), color: getStatusColor(selectedNotice.noticeStatus) }}>
                       {getStatusText(selectedNotice.noticeStatus)}
                     </span>
+                    <span className={`priority-badge priority-${selectedNotice.noticeLevel}`}>
+                      중요도 {selectedNotice.noticeLevel === 'L3' ? '긴급' : selectedNotice.noticeLevel === 'L2' ? '중간' : '낮음'}
+                    </span>
+                    {(selectedNotice.isMaintenance ||
+                      (selectedNotice.calendarRegister && selectedNotice.noticeStatus === 'SENT')) && (
+                      <div className="status-info-actions">
+                        {selectedNotice.calendarRegister && selectedNotice.noticeStatus === 'SENT' && (
+                          <button
+                            type="button"
+                            className="btn btn-cancel"
+                            onClick={() => handleCalendarRetry(selectedNotice.noticeId)}
+                          >
+                            캘린더 재생성
+                          </button>
+                        )}
+                        {selectedNotice.isMaintenance && (
+                          selectedNotice.isCompleted ? (
+                            <button
+                              type="button"
+                              className="btn btn-cancel"
+                              onClick={() => openCompletionDetail(selectedNotice.noticeId)}
+                            >
+                              완료 공지 보기
+                            </button>
+                          ) : (
+                            (selectedNotice.noticeStatus === 'APPROVED' &&
+                            currentUserId && selectedNotice.createdBy === currentUserId) && (
+                              <button
+                                type="button"
+                                className="btn btn-submit"
+                                onClick={() => navigate('/notices/new', { state: { isCompletion: true, originalNotice: selectedNotice } })}
+                              >
+                                완료 공지 등록
+                              </button>
+                            )
+                          )
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 
                 <div className="detail-section">
-                  <h4>공지 내용</h4>
-                  <div dangerouslySetInnerHTML={{ __html: selectedNotice.content }} />
+                  <h4>기본 정보</h4>
+                <div className="detail-grid">
+                  <div className="detail-item">
+                    <span className="detail-label">수신법인</span>
+                    <span className="detail-value">{getReceiverInfo(selectedNotice.targets).corps}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">공지유형</span>
+                    <span className="detail-value">{selectedNotice.noticeType || '-'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">수신부서</span>
+                    <span className="detail-value">{getReceiverInfo(selectedNotice.targets).depts}</span>
+                  </div>
+                    <div className="detail-item">
+                      <span className="detail-label">발신부서</span>
+                      <span className="detail-value">{selectedNotice.senderOrgUnitName || '-'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">점검/장애 여부</span>
+                      <span className="detail-value">{selectedNotice.isMaintenance ? '예' : '아니오'}</span>
+                    </div>
+                  </div>
                 </div>
-                
-                {selectedNotice.targets && selectedNotice.targets.length > 0 && (
+
+                <div className="detail-section">
+                  <h4>공지 내용</h4>
+                  <div className="detail-item full-width">
+                    <span className="detail-label">공지제목</span>
+                    <div className="detail-value">{selectedNotice.title}</div>
+                  </div>
+                  <div className="detail-item full-width">
+                    <span className="detail-label">공지내용</span>
+                    <div className="detail-value content-box" dangerouslySetInnerHTML={{ __html: selectedNotice.content }} />
+                  </div>
+                </div>
+
+                {selectedNotice.parentNoticeId && (
                   <div className="detail-section">
-                    <h4>수신 대상</h4>
-                    {selectedNotice.targets.map((target, idx) => (
-                      <div key={idx} className="target-item">
-                        <span>{target.targetType === 'CORP' ? '법인' : '부서'}</span>
-                        <span>{target.targetName}</span>
-                      </div>
+                    <h4>원본 공지</h4>
+                    <div className="detail-item full-width">
+                      <button
+                        type="button"
+                        className="btn btn-cancel"
+                        onClick={() => openOriginalDetail(selectedNotice.parentNoticeId)}
+                      >
+                        원본 공지 보기
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="detail-section">
+                  <h4>발송 정보</h4>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <span className="detail-label">게시 시작일시</span>
+                      <span className="detail-value">{formatDateTime(selectedNotice.publishStartAt)}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">등록일시</span>
+                      <span className="detail-value">{formatDateTime(selectedNotice.createdAt)}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">작성자</span>
+                      <span className="detail-value">{selectedNotice.createdBy}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">수정일시</span>
+                      <span className="detail-value">{formatDateTime(selectedNotice.updatedAt)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="modal-footer">
+                <button onClick={closeDetailModal}>닫기</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showDayListModal && (
+          <div className="modal-overlay" onClick={() => setShowDayListModal(false)}>
+            <div className="modal-content calendar-day-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{dayListTitle} 공지 목록</h3>
+                <button onClick={() => setShowDayListModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                {dayListEvents.length === 0 ? (
+                  <div className="empty-message">해당 날짜에 공지가 없습니다.</div>
+                ) : (
+                  <div className="calendar-day-list">
+                    {dayListEvents.map((event, idx) => (
+                      <button
+                        key={`${event.noticeId}-${idx}`}
+                        className="calendar-day-item"
+                        onClick={() => {
+                          setReturnToDayList(true);
+                          setShowDayListModal(false);
+                          handleEventClick(event);
+                        }}
+                      >
+                        <span className="calendar-day-item-title">{event.title}</span>
+                        <span className="calendar-day-item-meta">
+                          {event.senderDept} · {event.senderUser} · {event.noticeType}
+                        </span>
+                      </button>
                     ))}
                   </div>
                 )}
               </div>
-              
               <div className="modal-footer">
-                <button onClick={() => setShowDetailModal(false)}>닫기</button>
+                <button onClick={() => setShowDayListModal(false)}>닫기</button>
               </div>
             </div>
           </div>

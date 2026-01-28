@@ -1,6 +1,6 @@
 // NoticeHistory.jsx
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { noticeApi, corporationApi } from '../api';
 import './NoticeHistory.css';
 
@@ -42,9 +42,15 @@ const closeModal = () => {
 
 const NoticeHistory = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [historyList, setHistoryList] = useState([]);
   const [corporations, setCorporations] = useState([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState('');
 
   const defaultStatus = location.state?.status || '';
   const [filters, setFilters] = useState({
@@ -63,6 +69,10 @@ const NoticeHistory = () => {
   useEffect(() => {
     loadCorporations();
     loadHistoryList(filters);
+    const storedUserId = sessionStorage.getItem('userId');
+    if (storedUserId) {
+      setCurrentUserId(storedUserId);
+    }
   }, []);
 
   //  모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
@@ -99,7 +109,8 @@ const NoticeHistory = () => {
     const newFilters = { ...filters, [field]: value };
     setFilters(newFilters);
     if (value) {
-      setTimeout(() => loadHistoryList(newFilters), 100);
+      setCurrentPage(0);
+      setTimeout(() => loadHistoryList(newFilters, 0), 100);
     }
   };
 
@@ -114,10 +125,12 @@ const NoticeHistory = () => {
     }
   };
 
-  const loadHistoryList = async (currentFilters = filters) => {
+  const loadHistoryList = async (currentFilters = filters, page = currentPage) => {
     try {
       const params = {
-        sort: 'createdAt,DESC'
+        sort: 'createdAt,DESC',
+        page,
+        size: pageSize
       };
       
       if (currentFilters.corpId) params.corpId = currentFilters.corpId;
@@ -129,15 +142,26 @@ const NoticeHistory = () => {
       const result = await noticeApi.getList(params);
       
       if (result.success && result.data) {
-        const notices = result.data.data || result.data;
-        setHistoryList(Array.isArray(notices) ? notices : []);
+        const payload = result.data;
+        const list = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload.data) ? payload.data : [];
+        setHistoryList(list);
+        setCurrentPage(payload.currentPage ?? page);
+        setTotalPages(payload.totalPages ?? 1);
+        setTotalElements(payload.totalElements ?? list.length);
+        setPageSize(payload.pageSize ?? pageSize);
       } else {
         console.error('데이터 로드 실패:', result);
         setHistoryList([]);
+        setTotalPages(1);
+        setTotalElements(0);
       }
     } catch (error) {
       console.error('발송 이력 로드 실패:', error);
       setHistoryList([]);
+      setTotalPages(1);
+      setTotalElements(0);
     }
   };
 
@@ -155,6 +179,34 @@ const NoticeHistory = () => {
     }
   };
 
+  const openCompletionDetail = async (noticeId) => {
+    try {
+      const result = await noticeApi.getCompletion(noticeId);
+      if (result.success && result.data) {
+        setSelectedNotice(result.data);
+        setShowDetailModal(true);
+      } else {
+        alert('완료 공지가 없습니다.');
+      }
+    } catch (error) {
+      console.error('완료 공지 조회 실패:', error);
+      alert('완료 공지를 불러오지 못했습니다.');
+    }
+  };
+
+  const openOriginalDetail = async (noticeId) => {
+    try {
+      const result = await noticeApi.getById(noticeId);
+      if (result.success && result.data) {
+        setSelectedNotice(result.data);
+        setShowDetailModal(true);
+      }
+    } catch (error) {
+      console.error('원본 공지 조회 실패:', error);
+      alert('원본 공지를 불러오지 못했습니다.');
+    }
+  };
+
   const getStatusInfo = (status) => {
     const statusMap = {
       'DRAFT': { text: '작성중', class: 'draft', color: '#64748b' },
@@ -163,7 +215,6 @@ const NoticeHistory = () => {
       'SENT': { text: '발송완료', class: 'completed', color: '#10b981' },
       'FAILED': { text: '발송실패', class: 'failed', color: '#ef4444' },
       'REJECTED': { text: '발송반려', class: 'rejected', color: '#dc2626' },
-      'COMPLETED': { text: '완료', class: 'done', color: '#059669' }
     };
     return statusMap[status] || { text: status, class: 'default', color: '#94a3b8' };
   };
@@ -184,8 +235,24 @@ const NoticeHistory = () => {
     }
   };
 
+  const handleCalendarRetry = async (noticeId) => {
+    if (!window.confirm('캘린더를 재생성하시겠습니까?')) return;
+
+    setLoading(true);
+    try {
+      await noticeApi.retryCalendar(noticeId);
+      alert('캘린더 재생성 요청이 완료되었습니다.');
+    } catch (error) {
+      console.error('캘린더 재생성 실패:', error);
+      alert('캘린더 재생성 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = () => {
-    loadHistoryList(filters);
+    setCurrentPage(0);
+    loadHistoryList(filters, 0);
   };
 
   const handleReset = () => {
@@ -197,7 +264,30 @@ const NoticeHistory = () => {
       searchTerm: ''
     };
     setFilters(resetFilters);
-    setTimeout(() => loadHistoryList(resetFilters), 50);
+    setCurrentPage(0);
+    setTimeout(() => loadHistoryList(resetFilters, 0), 50);
+  };
+
+  const changePage = async (page) => {
+    if (page < 0 || page >= totalPages) return;
+    const scrollY = window.scrollY;
+    setCurrentPage(page);
+    await loadHistoryList(filters, page);
+    window.scrollTo({ top: scrollY });
+  };
+
+  const getVisiblePages = () => {
+    const maxButtons = 5;
+    const pages = [];
+    let start = Math.max(0, currentPage - Math.floor(maxButtons / 2));
+    let end = Math.min(totalPages - 1, start + maxButtons - 1);
+    if (end - start + 1 < maxButtons) {
+      start = Math.max(0, end - maxButtons + 1);
+    }
+    for (let i = start; i <= end; i += 1) {
+      pages.push(i);
+    }
+    return pages;
   };
 
   const formatDateTime = (dateTimeStr) => {
@@ -219,11 +309,21 @@ const NoticeHistory = () => {
       .map(t => t.targetName)
       .join(', ');
     
+    const inferredCorp = corps || (
+      depts && depts.includes('/')
+        ? depts.split('/')[0].trim()
+        : ''
+    );
+
     return {
-      corps: corps || '-',
+      corps: inferredCorp || '-',
       depts: depts || '-'
     };
   };
+
+  const detailReceiverInfo = selectedNotice
+    ? getReceiverInfo(selectedNotice.targets)
+    : { corps: '-', depts: '-' };
 
   if (loading) {
     return (
@@ -255,7 +355,8 @@ const NoticeHistory = () => {
                 onChange={(e) => {
                   const newFilters = {...filters, corpId: e.target.value};
                   setFilters(newFilters);
-                  setTimeout(() => loadHistoryList(newFilters), 100);
+                  setCurrentPage(0);
+                  setTimeout(() => loadHistoryList(newFilters, 0), 100);
                 }}
                 className="filter-select"
               >
@@ -275,7 +376,8 @@ const NoticeHistory = () => {
                 onChange={(e) => {
                   const newFilters = { ...filters, status: e.target.value };
                   setFilters(newFilters);
-                  setTimeout(() => loadHistoryList(newFilters), 100);
+                  setCurrentPage(0);
+                  setTimeout(() => loadHistoryList(newFilters, 0), 100);
                 }}
                 className="filter-select"
               >
@@ -285,7 +387,6 @@ const NoticeHistory = () => {
                 <option value="SENT">발송 완료</option>
                 <option value="FAILED">발송 실패</option>
                 <option value="REJECTED">발송 반려</option>
-                <option value="COMPLETED">완료</option>
               </select>
             </div>
 
@@ -298,7 +399,7 @@ const NoticeHistory = () => {
                   max={maxDate}
                   onChange={(e) => handleDateFilterChange('startDate', e.target.value)}
                   className="filter-input"
-                  placeholder="???"
+                  placeholder="시작일"
                 />
                 <span>~</span>
                 <input 
@@ -307,7 +408,7 @@ const NoticeHistory = () => {
                   max={maxDate}
                   onChange={(e) => handleDateFilterChange('endDate', e.target.value)}
                   className="filter-input"
-                  placeholder="???"
+                  placeholder="종료일"
                 />
               </div>
             </div>
@@ -338,7 +439,36 @@ const NoticeHistory = () => {
         <div className="history-list-section">
           <div className="section-header-row">
             <h2 className="section-title">공지 발송 로그</h2>
-            <span className="record-count">{historyList.length}건</span>
+            <div className="section-header-actions">
+              <span className="record-count">{totalElements}건</span>
+              {totalPages > 1 && (
+                <div className="pagination pagination-compact">
+                  <button
+                    className="page-btn"
+                    onClick={() => changePage(currentPage - 1)}
+                    disabled={currentPage === 0}
+                  >
+                    이전
+                  </button>
+                  {getVisiblePages().map(page => (
+                    <button
+                      key={page}
+                      className={`page-btn ${page === currentPage ? 'active' : ''}`}
+                      onClick={() => changePage(page)}
+                    >
+                      {page + 1}
+                    </button>
+                  ))}
+                  <button
+                    className="page-btn"
+                    onClick={() => changePage(currentPage + 1)}
+                    disabled={currentPage + 1 >= totalPages}
+                  >
+                    다음
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="table-wrapper">
@@ -421,6 +551,7 @@ const NoticeHistory = () => {
               </tbody>
             </table>
           </div>
+
         </div>
       </div>
 
@@ -435,13 +566,49 @@ const NoticeHistory = () => {
             <div className="modal-body">
               <div className="detail-section">
                 <h4>발송 상태</h4>
-                <div className="status-info-box">
-                  <div className="status-info-item">
-                    <span className="status-info-label">발송상태</span>
-                    <span className={`status-badge-large status-${getStatusInfo(selectedNotice.noticeStatus).class}`}>
-                      {getStatusInfo(selectedNotice.noticeStatus).text}
-                    </span>
-                  </div>
+                <div className="status-info-row">
+                  <span className={`status-badge-large status-${getStatusInfo(selectedNotice.noticeStatus).class}`}>
+                    {getStatusInfo(selectedNotice.noticeStatus).text}
+                  </span>
+                  <span className={`priority-badge priority-${selectedNotice.noticeLevel}`}>
+                    중요도 {selectedNotice.noticeLevel === 'L3' ? '긴급' : selectedNotice.noticeLevel === 'L2' ? '중간' : '낮음'}
+                  </span>
+                  {(selectedNotice.isMaintenance ||
+                    (selectedNotice.calendarRegister && selectedNotice.noticeStatus === 'SENT')) && (
+                    <div className="status-info-actions">
+                      {selectedNotice.calendarRegister && selectedNotice.noticeStatus === 'SENT' && (
+                        <button
+                          type="button"
+                          className="btn btn-cancel"
+                          onClick={() => handleCalendarRetry(selectedNotice.noticeId)}
+                        >
+                          캘린더 재생성
+                        </button>
+                      )}
+                      {selectedNotice.isMaintenance && (
+                        selectedNotice.isCompleted ? (
+                          <button
+                            type="button"
+                            className="btn btn-cancel"
+                            onClick={() => openCompletionDetail(selectedNotice.noticeId)}
+                          >
+                            완료 공지 보기
+                          </button>
+                        ) : (
+                          (selectedNotice.noticeStatus === 'APPROVED' &&
+                          currentUserId && selectedNotice.createdBy === currentUserId) && (
+                            <button
+                              type="button"
+                              className="btn btn-submit"
+                              onClick={() => navigate('/notices/new', { state: { isCompletion: true, originalNotice: selectedNotice } })}
+                            >
+                              완료 공지 등록
+                            </button>
+                          )
+                        )
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -449,16 +616,16 @@ const NoticeHistory = () => {
                 <h4>기본 정보</h4>
                 <div className="detail-grid">
                   <div className="detail-item">
-                    <span className="detail-label">공지ID</span>
-                    <span className="detail-value">{selectedNotice.noticeId}</span>
+                    <span className="detail-label">수신법인</span>
+                    <span className="detail-value">{detailReceiverInfo.corps}</span>
                   </div>
                   <div className="detail-item">
-                    <span className="detail-label">중요도</span>
-                    <span className="detail-value">
-                      <span className={`priority-badge priority-${selectedNotice.noticeLevel}`}>
-                        {selectedNotice.noticeLevel === 'L3' ? '긴급' : selectedNotice.noticeLevel === 'L2' ? '중간' : '낮음'}
-                      </span>
-                    </span>
+                    <span className="detail-label">공지유형</span>
+                    <span className="detail-value">{selectedNotice.noticeType || '-'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">수신부서</span>
+                    <span className="detail-value">{detailReceiverInfo.depts}</span>
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">발신부서</span>
@@ -470,6 +637,45 @@ const NoticeHistory = () => {
                   </div>
                 </div>
               </div>
+
+                <div className="detail-section">
+                  <h4>공지 내용</h4>
+                <div className="detail-item full-width">
+                  <span className="detail-label">공지제목</span>
+                  <div className="detail-value">{selectedNotice.title}</div>
+                </div>
+                <div className="detail-item full-width">
+                  <span className="detail-label">공지내용</span>
+                  <div className="detail-value content-box" dangerouslySetInnerHTML={{ __html: selectedNotice.content }} />
+                </div>
+                {selectedNotice.tags && selectedNotice.tags.length > 0 && (
+                  <div className="detail-item full-width">
+                    <span className="detail-label">해시태그</span>
+                    <div className="detail-value">
+                      <div className="tags-display">
+                        {selectedNotice.tags.map((tag, idx) => (
+                          <span key={idx} className="tag-item">{tag.tagValue}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                </div>
+
+                {selectedNotice.parentNoticeId && (
+                  <div className="detail-section">
+                    <h4>원본 공지</h4>
+                    <div className="detail-item full-width">
+                      <button
+                        type="button"
+                        className="btn btn-cancel"
+                        onClick={() => openOriginalDetail(selectedNotice.parentNoticeId)}
+                      >
+                        원본 공지 보기
+                      </button>
+                    </div>
+                  </div>
+                )}
 
               <div className="detail-section">
                 <h4>발송 정보</h4>
@@ -493,30 +699,6 @@ const NoticeHistory = () => {
                 </div>
               </div>
 
-              <div className="detail-section">
-                <h4>공지 내용</h4>
-                <div className="detail-item full-width">
-                  <span className="detail-label">공지제목</span>
-                  <div className="detail-value">{selectedNotice.title}</div>
-                </div>
-                <div className="detail-item full-width">
-                  <span className="detail-label">공지내용</span>
-                  <div className="detail-value content-box" dangerouslySetInnerHTML={{ __html: selectedNotice.content }} />
-                </div>
-                {selectedNotice.tags && selectedNotice.tags.length > 0 && (
-                  <div className="detail-item full-width">
-                    <span className="detail-label">해시태그</span>
-                    <div className="detail-value">
-                      <div className="tags-display">
-                        {selectedNotice.tags.map((tag, idx) => (
-                          <span key={idx} className="tag-item">{tag.tagValue}</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {selectedNotice.noticeStatus === 'REJECTED' && selectedNotice.rejectReason && (
                 <div className="detail-section">
                   <h4>반려 사유</h4>
@@ -527,19 +709,6 @@ const NoticeHistory = () => {
                 </div>
               )}
 
-              {selectedNotice.targets && selectedNotice.targets.length > 0 && (
-                <div className="detail-section">
-                  <h4>수신 대상</h4>
-                  <div className="targets-list">
-                    {selectedNotice.targets.map((target, idx) => (
-                      <div key={idx} className="target-item">
-                        <span className="target-type">{target.targetType === 'CORP' ? '법인' : '부서'}</span>
-                        <span className="target-name">{target.targetName}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
             
             <div className="modal-footer">

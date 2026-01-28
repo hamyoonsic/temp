@@ -52,4 +52,8 @@ public interface NoticeBaseRepository extends JpaRepository<NoticeBase, Long>,
     
     // 최근 공지 조회 (상위 N개)
     List<NoticeBase> findTop10ByOrderByCreatedAtDesc();
+
+    boolean existsByParentNoticeId(Long parentNoticeId);
+
+    java.util.Optional<NoticeBase> findTopByParentNoticeIdOrderByCreatedAtDesc(Long parentNoticeId);
 }

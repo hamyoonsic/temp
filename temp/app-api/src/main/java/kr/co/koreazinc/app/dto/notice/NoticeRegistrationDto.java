@@ -23,6 +23,7 @@ public class NoticeRegistrationDto {
     // 기본 정보
     private String title;
     private String content;
+    private String noticeType;
     private NoticeLevel noticeLevel;
     private Long affectedServiceId;
     
@@ -55,6 +56,9 @@ public class NoticeRegistrationDto {
     
     //  Outlook 캘린더 연동 (새로 추가)
     private OutlookCalendarDto outlookCalendar;
+
+    // 완료 공지 원본 참조
+    private Long parentNoticeId;
     
     /**
      * 대상 정보 DTO

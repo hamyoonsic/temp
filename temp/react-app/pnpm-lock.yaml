@@ -32,6 +32,9 @@ importers:
       '@ckeditor/ckeditor5-heading':
         specifier: ^44.3.0
         version: 44.3.0
+      '@ckeditor/ckeditor5-image':
+        specifier: ^44.3.0
+        version: 44.3.0
       '@ckeditor/ckeditor5-indent':
         specifier: ^44.3.0
         version: 44.3.0
@@ -57,6 +60,9 @@ importers:
         specifier: ^44.3.0
         version: 44.3.0
       '@ckeditor/ckeditor5-ui':
+        specifier: ^44.3.0
+        version: 44.3.0
+      '@ckeditor/ckeditor5-upload':
         specifier: ^44.3.0
         version: 44.3.0
       react:

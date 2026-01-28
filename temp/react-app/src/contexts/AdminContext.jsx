@@ -25,7 +25,7 @@ export const AdminProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // sessionStorage?? ??? ?? ????
+      // sessionStorage에서 사용자 정보 확인
       const userDataStr = sessionStorage.getItem('userData') || sessionStorage.getItem('user_me');
 
       if (!userDataStr) {
@@ -51,7 +51,7 @@ export const AdminProvider = ({ children }) => {
       setIsAdmin(hasPermission);
       setIsDelegatedAdmin(false);
     } catch (error) {
-      console.error('??? ?? ?? ??:', error);
+      console.error('관리자 권한 확인 실패:', error);
       setIsAdmin(false);
       setIsDelegatedAdmin(false);
     } finally {

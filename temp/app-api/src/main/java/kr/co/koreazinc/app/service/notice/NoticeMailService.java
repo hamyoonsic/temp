@@ -44,6 +44,7 @@ public class NoticeMailService {
     private final UserMasterRepository userMasterRepository;
     private final CorporationMasterRepository corporationMasterRepository;
     private final OrganizationMasterRepository organizationMasterRepository;
+    private final OutlookCalendarService outlookCalendarService;
     
     private final OAuth2Property oauth2Property;
     private final MailTestProperty mailTestProperty;  //  테스트 설정 추가
@@ -163,6 +164,18 @@ public class NoticeMailService {
             // 14. 공지 상태 업데이트
             notice.setNoticeStatus("SENT");
             noticeBaseRepository.save(notice);
+
+            // 15. Calendar register (mail recipients)
+            if (Boolean.TRUE.equals(notice.getCalendarRegister()) && notice.getCalendarEventAt() != null) {
+                try {
+                    LocalDateTime eventStartAt = notice.getCalendarEventAt();
+                    LocalDateTime eventEndAt = eventStartAt.plusHours(1);
+                    outlookCalendarService.createCalendarEvent(noticeId, eventStartAt, eventEndAt);
+                } catch (Exception calendarError) {
+                    log.error(" Calendar event create failed: noticeId={}, error={}", noticeId, calendarError.getMessage(), calendarError);
+                }
+            }
+
             
             log.info(" 메일 발송 완료: noticeId={}, recipients={}", noticeId, recipientEmails.size());
             
@@ -433,9 +446,9 @@ public class NoticeMailService {
         updated = updated.replaceAll("(?i)<table([^>]*\\bstyle=\")([^\"]*)(\"[^>]*)>",
             "<table$1$2; border-collapse:collapse;$3>");
         updated = updated.replaceAll("(?i)<(td|th)(?![^>]*\\bstyle=)([^>]*)>",
-            "<$1$2 style=\"border:1px solid #999; padding:4px;\">");
+            "<$1$2 style=\"border:1px solid #999; padding:8px 6px;\">");
         updated = updated.replaceAll("(?i)<(td|th)([^>]*\\bstyle=\")([^\"]*)(\"[^>]*)>",
-            "<$1$2$3; border:1px solid #999; padding:4px;$4>");
+            "<$1$2$3; border:1px solid #999; padding:8px 6px;$4>");
         return updated;
     }
 
@@ -443,22 +456,47 @@ public class NoticeMailService {
         if (html == null || html.isBlank()) {
             return html;
         }
-        String updated = html.replaceAll("(?i)\\s+align=\"center\"", "");
-        Pattern pattern = Pattern.compile("(?i)<(table|figure)([^>]*\\bstyle=\")([^\"]*)(\"[^>]*)>");
+        String updated = html;
+        Pattern pattern = Pattern.compile("(?i)<table([^>]*)>");
         Matcher matcher = pattern.matcher(updated);
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
-            String style = matcher.group(3);
-            style = style.replaceAll("(?i)text-align\\s*:\\s*center\\s*;?", "");
-            style = style.replaceAll("(?i)margin\\s*:\\s*0\\s*auto\\s*;?", "");
-            String styleLower = style.toLowerCase();
-            boolean hasMarginLeftAuto = styleLower.matches("(?s).*margin-left\\s*:\\s*auto.*");
-            boolean hasMarginRightAuto = styleLower.matches("(?s).*margin-right\\s*:\\s*auto.*");
-            if (hasMarginLeftAuto && hasMarginRightAuto) {
-                style = style.replaceAll("(?i)margin-left\\s*:\\s*auto\\s*;?", "");
-                style = style.replaceAll("(?i)margin-right\\s*:\\s*auto\\s*;?", "");
+            String attrs = matcher.group(1);
+            String updatedAttrs = attrs;
+            boolean hasWidthAttr = attrs.toLowerCase().contains("width=");
+            if (!attrs.toLowerCase().contains("align=")) {
+                updatedAttrs += " align=\"center\"";
             }
-            String replacement = "<" + matcher.group(1) + matcher.group(2) + style + matcher.group(4);
+
+            Pattern stylePattern = Pattern.compile("(?i)\\bstyle=\"([^\"]*)\"");
+            Matcher styleMatcher = stylePattern.matcher(attrs);
+            if (styleMatcher.find()) {
+                String style = styleMatcher.group(1);
+                style = style.replaceAll("(?i)\\bfloat\\s*:\\s*[^;]+;?", "");
+                if (!style.toLowerCase().contains("margin")) {
+                    style = style.trim();
+                    if (!style.isEmpty() && !style.endsWith(";")) {
+                        style += ";";
+                    }
+                    style += "margin:0 auto;";
+                }
+                if (!style.toLowerCase().contains("width")) {
+                    style = style.trim();
+                    if (!style.isEmpty() && !style.endsWith(";")) {
+                        style += ";";
+                    }
+                    style += "width:700px;";
+                }
+                String rebuiltStyle = "style=\"" + style + "\"";
+                updatedAttrs = styleMatcher.replaceFirst(Matcher.quoteReplacement(rebuiltStyle));
+            } else {
+                updatedAttrs += " style=\"margin:0 auto; width:700px;\"";
+            }
+
+            if (!hasWidthAttr) {
+                updatedAttrs += " width=\"700\"";
+            }
+            String replacement = "<table" + updatedAttrs + ">";
             matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(sb);
@@ -493,10 +531,9 @@ public class NoticeMailService {
         while (matcher.find()) {
             String style = matcher.group(1);
             String cleaned = style;
-            cleaned = cleaned.replaceAll("(?i)\\bwidth\\s*:\\s*[^;]+;?", "");
             cleaned = cleaned.replaceAll("(?i)\\bheight\\s*:\\s*[^;]+;?", "");
-            cleaned = cleaned.replaceAll("(?i)\\bpadding\\s*:\\s*[^;]+;?", "");
-            cleaned = cleaned.replaceAll("(?i)\\bmargin\\s*:\\s*[^;]+;?", "");
+            cleaned = cleaned.replaceAll("(?i)\\bmin-height\\s*:\\s*[^;]+;?", "");
+            cleaned = cleaned.replaceAll("(?i)\\bmax-height\\s*:\\s*[^;]+;?", "");
             cleaned = cleaned.replaceAll("(?i)\\s{2,}", " ").trim();
             cleaned = cleaned.replaceAll("(?i)^;|;\\s*;", ";").trim();
             String replacement = cleaned.isBlank()

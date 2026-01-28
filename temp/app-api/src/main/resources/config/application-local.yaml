@@ -32,3 +32,8 @@ notice:
     
     # 테스트용 대체 이메일 (선택사항)
     test-recipient-email: test@company.com
+  signature:
+    storage:
+      system-name: app
+      corporation-name: global
+      upload-path: notices/signatures

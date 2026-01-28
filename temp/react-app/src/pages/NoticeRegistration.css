@@ -29,6 +29,16 @@
   z-index: 1;
 }
 
+.ck-editor__editable figure.table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ck-editor__editable figure.table table {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .ck.ck-dropdown,
 .ck.ck-dropdown.ck-reset_all,
 .ck-reset_all .ck.ck-dropdown {
@@ -95,6 +105,11 @@
   display: grid;
   grid-template-columns: 260px 1fr;
   gap: 16px;
+  min-width: 0;
+}
+
+.template-manager > * {
+  min-width: 0;
 }
 
 .template-list {
@@ -160,10 +175,41 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
+}
+
+.template-editor-body {
+  min-width: 0;
 }
 
 .template-editor-body .ck-editor {
   border-radius: 8px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.template-editor-body .ck-editor__top,
+.template-editor-body .ck-editor__main {
+  min-width: 0;
+}
+
+.signature-upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.signature-upload-row input[type="file"] {
+  display: none;
+}
+
+.signature-upload-hint {
+  font-size: 12px;
+  color: #64748b;
 }
 
 .signature-default-toggle {
@@ -341,6 +387,12 @@
 
 .page-header {
   margin-bottom: 28px;
+}
+
+.page-header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .page-title {
@@ -529,6 +581,32 @@
   margin: 8px 0 0 0;
   line-height: 1.5;
 }
+
+.signature-preview {
+  margin-top: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  position: relative;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.signature-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 12px;
+  color: #475569;
+}
+
+.signature-preview-body {
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
 
 .corp-send-toggle {
   margin-top: 10px;
@@ -818,6 +896,10 @@ body[style*="padding-right"] {
   overflow-x: hidden; /*  가로 스크롤 방지 */
   padding: 20px 24px;
   min-height: 0; /*  flex 컨테이너 내에서 스크롤 가능하게 */
+}
+
+.modal-body.modal-body-wide {
+  overflow-x: auto;
 }
 
 .modal-body::-webkit-scrollbar {

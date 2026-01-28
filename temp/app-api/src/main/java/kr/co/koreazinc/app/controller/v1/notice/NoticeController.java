@@ -4,6 +4,7 @@ import kr.co.koreazinc.app.dto.notice.ApiResponse;
 import kr.co.koreazinc.app.dto.notice.NoticeRegistrationDto;
 import kr.co.koreazinc.app.dto.notice.NoticeResponseDto;
 import kr.co.koreazinc.app.service.notice.NoticeService;
+import kr.co.koreazinc.app.service.notice.NoticeResendService;
 import kr.co.koreazinc.temp.model.entity.notice.NoticeBase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ import java.util.Map;
 public class NoticeController {
     
     private final NoticeService noticeService;
+    private final NoticeResendService noticeResendService;
     
     /**
      * 공지 등록
@@ -99,6 +101,17 @@ public class NoticeController {
         NoticeResponseDto notice = noticeService.getNoticeDetail(noticeId);
         return ApiResponse.success(notice);
     }
+
+    /**
+     * 완료 공지 조회
+     * GET /v1/api/notices/{noticeId}/completion
+     */
+    @GetMapping("/{noticeId}/completion")
+    public ApiResponse<NoticeResponseDto> getCompletionNotice(@PathVariable Long noticeId) {
+        log.info("GET /v1/api/notices/{}/completion - 완료 공지 조회", noticeId);
+        NoticeResponseDto notice = noticeService.getCompletionNotice(noticeId);
+        return ApiResponse.success(notice);
+    }
     
     /**
      * 공지 승인
@@ -115,7 +128,59 @@ public class NoticeController {
         }
 
         noticeService.approveNotice(noticeId, approver);
-        return ApiResponse.success(null, "??? ???????");
+        return ApiResponse.success(null, "승인 처리되었습니다.");
+    }
+
+    /**
+     * 공지 재발송
+     * POST /v1/api/notices/{noticeId}/retry
+     */
+    @PostMapping("/{noticeId}/retry")
+    public ApiResponse<Void> retryNotice(
+            @PathVariable Long noticeId,
+            @RequestHeader(value = "X-User-Id", required = false) String requester) {
+        if (requester == null || requester.isBlank()) {
+            requester = "admin";
+        }
+        noticeResendService.resendNotice(noticeId, requester);
+        return ApiResponse.success(null, "재발송 요청이 완료되었습니다.");
+    }
+
+    /**
+     * 공지 재발송 가능 여부
+     * GET /v1/api/notices/{noticeId}/can-resend
+     */
+    @GetMapping("/{noticeId}/can-resend")
+    public ApiResponse<Boolean> canResend(@PathVariable Long noticeId) {
+        return ApiResponse.success(noticeResendService.canResend(noticeId));
+    }
+
+    /**
+     * 캘린더 이벤트 재생성
+     * POST /v1/api/notices/{noticeId}/calendar/retry
+     */
+    @PostMapping("/{noticeId}/calendar/retry")
+    public ApiResponse<Void> retryCalendar(
+            @PathVariable Long noticeId,
+            @RequestHeader(value = "X-User-Id", required = false) String requester) {
+        if (requester == null || requester.isBlank()) {
+            requester = "admin";
+        }
+        noticeService.regenerateCalendarEvent(noticeId, requester);
+        return ApiResponse.success(null, "캘린더 재생성이 요청되었습니다.");
+    }
+
+    /**
+     * 재발송 통계
+     * GET /v1/api/notices/resend-statistics
+     */
+    @GetMapping("/resend-statistics")
+    public ApiResponse<NoticeResendService.ResendStatistics> getResendStatistics(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        LocalDateTime from = (startDate != null) ? startDate.atStartOfDay() : LocalDate.now().minusMonths(1).atStartOfDay();
+        LocalDateTime to = (endDate != null) ? endDate.atTime(23, 59, 59) : LocalDateTime.now();
+        return ApiResponse.success(noticeResendService.getResendStatistics(from, to));
     }
 
 /**
@@ -135,7 +200,7 @@ public class NoticeController {
         }
 
         noticeService.rejectNotice(noticeId, reason, rejector);
-        return ApiResponse.success(null, "??? ???????");
+        return ApiResponse.success(null, "반려 처리되었습니다.");
     }
 
 /**

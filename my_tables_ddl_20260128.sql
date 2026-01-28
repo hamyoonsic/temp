@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 5w0Y7YWZWQBSEzFtgycbtK1hnG4tpehmpv4ByFXwLZZ1n5HifRBmH8z1Xu0bdsA
+\restrict Oj1mkN0K7P72HkHA52oLdfFQiGZSr3TH6GK5CftbiISoxYY575slOBAKet1WSQF
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 15.15
@@ -651,6 +651,8 @@ CREATE TABLE public.notice_base (
     calendar_register boolean DEFAULT false NOT NULL,
     calendar_event_at timestamp without time zone,
     sender_email character varying(150),
+    reject_reason character varying(500),
+    notice_type character varying(50),
     CONSTRAINT notice_level_check CHECK (((notice_level)::text = ANY ((ARRAY['L1'::character varying, 'L2'::character varying, 'L3'::character varying])::text[])))
 );
 
@@ -816,6 +818,20 @@ COMMENT ON COLUMN public.notice_base.calendar_event_at IS '캘린더 이벤트 �
 --
 
 COMMENT ON COLUMN public.notice_base.sender_email IS '발신자 이메일';
+
+
+--
+-- Name: COLUMN notice_base.reject_reason; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.notice_base.reject_reason IS '반려 사유';
+
+
+--
+-- Name: COLUMN notice_base.notice_type; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.notice_base.notice_type IS '공지 유형';
 
 
 --
@@ -1201,6 +1217,44 @@ ALTER SEQUENCE public.notice_send_plan_send_plan_id_seq OWNED BY public.notice_s
 
 
 --
+-- Name: notice_signature; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.notice_signature (
+    signature_id bigint NOT NULL,
+    user_id character varying(50) NOT NULL,
+    name character varying(200) NOT NULL,
+    content text NOT NULL,
+    is_default boolean DEFAULT false NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE public.notice_signature OWNER TO postgres;
+
+--
+-- Name: notice_signature_signature_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.notice_signature_signature_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.notice_signature_signature_id_seq OWNER TO postgres;
+
+--
+-- Name: notice_signature_signature_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.notice_signature_signature_id_seq OWNED BY public.notice_signature.signature_id;
+
+
+--
 -- Name: notice_tag; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1338,6 +1392,43 @@ ALTER TABLE public.notice_target_target_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE public.notice_target_target_id_seq OWNED BY public.notice_target.target_id;
+
+
+--
+-- Name: notice_template; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.notice_template (
+    template_id bigint NOT NULL,
+    user_id character varying(50) NOT NULL,
+    name character varying(200) NOT NULL,
+    content text NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE public.notice_template OWNER TO postgres;
+
+--
+-- Name: notice_template_template_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.notice_template_template_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.notice_template_template_id_seq OWNER TO postgres;
+
+--
+-- Name: notice_template_template_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.notice_template_template_id_seq OWNED BY public.notice_template.template_id;
 
 
 --
@@ -1710,6 +1801,13 @@ ALTER TABLE ONLY public.notice_send_plan ALTER COLUMN send_plan_id SET DEFAULT n
 
 
 --
+-- Name: notice_signature signature_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notice_signature ALTER COLUMN signature_id SET DEFAULT nextval('public.notice_signature_signature_id_seq'::regclass);
+
+
+--
 -- Name: notice_tag tag_id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1721,6 +1819,13 @@ ALTER TABLE ONLY public.notice_tag ALTER COLUMN tag_id SET DEFAULT nextval('publ
 --
 
 ALTER TABLE ONLY public.notice_target ALTER COLUMN target_id SET DEFAULT nextval('public.notice_target_target_id_seq'::regclass);
+
+
+--
+-- Name: notice_template template_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notice_template ALTER COLUMN template_id SET DEFAULT nextval('public.notice_template_template_id_seq'::regclass);
 
 
 --
@@ -1842,6 +1947,14 @@ ALTER TABLE ONLY public.notice_send_plan
 
 
 --
+-- Name: notice_signature notice_signature_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notice_signature
+    ADD CONSTRAINT notice_signature_pkey PRIMARY KEY (signature_id);
+
+
+--
 -- Name: notice_tag notice_tag_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1855,6 +1968,14 @@ ALTER TABLE ONLY public.notice_tag
 
 ALTER TABLE ONLY public.notice_target
     ADD CONSTRAINT notice_target_pkey PRIMARY KEY (target_id);
+
+
+--
+-- Name: notice_template notice_template_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.notice_template
+    ADD CONSTRAINT notice_template_pkey PRIMARY KEY (template_id);
 
 
 --
@@ -2031,6 +2152,20 @@ CREATE INDEX idx_notice_service ON public.notice_base USING btree (affected_serv
 
 
 --
+-- Name: idx_notice_signature_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_notice_signature_user ON public.notice_signature USING btree (user_id);
+
+
+--
+-- Name: idx_notice_signature_user_default; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_notice_signature_user_default ON public.notice_signature USING btree (user_id, is_default);
+
+
+--
 -- Name: idx_notice_tag_notice_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -2056,6 +2191,13 @@ CREATE INDEX idx_notice_target_notice_id ON public.notice_target USING btree (no
 --
 
 CREATE INDEX idx_notice_target_type_key ON public.notice_target USING btree (target_type, target_key);
+
+
+--
+-- Name: idx_notice_template_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_notice_template_user ON public.notice_template USING btree (user_id);
 
 
 --
@@ -2140,6 +2282,20 @@ CREATE INDEX idx_user_org ON public.user_master USING btree (org_unit_id);
 --
 
 CREATE UNIQUE INDEX uq_notice_delivery_idempotency ON public.notice_delivery_log USING btree (channel, idempotency_key);
+
+
+--
+-- Name: notice_signature trg_notice_signature_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_notice_signature_updated_at BEFORE UPDATE ON public.notice_signature FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+
+--
+-- Name: notice_template trg_notice_template_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER trg_notice_template_updated_at BEFORE UPDATE ON public.notice_template FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
 --
@@ -2274,5 +2430,5 @@ ALTER TABLE ONLY public.user_master
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 5w0Y7YWZWQBSEzFtgycbtK1hnG4tpehmpv4ByFXwLZZ1n5HifRBmH8z1Xu0bdsA
+\unrestrict Oj1mkN0K7P72HkHA52oLdfFQiGZSr3TH6GK5CftbiISoxYY575slOBAKet1WSQF
 

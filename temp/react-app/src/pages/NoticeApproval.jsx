@@ -58,9 +58,14 @@ const NoticeApproval = () => {
 
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState('');
 
   useEffect(() => {
     loadApprovalList();
+    const storedUserId = sessionStorage.getItem('userId');
+    if (storedUserId) {
+      setCurrentUserId(storedUserId);
+    }
   }, []);
 
   //  모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
@@ -100,10 +105,27 @@ const NoticeApproval = () => {
     try {
       await approvalApi.approve(noticeId);
       alert('공지가 승인되었습니다.');
+      if (selectedNotice && selectedNotice.noticeId === noticeId) {
+        setSelectedNotice(prev => prev ? { ...prev, noticeStatus: 'APPROVED' } : prev);
+      }
       loadApprovalList();
     } catch (error) {
       console.error('승인 실패:', error);
       alert('승인 처리 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleCalendarRetry = async (noticeId) => {
+    if (!window.confirm('캘린더를 재생성하시겠습니까?')) return;
+    setLoading(true);
+    try {
+      await noticeApi.retryCalendar(noticeId);
+      alert('캘린더 재생성 요청이 완료되었습니다.');
+    } catch (error) {
+      console.error('캘린더 재생성 실패:', error);
+      alert('캘린더 재생성 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -119,6 +141,9 @@ const NoticeApproval = () => {
     try {
       await approvalApi.reject(noticeId, reason);
       alert('공지가 반려되었습니다.');
+      if (selectedNotice && selectedNotice.noticeId === noticeId) {
+        setSelectedNotice(prev => prev ? { ...prev, noticeStatus: 'REJECTED' } : prev);
+      }
       loadApprovalList();
     } catch (error) {
       console.error('반려 실패:', error);
@@ -140,6 +165,34 @@ const NoticeApproval = () => {
     }
   };
 
+  const openCompletionDetail = async (noticeId) => {
+    try {
+      const result = await noticeApi.getCompletion(noticeId);
+      if (result.success && result.data) {
+        setSelectedNotice(result.data);
+        setShowDetailModal(true);
+      } else {
+        alert('완료 공지가 없습니다.');
+      }
+    } catch (error) {
+      console.error('완료 공지 조회 실패:', error);
+      alert('완료 공지를 불러오지 못했습니다.');
+    }
+  };
+
+  const openOriginalDetail = async (noticeId) => {
+    try {
+      const result = await noticeApi.getById(noticeId);
+      if (result.success && result.data) {
+        setSelectedNotice(result.data);
+        setShowDetailModal(true);
+      }
+    } catch (error) {
+      console.error('원본 공지 조회 실패:', error);
+      alert('원본 공지를 불러오지 못했습니다.');
+    }
+  };
+
   const filteredList = approvalList.filter(item => {
     if (filters.searchTerm && !item.title.includes(filters.searchTerm)) {
       return false;
@@ -152,6 +205,43 @@ const NoticeApproval = () => {
     const date = new Date(dateTimeStr);
     return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   };
+
+  const getStatusInfo = (status) => {
+    const statusMap = {
+      'DRAFT': { text: '작성중', class: 'draft', color: '#64748b' },
+      'PENDING': { text: '승인대기', class: 'pending', color: '#f59e0b' },
+      'APPROVED': { text: '승인완료', class: 'approved', color: '#3b82f6' },
+      'SENT': { text: '발송완료', class: 'completed', color: '#10b981' },
+      'FAILED': { text: '발송실패', class: 'failed', color: '#ef4444' },
+      'REJECTED': { text: '발송반려', class: 'rejected', color: '#dc2626' }
+    };
+    return statusMap[status] || { text: status, class: 'default', color: '#94a3b8' };
+  };
+
+  const getReceiverInfo = (targets) => {
+    if (!targets || targets.length === 0) return { corps: '-', depts: '-' };
+    const corps = targets
+      .filter(t => t.targetType === 'CORP')
+      .map(t => t.targetName)
+      .join(', ');
+    const depts = targets
+      .filter(t => t.targetType === 'ORG_UNIT')
+      .map(t => t.targetName)
+      .join(', ');
+    const inferredCorp = corps || (
+      depts && depts.includes('/')
+        ? depts.split('/')[0].trim()
+        : ''
+    );
+    return {
+      corps: inferredCorp || '-',
+      depts: depts || '-'
+    };
+  };
+
+  const detailReceiverInfo = selectedNotice
+    ? getReceiverInfo(selectedNotice.targets)
+    : { corps: '-', depts: '-' };
 
   if (loading) {
     return (
@@ -313,19 +403,67 @@ const NoticeApproval = () => {
             
             <div className="modal-body">
               <div className="detail-section">
+                <h4>발송 상태</h4>
+                <div className="status-info-row">
+                  <span className={`status-badge-large status-${getStatusInfo(selectedNotice.noticeStatus).class}`}>
+                    {getStatusInfo(selectedNotice.noticeStatus).text}
+                  </span>
+                  <span className={`priority-badge priority-${selectedNotice.noticeLevel}`}>
+                    중요도 {selectedNotice.noticeLevel === 'L3' ? '긴급' : selectedNotice.noticeLevel === 'L2' ? '중간' : '낮음'}
+                  </span>
+                  {(selectedNotice.isMaintenance ||
+                    (selectedNotice.calendarRegister && selectedNotice.noticeStatus === 'SENT')) && (
+                    <div className="status-info-actions">
+                      {selectedNotice.calendarRegister && selectedNotice.noticeStatus === 'SENT' && (
+                        <button
+                          type="button"
+                          className="btn btn-cancel"
+                          onClick={() => handleCalendarRetry(selectedNotice.noticeId)}
+                        >
+                          캘린더 재생성
+                        </button>
+                      )}
+                      {selectedNotice.isMaintenance && (
+                        selectedNotice.isCompleted ? (
+                          <button
+                            type="button"
+                            className="btn btn-cancel"
+                            onClick={() => openCompletionDetail(selectedNotice.noticeId)}
+                          >
+                            완료 공지 보기
+                          </button>
+                        ) : (
+                          (selectedNotice.noticeStatus === 'APPROVED' &&
+                          currentUserId && selectedNotice.createdBy === currentUserId) && (
+                            <button
+                              type="button"
+                              className="btn btn-submit"
+                              onClick={() => navigate('/notices/new', { state: { isCompletion: true, originalNotice: selectedNotice } })}
+                            >
+                              완료 공지 등록
+                            </button>
+                          )
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="detail-section">
                 <h4>기본 정보</h4>
                 <div className="detail-grid">
                   <div className="detail-item">
-                    <span className="detail-label">공지ID</span>
-                    <span className="detail-value">{selectedNotice.noticeId}</span>
+                    <span className="detail-label">수신법인</span>
+                    <span className="detail-value">{detailReceiverInfo.corps}</span>
                   </div>
                   <div className="detail-item">
-                    <span className="detail-label">중요도</span>
-                    <span className="detail-value">
-                      <span className={`priority-badge priority-${selectedNotice.noticeLevel}`}>
-                        {selectedNotice.noticeLevel === 'L3' ? '긴급' : selectedNotice.noticeLevel === 'L2' ? '중간' : '낮음'}
-                      </span>
-                    </span>
+                    <span className="detail-label">공지유형</span>
+                    <span className="detail-value">{selectedNotice.noticeType || '-'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">수신부서</span>
+                    <span className="detail-value">{detailReceiverInfo.depts}</span>
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">발신부서</span>
@@ -334,20 +472,6 @@ const NoticeApproval = () => {
                   <div className="detail-item">
                     <span className="detail-label">점검/장애 여부</span>
                     <span className="detail-value">{selectedNotice.isMaintenance ? '예' : '아니오'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="detail-section">
-                <h4>발송 설정</h4>
-                <div className="detail-grid">
-                  <div className="detail-item">
-                    <span className="detail-label">게시 시작일시</span>
-                    <span className="detail-value">{formatDateTime(selectedNotice.publishStartAt)}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">작성자</span>
-                    <span className="detail-value">{selectedNotice.createdBy}</span>
                   </div>
                 </div>
               </div>
@@ -364,6 +488,35 @@ const NoticeApproval = () => {
                 </div>
               </div>
 
+              {selectedNotice.parentNoticeId && (
+                <div className="detail-section">
+                  <h4>원본 공지</h4>
+                  <div className="detail-item full-width">
+                    <button
+                      type="button"
+                      className="btn btn-cancel"
+                      onClick={() => openOriginalDetail(selectedNotice.parentNoticeId)}
+                    >
+                      원본 공지 보기
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="detail-section">
+                <h4>발송 정보</h4>
+                <div className="detail-grid">
+                  <div className="detail-item">
+                    <span className="detail-label">게시 시작일시</span>
+                    <span className="detail-value">{formatDateTime(selectedNotice.publishStartAt)}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span className="detail-label">작성자</span>
+                    <span className="detail-value">{selectedNotice.createdBy}</span>
+                  </div>
+                </div>
+              </div>
+
               {selectedNotice.noticeStatus === 'REJECTED' && selectedNotice.rejectReason && (
                 <div className="detail-section">
                   <h4>반려 사유</h4>
@@ -373,24 +526,10 @@ const NoticeApproval = () => {
                   </div>
                 </div>
               )}
-
-              {selectedNotice.targets && selectedNotice.targets.length > 0 && (
-                <div className="detail-section">
-                  <h4>수신 대상</h4>
-                  <div className="targets-list">
-                    {selectedNotice.targets.map((target, index) => (
-                      <div key={index} className="target-item">
-                        <span className="target-type">{target.targetType === 'CORP' ? '법인' : '부서'}</span>
-                        <span className="target-name">{target.targetName}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
             
             <div className="modal-footer">
-              {isAdmin && (
+              {isAdmin && selectedNotice.noticeStatus === 'PENDING' ? (
                 <>
                   <button 
                     className="btn btn-reject"
@@ -405,6 +544,10 @@ const NoticeApproval = () => {
                     승인하기
                   </button>
                 </>
+              ) : (
+                <button className="btn btn-close" onClick={() => setShowDetailModal(false)}>
+                  닫기
+                </button>
               )}
             </div>
           </div>

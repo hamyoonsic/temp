@@ -29,6 +29,10 @@ export const noticeApi = {
     return apiClient.get(`/notices/${noticeId}`);
   },
 
+  getCompletion: (noticeId) => {
+    return apiClient.get(`/notices/${noticeId}/completion`);
+  },
+
   /**
    * 공지 수정
    */
@@ -48,6 +52,13 @@ export const noticeApi = {
    */
   retry: (noticeId) => {
     return apiClient.post(`/notices/${noticeId}/retry`);
+  },
+
+  /**
+   * 캘린더 재생성
+   */
+  retryCalendar: (noticeId) => {
+    return apiClient.post(`/notices/${noticeId}/calendar/retry`);
   },
   
   /**

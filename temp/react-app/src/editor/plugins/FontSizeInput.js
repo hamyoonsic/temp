@@ -57,6 +57,40 @@ export default class FontSizeInput extends Plugin {
 
     editor.ui.componentFactory.add('fontSizeInput', locale => {
       const inputView = new InputTextView(locale);
+      const syncFromSelection = () => {
+        const element = inputView.element;
+        if (!element) return;
+        const value = command ? command.value : null;
+        if (value) {
+          const match = String(value).match(/(\d+)\s*pt/i);
+          if (match) {
+            element.value = match[1];
+            return;
+          }
+        }
+        try {
+          const viewSelection = editor.editing.view.document.selection;
+          const viewPosition = viewSelection.getFirstPosition();
+          if (!viewPosition) {
+            element.value = '';
+            return;
+          }
+          const viewParent = viewPosition.parent;
+          const domParent = editor.editing.view.domConverter.mapViewToDom(viewParent);
+          if (!domParent || domParent.nodeType !== Node.ELEMENT_NODE) {
+            element.value = '';
+            return;
+          }
+          const fontSizePx = window.getComputedStyle(domParent).fontSize;
+          const pxValue = parseFloat(fontSizePx);
+          if (!Number.isNaN(pxValue)) {
+            const ptValue = Math.round((pxValue * 72) / 96);
+            element.value = String(Math.max(MIN_PT, Math.min(MAX_PT, ptValue)));
+          }
+        } catch (error) {
+          element.value = '';
+        }
+      };
       inputView.set({
         placeholder: 'pt'
       });
@@ -105,23 +139,18 @@ export default class FontSizeInput extends Plugin {
             applyValue();
           }
         });
+        syncFromSelection();
       });
 
       if (command) {
         command.on('change:value', () => {
-          const element = inputView.element;
-          if (!element) return;
-          const value = command.value;
-          if (!value) {
-            element.value = '';
-            return;
-          }
-          const match = String(value).match(/(\d+)\s*pt/i);
-          if (match) {
-            element.value = match[1];
-          }
+          syncFromSelection();
         });
       }
+
+      editor.editing.view.document.selection.on('change:range', () => {
+        syncFromSelection();
+      });
 
       return inputView;
     });

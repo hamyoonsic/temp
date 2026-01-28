@@ -39,6 +39,14 @@ body.modal-open {
   position: relative;
 }
 
+/* 상세 모달은 더 넓게 사용 */
+.modal-content.dashboard-detail-modal,
+.modal-content.approval-detail-modal,
+.modal-content.history-detail-modal {
+  max-width: 900px;
+  width: min(900px, 92vw);
+}
+
 /* 모달 헤더 - 고정 */
 .modal-header {
   padding: 20px 24px;

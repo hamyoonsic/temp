@@ -58,13 +58,29 @@ public class NoticeService {
     @Transactional
     public Long createNotice(NoticeRegistrationDto dto, String userId) {
         log.info("Creating notice: {} by {}", dto.getTitle(), userId);
-        
+
+        if (dto.getParentNoticeId() != null) {
+            NoticeBase parentNotice = noticeBaseRepository.findById(dto.getParentNoticeId())
+                    .orElseThrow(() -> new RuntimeException("원본 공지를 찾을 수 없습니다. ID: " + dto.getParentNoticeId()));
+
+            if (Boolean.TRUE.equals(parentNotice.getIsCompleted())
+                    || noticeBaseRepository.existsByParentNoticeId(dto.getParentNoticeId())) {
+                throw new RuntimeException("이미 완료 공지가 등록된 공지입니다.");
+            }
+
+            parentNotice.setIsCompleted(true);
+            parentNotice.setCompletedAt(LocalDateTime.now());
+            parentNotice.setUpdatedBy(userId);
+            noticeBaseRepository.save(parentNotice);
+        }
+
         // 1. NoticeBase 생성
         NoticeBase.NoticeBaseBuilder noticeBuilder = NoticeBase.builder()
                 .title(dto.getTitle())
                 .content(dto.getContent())
+                .noticeType(dto.getNoticeType())
                 .noticeLevel(dto.getNoticeLevel())
-                .noticeStatus("PENDING")  // ?????? ?????: ????? ?????
+                .noticeStatus("PENDING")  // 승인 대기: 결재 대기 상태
                 .affectedServiceId(dto.getAffectedServiceId())
                 .senderOrgUnitId(dto.getSenderOrgUnitId())
                 .senderOrgUnitName(dto.getSenderOrgUnitName())
@@ -74,6 +90,7 @@ public class NoticeService {
                 .isMaintenance(dto.getIsMaintenance() != null ? dto.getIsMaintenance() : false)
                 .isCompleted(false)
                 .mailSubject(dto.getMailSubject())
+                .parentNoticeId(dto.getParentNoticeId())
                 .createdBy(userId)
                 .updatedBy(userId);
 
@@ -114,7 +131,7 @@ public class NoticeService {
             noticeTargetRepository.saveAll(targets);
         }
 
-        // 3. ?????? ?????? ????
+        // 3. 발송 계획 저장
         if (dto.getSendPlan() != null) {
             NoticeRegistrationDto.SendPlanDto sendPlanDto = dto.getSendPlan();
             String sendMode = sendPlanDto.getSendMode() != null
@@ -323,12 +340,6 @@ public class NoticeService {
         });
 
         
-        // if (Boolean.TRUE.equals(notice.getCalendarRegister()) && notice.getCalendarEventAt() != null) {
-        //     LocalDateTime eventStartAt = notice.getCalendarEventAt();
-        //     LocalDateTime eventEndAt = eventStartAt.plusHours(1);
-        //     outlookCalendarService.createCalendarEvent(noticeId, eventStartAt, eventEndAt);
-        // }
-
         log.info("Notice approved successfully. ID: {}", noticeId);
     }
     
@@ -356,6 +367,30 @@ public class NoticeService {
         
         log.info("Notice rejected successfully. ID: {}", noticeId);
     }
+
+    /**
+     * 캘린더 이벤트 재생성 (실제 발송 대상 기준)
+     */
+    @Transactional
+    public void regenerateCalendarEvent(Long noticeId, String requestedBy) {
+        NoticeBase notice = noticeBaseRepository.findById(noticeId)
+            .orElseThrow(() -> new RuntimeException("공지을 찾을 수 없습니다. ID: " + noticeId));
+
+        if (!Boolean.TRUE.equals(notice.getCalendarRegister()) || notice.getCalendarEventAt() == null) {
+            throw new RuntimeException("캘린더 등록 요청이 없는 공지입니다.");
+        }
+
+        if (!"SENT".equals(notice.getNoticeStatus())) {
+            throw new RuntimeException("발송 완료된 공지에서만 재생성이 가능합니다.");
+        }
+
+        LocalDateTime eventStartAt = notice.getCalendarEventAt();
+        LocalDateTime eventEndAt = eventStartAt.plusHours(1);
+        outlookCalendarService.createCalendarEvent(noticeId, eventStartAt, eventEndAt);
+
+        notice.setUpdatedBy(requestedBy);
+        noticeBaseRepository.save(notice);
+    }
     
     /**
      * Entity -> DTO 변환 (기본)
@@ -365,8 +400,11 @@ public class NoticeService {
                 .noticeId(notice.getNoticeId())
                 .title(notice.getTitle())
                 .content(notice.getContent())
+                .noticeType(notice.getNoticeType())
                 .noticeLevel(notice.getNoticeLevel())
                 .noticeStatus(notice.getNoticeStatus())
+                .calendarRegister(notice.getCalendarRegister())
+                .calendarEventAt(notice.getCalendarEventAt())
                 .affectedServiceId(notice.getAffectedServiceId())
                 .senderOrgUnitId(notice.getSenderOrgUnitId())
                 .senderOrgUnitName(notice.getSenderOrgUnitName())
@@ -434,6 +472,13 @@ public class NoticeService {
                 .collect(Collectors.toList()));
         
         return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public NoticeResponseDto getCompletionNotice(Long noticeId) {
+        return noticeBaseRepository.findTopByParentNoticeIdOrderByCreatedAtDesc(noticeId)
+                .map(this::convertToResponseDtoWithDetails)
+                .orElse(null);
     }
 
     private String normalizeTargetKey(String targetType, String targetKey) {

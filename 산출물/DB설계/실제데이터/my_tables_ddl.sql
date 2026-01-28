@@ -98,6 +98,7 @@ CREATE TABLE public.notice_base (
     notice_id          bigint       NOT NULL,
     title              varchar(200) NOT NULL,
     content            text         NOT NULL,
+    notice_type        varchar(50),
     notice_level       varchar(10)  NOT NULL,
     notice_status      varchar(30)  NOT NULL,
     affected_service_id bigint,
@@ -121,6 +122,7 @@ COMMENT ON TABLE  public.notice_base IS '공지 기본 정보';
 COMMENT ON COLUMN public.notice_base.notice_id          IS '공지 고유 식별자(PK)';
 COMMENT ON COLUMN public.notice_base.title              IS '공지 제목';
 COMMENT ON COLUMN public.notice_base.content            IS '공지 상세 내용';
+COMMENT ON COLUMN public.notice_base.notice_type        IS '공지 유형';
 COMMENT ON COLUMN public.notice_base.notice_level       IS '공지 중요도(ENUM: L1 일반, L2 중요, L3 긴급)';
 COMMENT ON COLUMN public.notice_base.notice_status      IS '공지 상태(DRAFT, PENDING, APPROVED, SENT, FAILED, COMPLETED)';
 COMMENT ON COLUMN public.notice_base.affected_service_id IS '영향받는 서비스 ID(FK) - v1.4 추가';

@@ -23,8 +23,11 @@ public class NoticeResponseDto {
     private Long noticeId;
     private String title;
     private String content;
+    private String noticeType;
     private NoticeLevel noticeLevel;
     private String noticeStatus;
+    private Boolean calendarRegister;
+    private LocalDateTime calendarEventAt;
     
     // 서비스 정보
     private Long affectedServiceId;

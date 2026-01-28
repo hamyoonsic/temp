@@ -7,6 +7,10 @@ import Italic from '@ckeditor/ckeditor5-basic-styles/src/italic';
 import Underline from '@ckeditor/ckeditor5-basic-styles/src/underline';
 import Strikethrough from '@ckeditor/ckeditor5-basic-styles/src/strikethrough';
 import Alignment from '@ckeditor/ckeditor5-alignment/src/alignment';
+import Image from '@ckeditor/ckeditor5-image/src/image';
+import ImageToolbar from '@ckeditor/ckeditor5-image/src/imagetoolbar';
+import ImageStyle from '@ckeditor/ckeditor5-image/src/imagestyle';
+import ImageCaption from '@ckeditor/ckeditor5-image/src/imagecaption';
 import FontFamily from '@ckeditor/ckeditor5-font/src/fontfamily';
 import FontSize from '@ckeditor/ckeditor5-font/src/fontsize';
 import FontColor from '@ckeditor/ckeditor5-font/src/fontcolor';
@@ -38,6 +42,10 @@ NoticeEditor.builtinPlugins = [
   Underline,
   Strikethrough,
   Alignment,
+  Image,
+  ImageToolbar,
+  ImageStyle,
+  ImageCaption,
   FontFamily,
   FontSize,
   FontColor,

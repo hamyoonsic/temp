@@ -32,7 +32,10 @@ public class NoticeBase {
     
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
-    
+
+    @Column(name = "notice_type", length = 50)
+    private String noticeType;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "notice_level", nullable = false)
     private NoticeLevel noticeLevel;

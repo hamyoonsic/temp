@@ -886,10 +886,15 @@ body {
 .modal-content {
   background: white;
   border-radius: 16px;
-  max-width: 900px;
+  max-width: 1100px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+.dashboard-detail-modal {
+  max-width: 1100px;
+  width: 100%;
 }
 
 .modal-header {
@@ -920,7 +925,7 @@ body {
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 20px;
 }
 
 .modal-footer {
@@ -946,22 +951,73 @@ body {
   background: #1e3a8a;
 }
 
+.calendar-day-modal {
+  max-width: 700px;
+  width: min(700px, 92vw);
+}
+
+.calendar-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.calendar-day-item {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.calendar-day-item:hover {
+  border-color: #1e40af;
+  background: #eff6ff;
+}
+
+.calendar-day-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.calendar-day-item-meta {
+  font-size: 12px;
+  color: #64748b;
+  white-space: normal;
+  text-align: left;
+}
+
 .detail-section {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .detail-section h4 {
   font-size: 16px;
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
 }
 
 .detail-item {
   display: flex;
-  justify-content: space-between;
-  padding: 12px 0;
-  border-bottom: 1px solid #f8fafc;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
 }
 
 .detail-label {
@@ -974,6 +1030,37 @@ body {
   font-size: 14px;
   color: #1e293b;
   font-weight: 600;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.status-info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-info-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-badge-large {
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1.5px solid;
+}
+
+.content-box {
+  white-space: pre-wrap;
+  line-height: 1.55;
+  min-height: 80px;
 }
 
 .target-item {
@@ -1080,8 +1167,8 @@ body.modal-open {
 
 .modal-content {
   background: white;
-  border-radius: 8px;
-  max-width: 800px;
+  border-radius: 16px;
+  max-width: 900px;
   width: 100%;
   max-height: 90vh;
   display: flex;
@@ -1130,5 +1217,11 @@ body.modal-open {
 
 .modal-body::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* 상세 모달 폭 통일 */
+.modal-content.dashboard-detail-modal {
+  max-width: 1100px !important;
+  width: min(1100px, 92vw) !important;
 }
 }

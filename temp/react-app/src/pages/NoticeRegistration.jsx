@@ -85,14 +85,21 @@ const NoticeRegistration = () => {
   });
 
   const editorRef = useRef(null);
+  const templateEditorRef = useRef(null);
+  const signatureEditorRef = useRef(null);
+  const signatureFileInputRef = useRef(null);
 
   const [templates, setTemplates] = useState([]);
   const [signatures, setSignatures] = useState([]);
   const [defaultSignature, setDefaultSignature] = useState(null);
+  const [signaturePreview, setSignaturePreview] = useState(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [templateDraft, setTemplateDraft] = useState({ templateId: null, name: '', content: '' });
-  const [signatureDraft, setSignatureDraft] = useState({ signatureId: null, name: '', content: '', isDefault: true });
+  const [signatureDraft, setSignatureDraft] = useState({ signatureId: null, name: '', content: '', isDefault: false });
+  const [showCompletionSelectModal, setShowCompletionSelectModal] = useState(false);
+  const [completionCandidates, setCompletionCandidates] = useState([]);
+  const completionNoticeType = '시스템 정상화안내';
 
   const [formData, setFormData] = useState({
     noticeType: '시스템 점검안내',
@@ -111,6 +118,8 @@ const NoticeRegistration = () => {
     outlookTime: '17:30',
     tags: []
   });
+
+  const hasSignatureInContent = /notice-signature/.test(formData.noticeContent || '');
 
   const [tagInput, setTagInput] = useState('');
   const todayDate = new Date().toISOString().split('T')[0];
@@ -147,10 +156,81 @@ const NoticeRegistration = () => {
 
   const resetTemplateDraft = () => {
     setTemplateDraft({ templateId: null, name: '', content: '' });
+    if (templateEditorRef.current) {
+      templateEditorRef.current.setData('');
+    }
   };
 
   const resetSignatureDraft = () => {
-    setSignatureDraft({ signatureId: null, name: '', content: '', isDefault: true });
+    setSignatureDraft({ signatureId: null, name: '', content: '', isDefault: false });
+    if (signatureEditorRef.current) {
+      signatureEditorRef.current.setData('');
+    }
+  };
+
+  const startEditTemplate = (template) => {
+    if (!template) return;
+    const next = {
+      templateId: template.templateId ?? null,
+      name: template.name || '',
+      content: template.content || ''
+    };
+    setTemplateDraft(next);
+    if (templateEditorRef.current) {
+      templateEditorRef.current.setData(next.content || '');
+    }
+  };
+
+  const startEditSignature = (signature) => {
+    if (!signature) return;
+    const next = {
+      signatureId: signature.signatureId ?? null,
+      name: signature.name || '',
+      content: signature.content || '',
+      isDefault: Boolean(signature.isDefault)
+    };
+    setSignatureDraft(next);
+    if (signatureEditorRef.current) {
+      signatureEditorRef.current.setData(next.content || '');
+    }
+  };
+
+  const resolveAbsoluteUrl = (url) => {
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    const base = window.location.origin;
+    if (url.startsWith('/')) {
+      return `${base}${url}`;
+    }
+    return `${base}/${url}`;
+  };
+
+  const handleSignatureImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const response = await signatureApi.uploadImage(file, { userId: userInfo.userId });
+      const payload = response?.data?.data || response?.data || response;
+      const url = resolveAbsoluteUrl(payload?.url);
+      if (!url) {
+        throw new Error('image url missing');
+      }
+      const editor = signatureEditorRef.current;
+      const current = editor ? editor.getData() : signatureDraft.content || '';
+      const imageHtml = `<p><img src="${url}" alt="signature-image" /></p>`;
+      const nextContent = `${current}${imageHtml}`;
+      setSignatureDraft(prev => ({ ...prev, content: nextContent }));
+      if (editor) {
+        editor.setData(nextContent);
+      }
+    } catch (error) {
+      console.error('서명 이미지 업로드 실패:', error);
+      alert('서명 이미지 업로드에 실패했습니다.');
+    } finally {
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
   };
 
   const loadTemplates = async (userId) => {
@@ -190,13 +270,40 @@ const NoticeRegistration = () => {
 
   const applySignatureToEditor = (signature) => {
     if (!signature) return;
-    setDefaultSignature(signature);
+    const hasSignature = /notice-signature/.test(formData.noticeContent || '');
+    if (hasSignature) {
+      setSignaturePreview(signature);
+      return;
+    }
+    const nextContent = appendSignature(formData.noticeContent, signature);
     setFormData(prev => ({
       ...prev,
-      noticeContent: appendSignature(prev.noticeContent, signature)
+      noticeContent: nextContent
     }));
     if (editorRef.current) {
-      editorRef.current.setData(appendSignature(editorRef.current.getData(), signature));
+      editorRef.current.setData(nextContent);
+    }
+    setSignaturePreview(signature);
+  };
+
+  const loadCompletionCandidates = async () => {
+    try {
+      const result = await noticeApi.getList({ page: 0, size: 200, sort: 'createdAt,DESC' });
+      if (result.success && result.data) {
+        const list = result.data.data || result.data || [];
+        const filtered = (Array.isArray(list) ? list : []).filter(notice =>
+          notice.isMaintenance &&
+          !notice.isCompleted &&
+          ['APPROVED', 'SENT', 'FAILED'].includes(notice.noticeStatus) &&
+          (!userInfo.userId || notice.createdBy === userInfo.userId)
+        );
+        setCompletionCandidates(filtered);
+      } else {
+        setCompletionCandidates([]);
+      }
+    } catch (error) {
+      console.error('완료 공지 대상 조회 실패:', error);
+      setCompletionCandidates([]);
     }
   };
 
@@ -245,6 +352,9 @@ const NoticeRegistration = () => {
     try {
       await templateApi.delete(templateId, { userId: userInfo.userId });
       await loadTemplates(userInfo.userId);
+      if (Number(templateDraft.templateId) === Number(templateId)) {
+        resetTemplateDraft();
+      }
     } catch (error) {
       console.error('??? ?? ??:', error);
     }
@@ -254,6 +364,9 @@ const NoticeRegistration = () => {
     try {
       await signatureApi.delete(signatureId, { userId: userInfo.userId });
       await loadSignatures(userInfo.userId);
+      if (Number(signatureDraft.signatureId) === Number(signatureId)) {
+        resetSignatureDraft();
+      }
     } catch (error) {
       console.error('?? ?? ??:', error);
     }
@@ -263,7 +376,8 @@ const NoticeRegistration = () => {
     if (!signature || !signature.content) return content || '';
     let next = content || '';
     next = next.replace(/<div class="notice-signature"[\s\S]*?<\/div>/gi, '');
-    const block = `<div class="notice-signature" data-signature-id="${signature.signatureId || ''}">${signature.content}</div>`;
+    const spacer = '<p>&nbsp;</p><p>&nbsp;</p><p>&nbsp;</p>';
+    const block = `<div class="notice-signature" data-signature-id="${signature.signatureId || ''}">${spacer}${signature.content}</div>`;
     return next + block;
   };
 
@@ -283,7 +397,7 @@ const NoticeRegistration = () => {
   };
 
   useEffect(() => {
-    const isAnyModalOpen = showServiceModal || showCorpModal || showOrgModal || showTemplateModal || showSignatureModal;
+    const isAnyModalOpen = showServiceModal || showCorpModal || showOrgModal || showTemplateModal || showSignatureModal || showCompletionSelectModal;
 
     if (isAnyModalOpen) {
       openModal();
@@ -294,7 +408,7 @@ const NoticeRegistration = () => {
     return () => {
       closeModal();
     };
-  }, [showServiceModal, showCorpModal, showOrgModal, showTemplateModal, showSignatureModal]);
+  }, [showServiceModal, showCorpModal, showOrgModal, showTemplateModal, showSignatureModal, showCompletionSelectModal]);
 
 
   useEffect(() => {
@@ -316,6 +430,18 @@ const NoticeRegistration = () => {
   }, [userInfo.userId]);
 
   useEffect(() => {
+    if (!defaultSignature || !editorRef.current) return;
+    const current = editorRef.current.getData();
+    if (/notice-signature/.test(current || '')) {
+      return;
+    }
+    const nextContent = appendSignature(current, defaultSignature);
+    editorRef.current.setData(nextContent);
+    handleInputChange("noticeContent", nextContent);
+    setSignaturePreview(defaultSignature);
+  }, [defaultSignature]);
+
+  useEffect(() => {
     if (formData.receiverCompanies.length === 0) {
       setSendToCorpAll(false);
     }
@@ -329,7 +455,7 @@ const NoticeRegistration = () => {
     const completionTitle = `[완료] ${original.title}`;
     
     // 공지 유형: "시스템 정상화안내"로 고정
-    const completionType = '시스템 정상화안내';
+    const completionType = completionNoticeType;
     
     // 서비스 자동 선택
     if (original.affectedService) {
@@ -628,12 +754,47 @@ const NoticeRegistration = () => {
     }));
   };
 
+  const formatDateTime = (dateTimeStr) => {
+    if (!dateTimeStr) return '-';
+    const date = new Date(dateTimeStr);
+    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const handleNoticeTypeChange = (value) => {
+    if (value === completionNoticeType && !isCompletionNotice) {
+      loadCompletionCandidates();
+      setShowCompletionSelectModal(true);
+      return;
+    }
+    handleInputChange('noticeType', value);
+  };
+
+  const exitCompletionMode = () => {
+    setIsCompletionNotice(false);
+    setOriginalNotice(null);
+    setFormData(prev => ({
+      ...prev,
+      noticeType: prev.noticeType === completionNoticeType ? '시스템 점검안내' : prev.noticeType,
+      noticeTitle: prev.noticeTitle.replace(/^\[완료\]\s*/i, '')
+    }));
+  };
+
   const handleSubmit = async (e) => {
   e.preventDefault();
   
   // 유효성 검증
   if (!formData.noticeTitle.trim()) {
     alert('제목을 입력하세요.');
+    return;
+  }
+
+  if (isCompletionNotice && !originalNotice) {
+    alert('완료 공지의 원본 공지를 선택하세요.');
+    return;
+  }
+
+  if (isCompletionNotice && originalNotice && originalNotice.isCompleted) {
+    alert('이미 완료 공지가 등록된 공지입니다.');
     return;
   }
   
@@ -678,13 +839,10 @@ const NoticeRegistration = () => {
       targetName: d.orgUnitName
     }));
 
-    const contentWithSignature = defaultSignature
-      ? appendSignature(formData.noticeContent, defaultSignature)
-      : formData.noticeContent;
-
     const requestData = {
       title: formData.noticeTitle,
-      content: contentWithSignature,
+      content: formData.noticeContent,
+      noticeType: formData.noticeType,
       noticeLevel: formData.priority,
       affectedServiceId: formData.affectedServices[0]?.serviceId || null,
       publishStartAt: `${formData.sendDate}T${formData.sendTime}:00`,
@@ -747,14 +905,50 @@ const NoticeRegistration = () => {
     <div className="notice-registration-page">
       <div className="notice-registration-container">
         <div className="page-header">
-          <h1 className="page-title">
-            {isCompletionNotice ? ' 점검 완료 공지 등록' : '공지 등록'}
-          </h1>
-          <p className="page-description">
-            {isCompletionNotice 
-              ? `"${originalNotice?.title}" 점검에 대한 완료 공지를 작성합니다`
-              : '새로운 공지를 작성하고 발송 설정을 진행합니다'}
-          </p>
+          <div>
+            <h1 className="page-title">
+              {isCompletionNotice ? ' 점검 완료 공지 등록' : '공지 등록'}
+            </h1>
+            <p className="page-description">
+              {isCompletionNotice 
+                ? `"${originalNotice?.title}" 점검에 대한 완료 공지를 작성합니다`
+                : '새로운 공지를 작성하고 발송 설정을 진행합니다'}
+            </p>
+          </div>
+          {!isCompletionNotice ? (
+            <div className="page-header-actions">
+              <button
+                type="button"
+                className="btn btn-cancel"
+                onClick={() => {
+                  loadCompletionCandidates();
+                  setShowCompletionSelectModal(true);
+                }}
+              >
+                완료 공지 등록
+              </button>
+            </div>
+          ) : (
+            <div className="page-header-actions">
+              <button
+                type="button"
+                className="btn btn-cancel"
+                onClick={() => {
+                  loadCompletionCandidates();
+                  setShowCompletionSelectModal(true);
+                }}
+              >
+                완료 공지 변경
+              </button>
+              <button
+                type="button"
+                className="btn btn-cancel"
+                onClick={exitCompletionMode}
+              >
+                일반 공지로 전환
+              </button>
+            </div>
+          )}
         </div>
 
         {/*  완료 공지 안내 배너 */}
@@ -770,6 +964,44 @@ const NoticeRegistration = () => {
                 <li>수신 대상: 원본 공지와 동일하게 설정됨</li>
               </ul>
               <p className="banner-hint">💡 완료 내용만 작성하시면 됩니다!</p>
+            </div>
+          </div>
+        )}
+
+        {showCompletionSelectModal && (
+          <div className="modal-overlay" onClick={() => setShowCompletionSelectModal(false)}>
+            <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>완료 공지 대상 선택</h3>
+                <button onClick={() => setShowCompletionSelectModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                {completionCandidates.length === 0 ? (
+                  <div className="empty-message">선택 가능한 점검 공지가 없습니다.</div>
+                ) : (
+                  <div className="selection-list">
+                    {completionCandidates.map((notice) => (
+                      <div
+                        key={notice.noticeId}
+                        className="selection-item"
+                        onClick={() => {
+                          setIsCompletionNotice(true);
+                          setOriginalNotice(notice);
+                          initializeCompletionForm(notice);
+                          setShowCompletionSelectModal(false);
+                        }}
+                      >
+                        <div className="selection-name">{notice.title}</div>
+                        <div className="selection-corp">{notice.senderOrgUnitName || '-'}</div>
+                        <div className="selection-code">{formatDateTime(notice.publishStartAt || notice.createdAt)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-cancel" onClick={() => setShowCompletionSelectModal(false)}>닫기</button>
+              </div>
             </div>
           </div>
         )}
@@ -792,13 +1024,13 @@ const NoticeRegistration = () => {
                     <select
                       className="form-select"
                       value={formData.noticeType}
-                      onChange={(e) => handleInputChange('noticeType', e.target.value)}
+                      onChange={(e) => handleNoticeTypeChange(e.target.value)}
                       disabled={isCompletionNotice}
                     >
                       <option value="일반공지">일반공지</option>
                       <option value="시스템 점검안내">시스템 점검안내</option>
                       <option value="시스템 장애안내">시스템 장애안내</option>
-                      <option value="시스템 정상화안내">시스템 정상화안내</option>
+                      <option value={completionNoticeType}>{completionNoticeType}</option>
                       <option value="보안 공지">보안 공지</option>
                       <option value="인프라 공지">인프라 공지</option>
                     </select>
@@ -1031,6 +1263,15 @@ const NoticeRegistration = () => {
                     data={formData.noticeContent}
                     onReady={(editor) => {
                       editorRef.current = editor;
+                      if (defaultSignature) {
+                        const current = editor.getData();
+                        if (!/notice-signature/.test(current || '')) {
+                          const nextContent = appendSignature(current, defaultSignature);
+                          editor.setData(nextContent);
+                          handleInputChange("noticeContent", nextContent);
+                          setSignaturePreview(defaultSignature);
+                        }
+                      }
                       editor.on('openTemplateManager', () => {
                         resetTemplateDraft();
                         setShowTemplateModal(true);
@@ -1048,6 +1289,25 @@ const NoticeRegistration = () => {
                     </p>
                   )}
                 </div>
+
+                {signaturePreview && hasSignatureInContent && (
+                  <div className="signature-preview">
+                    <div className="signature-preview-header">
+                      <span>현재 서명: {signaturePreview.name}</span>
+                      <button
+                        type="button"
+                        className="btn btn-cancel"
+                        onClick={() => setSignaturePreview(null)}
+                      >
+                        닫기
+                      </button>
+                    </div>
+                    <div
+                      className="signature-preview-body"
+                      dangerouslySetInnerHTML={{ __html: signaturePreview.content }}
+                    />
+                  </div>
+                )}
 
                 <div className="form-group full-width">
                   <label className="form-label">해시태그 (선택)</label>
@@ -1100,6 +1360,7 @@ const NoticeRegistration = () => {
                       min={todayDate}
                       max={maxDate}
                       onChange={(e) => handleDateInputChange('sendDate', e.target.value)}
+                      disabled={formData.sendTimeType === '즉시 발송'}
                     />
                     <select
                       className="form-select"
@@ -1117,7 +1378,7 @@ const NoticeRegistration = () => {
                       value={formData.sendTime}
                       min={formData.sendDate === todayDate ? nowTime : undefined}
                       onChange={(e) => handleTimeInputChange('sendTime', e.target.value, formData.sendDate)}
-                      disabled={formData.sendTimeType !== '시간 직접 선택'}
+                      disabled={formData.sendTimeType !== '시간 직접 선택' || formData.sendTimeType === '즉시 발송'}
                     />
                   </div>
                 </div>
@@ -1175,7 +1436,7 @@ const NoticeRegistration = () => {
               <h3>서비스 선택</h3>
               <button onClick={() => setShowServiceModal(false)}>×</button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body modal-body-wide">
               <div className="selection-list">
                 {services.map(service => (
                   <div
@@ -1207,7 +1468,7 @@ const NoticeRegistration = () => {
               <h3>법인 선택</h3>
               <button onClick={() => setShowCorpModal(false)}>×</button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body modal-body-wide">
               <div className="selection-list">
                 {corporations.map(corp => (
                   <div
@@ -1239,7 +1500,7 @@ const NoticeRegistration = () => {
               <h3>부서 선택</h3>
               <button onClick={() => setShowOrgModal(false)}>×</button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body modal-body-wide">
               {selectedCorpIds.length > 0 && (
                 <div className="filter-info">
                   🔍 선택한 법인의 부서만 표시됩니다 ({organizations.length}개)
@@ -1272,44 +1533,50 @@ const NoticeRegistration = () => {
         <div className="modal-overlay" onClick={() => setShowTemplateModal(false)}>
           <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>??? ??</h3>
-              <button onClick={() => setShowTemplateModal(false)}>?</button>
+              <h3>템플릿 관리</h3>
+              <button onClick={() => setShowTemplateModal(false)}>×</button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body modal-body-wide">
               <div className="template-manager">
                 <div className="template-list">
                   <div className="template-list-header">
-                    <span>??? ???</span>
-                    <button type="button" className="btn btn-cancel" onClick={resetTemplateDraft}>? ???</button>
+                    <span>저장된 템플릿</span>
+                    <button type="button" className="btn btn-cancel" onClick={resetTemplateDraft}>새 템플릿</button>
                   </div>
                   {templates.length === 0 && (
-                    <p className="empty-message">??? ???? ????.</p>
+                    <p className="empty-message">저장된 템플릿이 없습니다.</p>
                   )}
                   {templates.map((template) => (
                     <div key={template.templateId} className="template-item">
                       <div className="template-name">{template.name}</div>
                       <div className="template-actions">
-                        <button type="button" onClick={() => applyTemplate(template)}>??</button>
-                        <button type="button" onClick={() => setTemplateDraft(template)}>??</button>
-                        <button type="button" onClick={() => removeTemplate(template.templateId)}>??</button>
+                        <button type="button" onClick={() => applyTemplate(template)}>사용</button>
+                        <button type="button" onClick={() => startEditTemplate(template)}>수정</button>
+                        <button type="button" onClick={() => removeTemplate(template.templateId)}>삭제</button>
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="template-editor">
-                  <label className="form-label">??? ??</label>
+                  <label className="form-label">템플릿 이름</label>
                   <input
                     type="text"
                     className="form-input"
                     value={templateDraft.name}
                     onChange={(e) => setTemplateDraft(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="??? ??? ?????"
+                    placeholder="템플릿 이름을 입력하세요"
                   />
-                  <label className="form-label">??? ??</label>
+                  <label className="form-label">템플릿 내용</label>
                   <div className="template-editor-body">
                     <CKEditor
                       editor={NoticeEditor}
                       data={templateDraft.content}
+                      onReady={(editor) => {
+                        templateEditorRef.current = editor;
+                        if (templateDraft.content) {
+                          editor.setData(templateDraft.content);
+                        }
+                      }}
                       onChange={(event, editor) => setTemplateDraft(prev => ({ ...prev, content: editor.getData() }))}
                     />
                   </div>
@@ -1317,8 +1584,8 @@ const NoticeRegistration = () => {
               </div>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn btn-cancel" onClick={() => setShowTemplateModal(false)}>??</button>
-              <button type="button" className="btn btn-submit" onClick={saveTemplate}>??</button>
+              <button type="button" className="btn btn-cancel" onClick={() => setShowTemplateModal(false)}>닫기</button>
+              <button type="button" className="btn btn-submit" onClick={saveTemplate}>저장</button>
             </div>
           </div>
         </div>
@@ -1328,47 +1595,69 @@ const NoticeRegistration = () => {
         <div className="modal-overlay" onClick={() => setShowSignatureModal(false)}>
           <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>?? ??</h3>
-              <button onClick={() => setShowSignatureModal(false)}>?</button>
+              <h3>서명 관리</h3>
+              <button onClick={() => setShowSignatureModal(false)}>×</button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body modal-body-wide">
               <div className="template-manager">
                 <div className="template-list">
                   <div className="template-list-header">
-                    <span>??? ??</span>
-                    <button type="button" className="btn btn-cancel" onClick={resetSignatureDraft}>? ??</button>
+                    <span>저장된 서명</span>
+                    <button type="button" className="btn btn-cancel" onClick={resetSignatureDraft}>새 서명</button>
                   </div>
                   {signatures.length === 0 && (
-                    <p className="empty-message">??? ??? ????.</p>
+                    <p className="empty-message">저장된 서명이 없습니다.</p>
                   )}
                   {signatures.map((signature) => (
                     <div key={signature.signatureId} className="template-item">
                       <div className="template-name">{signature.name}</div>
                       <div className="template-actions">
-                        <button type="button" onClick={() => applySignatureToEditor(signature)}>??</button>
-                        <button type="button" onClick={() => setDefaultSignatureById(signature)}>{signature.isDefault ? '??' : '????'}</button>
-                        <button type="button" onClick={() => setSignatureDraft(signature)}>??</button>
-                        <button type="button" onClick={() => removeSignature(signature.signatureId)}>??</button>
+                        <button type="button" onClick={() => applySignatureToEditor(signature)}>삽입</button>
+                        <button type="button" onClick={() => setDefaultSignatureById(signature)}>{signature.isDefault ? '기본' : '기본설정'}</button>
+                        <button type="button" onClick={() => startEditSignature(signature)}>수정</button>
+                        <button type="button" onClick={() => removeSignature(signature.signatureId)}>삭제</button>
                       </div>
                     </div>
                   ))}
                 </div>
                 <div className="template-editor">
-                  <label className="form-label">?? ??</label>
+                  <label className="form-label">서명 이름</label>
                   <input
                     type="text"
                     className="form-input"
                     value={signatureDraft.name}
                     onChange={(e) => setSignatureDraft(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="?? ??? ?????"
+                    placeholder="서명 이름을 입력하세요"
                   />
-                  <label className="form-label">?? ??</label>
+                  <label className="form-label">서명 내용</label>
                   <div className="template-editor-body">
                     <CKEditor
                       editor={NoticeEditor}
                       data={signatureDraft.content}
+                      onReady={(editor) => {
+                        signatureEditorRef.current = editor;
+                        if (signatureDraft.content) {
+                          editor.setData(signatureDraft.content);
+                        }
+                      }}
                       onChange={(event, editor) => setSignatureDraft(prev => ({ ...prev, content: editor.getData() }))}
                     />
+                  </div>
+                  <div className="signature-upload-row">
+                    <input
+                      ref={signatureFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSignatureImageUpload}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-cancel"
+                      onClick={() => signatureFileInputRef.current?.click()}
+                    >
+                      이미지 업로드
+                    </button>
+                    <span className="signature-upload-hint">서명용 이미지(PNG/JPG)를 업로드하면 본문에 추가됩니다.</span>
                   </div>
                   <label className="signature-default-toggle">
                     <input
@@ -1376,14 +1665,14 @@ const NoticeRegistration = () => {
                       checked={signatureDraft.isDefault}
                       onChange={(e) => setSignatureDraft(prev => ({ ...prev, isDefault: e.target.checked }))}
                     />
-                    ?? ???? ??
+                    기본 서명으로 설정
                   </label>
                 </div>
               </div>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn btn-cancel" onClick={() => setShowSignatureModal(false)}>??</button>
-              <button type="button" className="btn btn-submit" onClick={saveSignature}>??</button>
+              <button type="button" className="btn btn-cancel" onClick={() => setShowSignatureModal(false)}>닫기</button>
+              <button type="button" className="btn btn-submit" onClick={saveSignature}>저장</button>
             </div>
           </div>
         </div>
