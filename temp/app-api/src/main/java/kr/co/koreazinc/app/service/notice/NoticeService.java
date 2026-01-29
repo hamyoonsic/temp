@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -163,6 +164,119 @@ public class NoticeService {
         log.info("Notice created successfully. ID: {}", savedNotice.getNoticeId());
         return savedNotice.getNoticeId();
     }
+
+    /**
+     * 공지 수정 (승인 전, 작성자만)
+     */
+    @Transactional
+    public void updateNotice(Long noticeId, NoticeRegistrationDto dto, String requester) {
+        log.info("Updating notice: {} by {}", noticeId, requester);
+
+        NoticeBase notice = noticeBaseRepository.findById(noticeId)
+                .orElseThrow(() -> new RuntimeException("공지 ID를 찾을 수 없습니다. ID: " + noticeId));
+
+        if (!"PENDING".equals(notice.getNoticeStatus())) {
+            throw new RuntimeException("승인 대기 상태의 공지만 수정할 수 있습니다.");
+        }
+
+        if (requester == null || requester.isBlank()) {
+            throw new RuntimeException("요청자 정보가 필요합니다.");
+        }
+
+        if (!requester.equals(notice.getCreatedBy())) {
+            throw new RuntimeException("작성자만 공지를 수정할 수 있습니다.");
+        }
+
+        notice.setTitle(dto.getTitle());
+        notice.setContent(dto.getContent());
+        notice.setNoticeType(dto.getNoticeType());
+        notice.setNoticeLevel(dto.getNoticeLevel());
+        notice.setAffectedServiceId(dto.getAffectedServiceId());
+        if (dto.getSenderOrgUnitId() != null) {
+            notice.setSenderOrgUnitId(dto.getSenderOrgUnitId());
+        }
+        if (dto.getSenderOrgUnitName() != null) {
+            notice.setSenderOrgUnitName(dto.getSenderOrgUnitName());
+        }
+        if (dto.getSenderEmail() != null) {
+            notice.setSenderEmail(dto.getSenderEmail());
+        }
+        notice.setPublishStartAt(dto.getPublishStartAt());
+        notice.setPublishEndAt(dto.getPublishEndAt());
+        notice.setIsMaintenance(dto.getIsMaintenance() != null ? dto.getIsMaintenance() : false);
+        notice.setMailSubject(dto.getMailSubject());
+        notice.setParentNoticeId(dto.getParentNoticeId());
+        notice.setUpdatedBy(requester);
+
+        if (dto.getOutlookCalendar() != null && Boolean.TRUE.equals(dto.getOutlookCalendar().getRegister())) {
+            notice.setCalendarRegister(true);
+            notice.setCalendarEventAt(dto.getOutlookCalendar().getEventDate());
+        } else {
+            notice.setCalendarRegister(false);
+            notice.setCalendarEventAt(null);
+        }
+
+        noticeBaseRepository.save(notice);
+
+        noticeTargetRepository.deleteByNoticeId(noticeId);
+        if (dto.getTargets() != null && !dto.getTargets().isEmpty()) {
+            List<NoticeTarget> targets = dto.getTargets().stream()
+                    .map(targetDto -> {
+                        String normalizedKey = normalizeTargetKey(
+                                targetDto.getTargetType(),
+                                targetDto.getTargetKey()
+                        );
+                        String normalizedName = targetDto.getTargetName();
+                        if (normalizedName == null || normalizedName.isBlank()) {
+                            normalizedName = resolveTargetName(
+                                    targetDto.getTargetType(),
+                                    normalizedKey
+                            );
+                        }
+
+                        return NoticeTarget.builder()
+                                .noticeId(noticeId)
+                                .targetType(targetDto.getTargetType())
+                                .targetKey(normalizedKey)
+                                .targetName(normalizedName)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+            noticeTargetRepository.saveAll(targets);
+        }
+
+        noticeSendPlanRepository.deleteByNoticeId(noticeId);
+        noticeSendPlanRepository.flush();
+        if (dto.getSendPlan() != null) {
+            NoticeRegistrationDto.SendPlanDto sendPlanDto = dto.getSendPlan();
+            String sendMode = sendPlanDto.getSendMode() != null
+                    ? sendPlanDto.getSendMode()
+                    : NoticeSendPlan.SendMode.SCHEDULED;
+
+            if (NoticeSendPlan.SendMode.IMMEDIATE.equals(sendMode)) {
+                return;
+            }
+
+            LocalDateTime scheduledAt = sendPlanDto.getScheduledSendAt();
+
+            String bundleKey = null;
+            if (scheduledAt != null && Boolean.TRUE.equals(sendPlanDto.getAllowBundle())) {
+                bundleKey = scheduledAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm"));
+            }
+
+            NoticeSendPlan sendPlan = NoticeSendPlan.builder()
+                    .noticeId(noticeId)
+                    .sendMode(sendMode)
+                    .scheduledSendAt(scheduledAt)
+                    .allowBundle(sendPlanDto.getAllowBundle() != null ? sendPlanDto.getAllowBundle() : true)
+                    .bundleKey(bundleKey)
+                    .build();
+
+            noticeSendPlanRepository.save(sendPlan);
+        }
+
+        log.info("Notice updated successfully. ID: {}", noticeId);
+    }
     
     /**
      * 공지 목록 조회 (필터링)
@@ -178,6 +292,7 @@ public class NoticeService {
             String search,
             String receiverDept,
             String createdBy,
+            String updatedBy,
             Pageable pageable) {
         
         List<Long> corpNoticeIds = null;
@@ -227,7 +342,15 @@ public class NoticeService {
             
             // 상태 필터
             if (status != null && !status.isEmpty()) {
-                predicates.add(cb.equal(root.get("noticeStatus"), status));
+                List<String> statusList = Arrays.stream(status.split(","))
+                    .map(String::trim)
+                    .filter(value -> !value.isEmpty())
+                    .collect(Collectors.toList());
+                if (statusList.size() == 1) {
+                    predicates.add(cb.equal(root.get("noticeStatus"), statusList.get(0)));
+                } else if (!statusList.isEmpty()) {
+                    predicates.add(root.get("noticeStatus").in(statusList));
+                }
             }
             
             // 중요도 필터
@@ -282,6 +405,21 @@ public class NoticeService {
                 predicates.add(cb.or(byId, byName));
             }
 
+            if (updatedBy != null && !updatedBy.trim().isEmpty()) {
+                String keyword = "%" + updatedBy.toLowerCase() + "%";
+                Predicate byId = cb.like(cb.lower(root.get("updatedBy")), keyword);
+                var userSubquery = query.subquery(String.class);
+                var userRoot = userSubquery.from(UserMaster.class);
+                userSubquery.select(userRoot.get("userId"))
+                    .where(cb.or(
+                        cb.like(cb.lower(userRoot.get("userKoNm")), keyword),
+                        cb.like(cb.lower(userRoot.get("userEnNm")), keyword),
+                        cb.like(cb.lower(userRoot.get("userId")), keyword)
+                    ));
+                Predicate byName = root.get("updatedBy").in(userSubquery);
+                predicates.add(cb.or(byId, byName));
+            }
+
             // 수신부서 검색 (ORG_UNIT 기준)
             if (receiverDept != null && !receiverDept.trim().isEmpty()) {
                 var subquery = query.subquery(Long.class);
@@ -313,11 +451,26 @@ public class NoticeService {
         Map<Long, List<NoticeResponseDto.TargetDto>> targetsByNoticeId = new HashMap<>();
         List<NoticeTarget> targets = noticeTargetRepository.findByNoticeIdIn(noticeIds);
         for (NoticeTarget target : targets) {
+            String targetName = target.getTargetName();
+            if ("ORG_UNIT".equals(target.getTargetType())
+                    && target.getTargetKey() != null) {
+                targetName = resolveTargetName(
+                        target.getTargetType(),
+                        target.getTargetKey()
+                );
+            } else if ((targetName == null || targetName.isBlank())
+                    && target.getTargetKey() != null) {
+                targetName = resolveTargetName(
+                        target.getTargetType(),
+                        target.getTargetKey()
+                );
+            }
+
             NoticeResponseDto.TargetDto targetDto = NoticeResponseDto.TargetDto.builder()
                     .targetId(target.getTargetId())
                     .targetType(target.getTargetType())
                     .targetKey(target.getTargetKey())
-                    .targetName(target.getTargetName())
+                    .targetName(targetName)
                     .build();
             targetsByNoticeId
                     .computeIfAbsent(target.getNoticeId(), key -> new ArrayList<>())
@@ -407,6 +560,38 @@ public class NoticeService {
     /**
      * 캘린더 이벤트 재생성 (실제 발송 대상 기준)
      */
+    /**
+     * Notice request cancel (before approval)
+     */
+    @Transactional
+    public void cancelNotice(Long noticeId, String requester) {
+        log.info("Cancelling notice: {} by {}", noticeId, requester);
+
+        NoticeBase notice = noticeBaseRepository.findById(noticeId)
+                .orElseThrow(() -> new RuntimeException("Notice not found. ID: " + noticeId));
+
+        if (!"PENDING".equals(notice.getNoticeStatus())) {
+            throw new RuntimeException("Only PENDING notices can be cancelled.");
+        }
+
+        if (requester == null || requester.isBlank()) {
+            throw new RuntimeException("Requester is required to cancel a notice.");
+        }
+
+        if (!requester.equals(notice.getCreatedBy()) && !"admin".equalsIgnoreCase(requester)) {
+            throw new RuntimeException("Only the creator can cancel this notice.");
+        }
+
+        notice.setNoticeStatus("CANCELLED");
+        notice.setUpdatedBy(requester);
+        noticeBaseRepository.save(notice);
+
+        noticeSendPlanRepository.findByNoticeId(noticeId)
+                .ifPresent(noticeSendPlanRepository::delete);
+
+        log.info("Notice cancelled successfully. ID: {}", noticeId);
+    }
+
     @Transactional
     public void regenerateCalendarEvent(Long noticeId, String requestedBy) {
         NoticeBase notice = noticeBaseRepository.findById(noticeId)
@@ -514,6 +699,15 @@ public class NoticeService {
                             .build();
                 })
                 .collect(Collectors.toList()));
+
+        noticeSendPlanRepository.findByNoticeId(notice.getNoticeId())
+                .ifPresent(plan -> dto.setSendPlan(
+                        NoticeResponseDto.SendPlanDto.builder()
+                                .sendMode(plan.getSendMode())
+                                .scheduledSendAt(plan.getScheduledSendAt())
+                                .allowBundle(plan.getAllowBundle())
+                                .build()
+                ));
         
         return dto;
     }

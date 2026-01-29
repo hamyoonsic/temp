@@ -77,6 +77,8 @@ const NoticeRegistration = () => {
   // 완료 공지 관련 상태
   const [isCompletionNotice, setIsCompletionNotice] = useState(false);
   const [originalNotice, setOriginalNotice] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editNotice, setEditNotice] = useState(null);
 
   const [userInfo, setUserInfo] = useState({
     userId: '',
@@ -88,6 +90,7 @@ const NoticeRegistration = () => {
   const templateEditorRef = useRef(null);
   const signatureEditorRef = useRef(null);
   const signatureFileInputRef = useRef(null);
+  const editInitializedRef = useRef(false);
 
   const [templates, setTemplates] = useState([]);
   const [signatures, setSignatures] = useState([]);
@@ -99,7 +102,7 @@ const NoticeRegistration = () => {
   const [signatureDraft, setSignatureDraft] = useState({ signatureId: null, name: '', content: '', isDefault: false });
   const [showCompletionSelectModal, setShowCompletionSelectModal] = useState(false);
   const [completionCandidates, setCompletionCandidates] = useState([]);
-  const completionNoticeType = '시스템 정상화안내';
+  const completionNoticeType = '시스템 정상화 안내';
 
   const [formData, setFormData] = useState({
     noticeType: '시스템 점검안내',
@@ -307,6 +310,26 @@ const NoticeRegistration = () => {
     }
   };
 
+  const handleSelectCompletionNotice = async (noticeId) => {
+    setLoading(true);
+    try {
+      const result = await noticeApi.getById(noticeId);
+      if (!result.success || !result.data) {
+        alert('공지 정보를 불러오지 못했습니다.');
+        return;
+      }
+      setIsCompletionNotice(true);
+      setOriginalNotice(result.data);
+      initializeCompletionForm(result.data);
+      setShowCompletionSelectModal(false);
+    } catch (error) {
+      console.error('완료 공지 선택 실패:', error);
+      alert('완료 공지 정보를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const saveTemplate = async () => {
     if (!templateDraft.name.trim()) return;
     const payload = {
@@ -424,6 +447,18 @@ const NoticeRegistration = () => {
   }, [location.state]);
 
   useEffect(() => {
+    if (!id) return;
+    loadEditNotice();
+  }, [id]);
+
+  useEffect(() => {
+    if (!editNotice || editInitializedRef.current) return;
+    if (services.length === 0 || corporations.length === 0 || allOrganizations.length === 0) return;
+    applyEditNotice(editNotice);
+    editInitializedRef.current = true;
+  }, [editNotice, services, corporations, allOrganizations]);
+
+  useEffect(() => {
     if (!userInfo.userId) return;
     loadTemplates(userInfo.userId);
     loadSignatures(userInfo.userId);
@@ -447,14 +482,28 @@ const NoticeRegistration = () => {
     }
   }, [formData.receiverCompanies.length]);
 
+  useEffect(() => {
+    if (!isCompletionNotice || !originalNotice) return;
+    setFormData(prev => {
+      const next = { ...prev };
+      if (!next.noticeTitle || !next.noticeTitle.trim()) {
+        next.noticeTitle = `[점검완료안내] ${originalNotice.title}`;
+      }
+      if (next.noticeType !== completionNoticeType) {
+        next.noticeType = completionNoticeType;
+      }
+      return next;
+    });
+  }, [isCompletionNotice, originalNotice, completionNoticeType]);
+
   //  완료 공지 폼 초기화
   const initializeCompletionForm = async (original) => {
     console.log(' 완료 공지 초기화:', original);
     
-    // 제목: "[완료] 원본 제목"
-    const completionTitle = `[완료] ${original.title}`;
+    // 제목: "[점검완료안내] 원본 제목"
+    const completionTitle = `[점검완료안내] ${original.title}`;
     
-    // 공지 유형: "시스템 정상화안내"로 고정
+    // 공지 유형: "시스템 정상화 안내"로 고정
     const completionType = completionNoticeType;
     
     // 서비스 자동 선택 (단일/다중)
@@ -470,16 +519,38 @@ const NoticeRegistration = () => {
     }
     if (serviceIds.length > 0) {
       setSelectedServiceIds(serviceIds);
+      updateAffectedServices(serviceIds);
     }
     
     // 수신 대상 자동 선택 (원본 공지의 targets 사용)
     if (original.targets && original.targets.length > 0) {
       const corpIds = resolveCorpTargetIds(original.targets);
       const orgIds = resolveOrgTargetIds(original.targets);
-      if (corpIds.length > 0) setSelectedCorpIds(corpIds);
-      if (orgIds.length > 0) setSelectedOrgIds(orgIds);
+      if (corpIds.length > 0) {
+        setSelectedCorpIds(corpIds);
+        updateReceiverCompanies(corpIds);
+        filterOrganizationsByCorps(corpIds);
+      }
+      if (orgIds.length > 0) {
+        setSelectedOrgIds(orgIds);
+        updateReceiverDepts(orgIds);
+      }
+      if (corpIds.length === 0 && orgIds.length > 0) {
+        const corpIdSet = new Set();
+        allOrganizations.forEach(org => {
+          if (orgIds.includes(String(org.orgUnitId)) && org.corpId != null) {
+            corpIdSet.add(String(org.corpId));
+          }
+        });
+        const derivedCorpIds = Array.from(corpIdSet);
+        if (derivedCorpIds.length > 0) {
+          setSelectedCorpIds(derivedCorpIds);
+          updateReceiverCompanies(derivedCorpIds);
+          filterOrganizationsByCorps(derivedCorpIds);
+        }
+      }
     }
-    
+
     setFormData(prev => ({
       ...prev,
       noticeType: completionType,
@@ -497,6 +568,98 @@ const NoticeRegistration = () => {
           : [],
       // 내용은 비워둠 (사용자가 직접 작성)
       noticeContent: ''
+    }));
+  };
+
+  const applyEditNotice = (notice) => {
+    if (!notice) return;
+
+    const serviceIds = resolveServiceIds(notice);
+    if (serviceIds.length > 0) {
+      setSelectedServiceIds(serviceIds);
+      updateAffectedServices(serviceIds);
+    }
+
+    const targets = notice.targets || [];
+    const corpIds = resolveCorpTargetIds(targets);
+    const orgIds = resolveOrgTargetIds(targets);
+    if (corpIds.length > 0) {
+      setSelectedCorpIds(corpIds);
+      updateReceiverCompanies(corpIds);
+      filterOrganizationsByCorps(corpIds);
+    }
+    if (orgIds.length > 0) {
+      setSelectedOrgIds(orgIds);
+      updateReceiverDepts(orgIds);
+    }
+
+    if (corpIds.length === 0 && orgIds.length > 0) {
+      const corpIdSet = new Set();
+      allOrganizations.forEach(org => {
+        if (orgIds.includes(String(org.orgUnitId)) && org.corpId != null) {
+          corpIdSet.add(String(org.corpId));
+        }
+      });
+      const derivedCorpIds = Array.from(corpIdSet);
+      if (derivedCorpIds.length > 0) {
+        setSelectedCorpIds(derivedCorpIds);
+        updateReceiverCompanies(derivedCorpIds);
+        filterOrganizationsByCorps(derivedCorpIds);
+      }
+    }
+
+    setSendToCorpAll(orgIds.length === 0);
+
+    const publishStartAt = notice.publishStartAt ? new Date(notice.publishStartAt) : null;
+    const publishDate = publishStartAt
+      ? `${publishStartAt.getFullYear()}-${String(publishStartAt.getMonth() + 1).padStart(2, '0')}-${String(publishStartAt.getDate()).padStart(2, '0')}`
+      : formData.sendDate;
+    const publishTime = publishStartAt
+      ? `${String(publishStartAt.getHours()).padStart(2, '0')}:${String(publishStartAt.getMinutes()).padStart(2, '0')}`
+      : formData.sendTime;
+
+    const calendarAt = notice.calendarEventAt ? new Date(notice.calendarEventAt) : null;
+    const calendarDate = calendarAt
+      ? `${calendarAt.getFullYear()}-${String(calendarAt.getMonth() + 1).padStart(2, '0')}-${String(calendarAt.getDate()).padStart(2, '0')}`
+      : formData.outlookDate;
+    const calendarTime = calendarAt
+      ? `${String(calendarAt.getHours()).padStart(2, '0')}:${String(calendarAt.getMinutes()).padStart(2, '0')}`
+      : formData.outlookTime;
+
+    const sendMode = notice.sendPlan?.sendMode;
+    const scheduledAt = notice.sendPlan?.scheduledSendAt
+      ? new Date(notice.sendPlan.scheduledSendAt)
+      : publishStartAt;
+    const scheduledDate = scheduledAt
+      ? `${scheduledAt.getFullYear()}-${String(scheduledAt.getMonth() + 1).padStart(2, '0')}-${String(scheduledAt.getDate()).padStart(2, '0')}`
+      : publishDate;
+    const scheduledTime = scheduledAt
+      ? `${String(scheduledAt.getHours()).padStart(2, '0')}:${String(scheduledAt.getMinutes()).padStart(2, '0')}`
+      : publishTime;
+
+    setFormData(prev => ({
+      ...prev,
+      noticeType: notice.noticeType || prev.noticeType,
+      priority: notice.noticeLevel || prev.priority,
+      noticeTitle: notice.title || '',
+      noticeContent: notice.content || '',
+      affectedServices: Array.isArray(notice.affectedServices)
+        ? notice.affectedServices
+            .filter(service => service && service.serviceId)
+            .map(service => ({ serviceId: service.serviceId, serviceName: service.serviceName || '' }))
+        : notice.affectedService
+          ? [{
+              serviceId: notice.affectedService.serviceId,
+              serviceName: notice.affectedService.serviceName
+            }]
+          : [],
+      sendDate: scheduledDate,
+      sendTime: scheduledTime,
+      sendTimeType: sendMode === 'IMMEDIATE' ? '즉시 발송' : '시간 직접 선택',
+      outlookSchedule: notice.calendarRegister ? '등록함' : '등록안함',
+      outlookDate: calendarDate,
+      outlookTime: calendarTime,
+      tags: Array.isArray(notice.tags) ? notice.tags : []
     }));
   };
 
@@ -581,6 +744,57 @@ const NoticeRegistration = () => {
     }
   };
 
+  const loadEditNotice = async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const result = await noticeApi.getById(id);
+      if (!result.success || !result.data) {
+        alert('공지 정보를 불러오지 못했습니다.');
+        navigate('/notices/history');
+        return;
+      }
+
+      const notice = result.data;
+      const currentUserId = sessionStorage.getItem('userId') || userInfo.userId;
+      if (notice.noticeStatus !== 'PENDING') {
+        alert('승인 대기 상태의 공지만 수정할 수 있습니다.');
+        navigate('/notices/history');
+        return;
+      }
+      if (currentUserId && notice.createdBy !== currentUserId) {
+        alert('작성자만 공지를 수정할 수 있습니다.');
+        navigate('/notices/history');
+        return;
+      }
+
+      setIsEditMode(true);
+      setEditNotice(notice);
+      editInitializedRef.current = false;
+
+      if (notice.parentNoticeId) {
+        setIsCompletionNotice(true);
+        try {
+          const parentResult = await noticeApi.getById(notice.parentNoticeId);
+          if (parentResult.success && parentResult.data) {
+            setOriginalNotice(parentResult.data);
+          }
+        } catch (error) {
+          console.error('원본 공지 조회 실패:', error);
+        }
+      } else {
+        setIsCompletionNotice(false);
+        setOriginalNotice(null);
+      }
+    } catch (error) {
+      console.error('공지 조회 실패:', error);
+      alert('공지 정보를 불러오는 중 오류가 발생했습니다.');
+      navigate('/notices/history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadMasterData = async () => {
   setLoading(true);
   try {
@@ -611,18 +825,18 @@ const NoticeRegistration = () => {
 
   // 마스터 데이터 로드 완료 후 targets 복원
   useEffect(() => {
-    if (isCompletionNotice && originalNotice && 
+    if (isCompletionNotice && originalNotice &&
         corporations.length > 0 && allOrganizations.length > 0) {
       restoreTargets();
     }
-  }, [corporations, allOrganizations]);
+  }, [isCompletionNotice, originalNotice, corporations, allOrganizations]);
 
   // 마스터 데이터 로드 완료 후 서비스 복원
   useEffect(() => {
     if (isCompletionNotice && originalNotice && services.length > 0) {
       restoreServices();
     }
-  }, [services]);
+  }, [isCompletionNotice, originalNotice, services]);
 
   const resolveCorpTargetIds = (targets) => {
     if (!targets || targets.length === 0) return [];
@@ -637,7 +851,8 @@ const NoticeRegistration = () => {
       .map(t => {
         const key = t.targetKey != null ? String(t.targetKey).trim() : '';
         const name = t.targetName != null ? String(t.targetName).trim() : '';
-        return corpMap.get(key) ?? corpMap.get(name);
+        const value = corpMap.get(key) ?? corpMap.get(name);
+        return value != null ? String(value) : null;
       })
       .filter(id => id != null);
   };
@@ -658,7 +873,8 @@ const NoticeRegistration = () => {
         if (name.includes('/')) {
           name = name.split('/').pop().trim();
         }
-        return orgMap.get(key) ?? orgMap.get(name);
+        const value = orgMap.get(key) ?? orgMap.get(name);
+        return value != null ? String(value) : null;
       })
       .filter(id => id != null);
   };
@@ -700,6 +916,20 @@ const NoticeRegistration = () => {
     if (orgIds.length > 0) {
       updateReceiverDepts(orgIds);
     }
+
+    if (corpIds.length === 0 && orgIds.length > 0) {
+      const corpIdSet = new Set();
+      allOrganizations.forEach(org => {
+        if (orgIds.includes(String(org.orgUnitId)) && org.corpId != null) {
+          corpIdSet.add(String(org.corpId));
+        }
+      });
+      const derivedCorpIds = Array.from(corpIdSet);
+      if (derivedCorpIds.length > 0) {
+        updateReceiverCompanies(derivedCorpIds);
+        filterOrganizationsByCorps(derivedCorpIds);
+      }
+    }
   };
 
   const filterOrganizationsByCorps = (corpIds) => {
@@ -707,12 +937,12 @@ const NoticeRegistration = () => {
       setOrganizations(allOrganizations);
     } else {
       const filtered = allOrganizations.filter(org => 
-        corpIds.includes(org.corpId)
+        corpIds.includes(String(org.corpId))
       );
       setOrganizations(filtered);
       
-      const validOrgIds = filtered.map(o => o.orgUnitId);
-      const filteredOrgIds = selectedOrgIds.filter(id => validOrgIds.includes(id));
+      const validOrgIds = filtered.map(o => String(o.orgUnitId));
+      const filteredOrgIds = selectedOrgIds.filter(id => validOrgIds.includes(String(id)));
       if (filteredOrgIds.length !== selectedOrgIds.length) {
         setSelectedOrgIds(filteredOrgIds);
         updateReceiverDepts(filteredOrgIds);
@@ -753,13 +983,14 @@ const NoticeRegistration = () => {
   };
 
   const handleCorpToggle = (corp) => {
-    const isSelected = selectedCorpIds.includes(corp.corpId);
+    const corpId = String(corp.corpId);
+    const isSelected = selectedCorpIds.includes(corpId);
     let newSelectedIds;
     
     if (isSelected) {
-      newSelectedIds = selectedCorpIds.filter(id => id !== corp.corpId);
+      newSelectedIds = selectedCorpIds.filter(id => id !== corpId);
     } else {
-      newSelectedIds = [...selectedCorpIds, corp.corpId];
+      newSelectedIds = [...selectedCorpIds, corpId];
     }
     
     setSelectedCorpIds(newSelectedIds);
@@ -768,7 +999,7 @@ const NoticeRegistration = () => {
   };
 
   const updateReceiverCompanies = (corpIds) => {
-    const selectedCorps = corporations.filter(c => corpIds.includes(c.corpId));
+    const selectedCorps = corporations.filter(c => corpIds.includes(String(c.corpId)));
     setFormData(prev => ({
       ...prev,
       receiverCompanies: selectedCorps.map(c => ({
@@ -779,13 +1010,14 @@ const NoticeRegistration = () => {
   };
 
   const handleOrgToggle = (org) => {
-    const isSelected = selectedOrgIds.includes(org.orgUnitId);
+    const orgId = String(org.orgUnitId);
+    const isSelected = selectedOrgIds.includes(orgId);
     let newSelectedIds;
     
     if (isSelected) {
-      newSelectedIds = selectedOrgIds.filter(id => id !== org.orgUnitId);
+      newSelectedIds = selectedOrgIds.filter(id => id !== orgId);
     } else {
-      newSelectedIds = [...selectedOrgIds, org.orgUnitId];
+      newSelectedIds = [...selectedOrgIds, orgId];
     }
     
     setSelectedOrgIds(newSelectedIds);
@@ -793,7 +1025,7 @@ const NoticeRegistration = () => {
   };
 
   const updateReceiverDepts = (orgIds) => {
-    const selectedOrgs = allOrganizations.filter(o => orgIds.includes(o.orgUnitId));
+    const selectedOrgs = allOrganizations.filter(o => orgIds.includes(String(o.orgUnitId)));
     setFormData(prev => ({
       ...prev,
       receiverDepts: selectedOrgs.map(o => ({
@@ -851,7 +1083,7 @@ const NoticeRegistration = () => {
     setFormData(prev => ({
       ...prev,
       noticeType: prev.noticeType === completionNoticeType ? '시스템 점검안내' : prev.noticeType,
-      noticeTitle: prev.noticeTitle.replace(/^\[완료\]\s*/i, '')
+      noticeTitle: prev.noticeTitle.replace(/^\[점검완료안내\]\s*/i, '')
     }));
   };
 
@@ -864,7 +1096,7 @@ const NoticeRegistration = () => {
     return;
   }
 
-  if (isCompletionNotice && !originalNotice) {
+  if (isCompletionNotice && !originalNotice && !editNotice?.parentNoticeId) {
     alert('완료 공지의 원본 공지를 선택하세요.');
     return;
   }
@@ -927,8 +1159,10 @@ const NoticeRegistration = () => {
       mailSubject: formData.noticeTitle,
       senderOrgUnitName: userInfo.orgUnitName,
       senderEmail: userEmail,
-      createdBy: userInfo.userId,
-      parentNoticeId: isCompletionNotice ? originalNotice.noticeId : null,
+      createdBy: editNotice?.createdBy || userInfo.userId,
+      parentNoticeId: isCompletionNotice
+        ? (originalNotice?.noticeId || editNotice?.parentNoticeId)
+        : null,
       
       targets: [...corpTargets, ...deptTargets],
       tags: formData.tags,
@@ -945,14 +1179,16 @@ const NoticeRegistration = () => {
 
     console.log(' 공지 등록 요청:', requestData);
 
-    const result = await noticeApi.create(requestData);
+    const result = isEditMode
+      ? await noticeApi.update(id, requestData)
+      : await noticeApi.create(requestData);
   
-    console.log(' 등록 성공:', result);
+    console.log(isEditMode ? ' 수정 성공:' : ' 등록 성공:', result);
     navigate('/notices/history');
     
   } catch (error) {
-    console.error('공지 등록 실패:', error);
-    alert('공지 등록 중 오류가 발생했습니다.');
+    console.error(isEditMode ? '공지 수정 실패:' : '공지 등록 실패:', error);
+    alert(isEditMode ? '공지 수정 중 오류가 발생했습니다.' : '공지 등록 중 오류가 발생했습니다.');
   } finally {
     setLoading(false);
   }
@@ -983,15 +1219,19 @@ const NoticeRegistration = () => {
         <div className="page-header">
           <div>
             <h1 className="page-title">
-              {isCompletionNotice ? ' 점검 완료 공지 등록' : '공지 등록'}
+              {isEditMode
+                ? (isCompletionNotice ? '완료 공지 수정' : '공지 수정')
+                : (isCompletionNotice ? ' 점검 완료 공지 등록' : '공지 등록')}
             </h1>
             <p className="page-description">
-              {isCompletionNotice 
-                ? `"${originalNotice?.title}" 점검에 대한 완료 공지를 작성합니다`
-                : '새로운 공지를 작성하고 발송 설정을 진행합니다'}
+              {isEditMode
+                ? '승인 전 공지 내용을 수정합니다'
+                : (isCompletionNotice 
+                  ? `"${originalNotice?.title}" 점검에 대한 완료 공지를 작성합니다`
+                  : '새로운 공지를 작성하고 발송 설정을 진행합니다')}
             </p>
           </div>
-          {!isCompletionNotice ? (
+          {!isEditMode && !isCompletionNotice ? (
             <div className="page-header-actions">
               <button
                 type="button"
@@ -1004,7 +1244,7 @@ const NoticeRegistration = () => {
                 완료 공지 등록
               </button>
             </div>
-          ) : (
+          ) : (!isEditMode && isCompletionNotice) ? (
             <div className="page-header-actions">
               <button
                 type="button"
@@ -1024,7 +1264,7 @@ const NoticeRegistration = () => {
                 일반 공지로 전환
               </button>
             </div>
-          )}
+          ) : null}
         </div>
 
         {/*  완료 공지 안내 배너 */}
@@ -1034,8 +1274,8 @@ const NoticeRegistration = () => {
             <div className="banner-content">
               <h4>완료 공지 자동 설정</h4>
               <ul>
-                <li>제목: "[완료] {originalNotice.title}"</li>
-                <li>공지유형: 시스템 정상화안내</li>
+                <li>제목: "[점검완료안내] {originalNotice.title}"</li>
+                <li>공지유형: 시스템 정상화 안내</li>
                 <li>영향받는 서비스: {originalNotice.affectedService?.serviceName || '미설정'}</li>
                 <li>수신 대상: 원본 공지와 동일하게 설정됨</li>
               </ul>
@@ -1060,12 +1300,7 @@ const NoticeRegistration = () => {
                       <div
                         key={notice.noticeId}
                         className="selection-item"
-                        onClick={() => {
-                          setIsCompletionNotice(true);
-                          setOriginalNotice(notice);
-                          initializeCompletionForm(notice);
-                          setShowCompletionSelectModal(false);
-                        }}
+                        onClick={() => handleSelectCompletionNotice(notice.noticeId)}
                       >
                         <div className="selection-name">{notice.title}</div>
                         <div className="selection-corp">{notice.senderOrgUnitName || '-'}</div>
@@ -1112,7 +1347,7 @@ const NoticeRegistration = () => {
                     </select>
                     {isCompletionNotice && (
                       <p className="form-hint">
-                         완료 공지는 "시스템 정상화안내"로 고정됩니다
+                         완료 공지는 "시스템 정상화 안내"로 고정됩니다
                       </p>
                     )}
                   </div>
@@ -1229,7 +1464,7 @@ const NoticeRegistration = () => {
                               type="button"
                               className="selected-tag-remove"
                               onClick={() => {
-                                const newIds = selectedCorpIds.filter(id => id !== company.corpId);
+                                const newIds = selectedCorpIds.filter(id => id !== String(company.corpId));
                                 setSelectedCorpIds(newIds);
                                 updateReceiverCompanies(newIds);
                                 filterOrganizationsByCorps(newIds);
@@ -1283,7 +1518,7 @@ const NoticeRegistration = () => {
                               type="button"
                               className="selected-tag-remove"
                               onClick={() => {
-                                const newIds = selectedOrgIds.filter(id => id !== dept.orgUnitId);
+                                const newIds = selectedOrgIds.filter(id => id !== String(dept.orgUnitId));
                                 setSelectedOrgIds(newIds);
                                 updateReceiverDepts(newIds);
                               }}
@@ -1325,7 +1560,7 @@ const NoticeRegistration = () => {
                   />
                   {isCompletionNotice && (
                     <p className="form-hint">
-                       완료 공지 제목은 "[완료] 원본 제목" 형식으로 자동 설정됩니다
+                       완료 공지 제목은 "[점검완료안내] 원본 제목" 형식으로 자동 설정됩니다
                     </p>
                   )}
                 </div>
@@ -1498,7 +1733,13 @@ const NoticeRegistration = () => {
               취소
             </button>
             <button type="submit" className="btn btn-submit" disabled={loading}>
-              {loading ? '처리 중...' : isCompletionNotice ? '완료 공지 등록' : '등록'}
+              {loading
+                ? '처리 중...'
+                : isEditMode
+                  ? '수정'
+                  : isCompletionNotice
+                    ? '완료 공지 등록'
+                    : '등록'}
             </button>
           </div>
         </form>
@@ -1549,10 +1790,10 @@ const NoticeRegistration = () => {
                 {corporations.map(corp => (
                   <div
                     key={corp.corpId}
-                    className={`selection-item ${selectedCorpIds.includes(corp.corpId) ? 'selected' : ''}`}
+                    className={`selection-item ${selectedCorpIds.includes(String(corp.corpId)) ? 'selected' : ''}`}
                     onClick={() => handleCorpToggle(corp)}
                   >
-                    <input type="checkbox" checked={selectedCorpIds.includes(corp.corpId)} readOnly />
+                    <input type="checkbox" checked={selectedCorpIds.includes(String(corp.corpId))} readOnly />
                     <div className="selection-name">{corp.corpName}</div>
                     <div className="selection-code">{corp.corpCode}</div>
                   </div>
@@ -1586,10 +1827,10 @@ const NoticeRegistration = () => {
                 {organizations.map(org => (
                   <div
                     key={org.orgUnitId}
-                    className={`selection-item ${selectedOrgIds.includes(org.orgUnitId) ? 'selected' : ''}`}
+                    className={`selection-item ${selectedOrgIds.includes(String(org.orgUnitId)) ? 'selected' : ''}`}
                     onClick={() => handleOrgToggle(org)}
                   >
-                    <input type="checkbox" checked={selectedOrgIds.includes(org.orgUnitId)} readOnly />
+                    <input type="checkbox" checked={selectedOrgIds.includes(String(org.orgUnitId))} readOnly />
                     <div className="selection-name">{org.orgUnitName}</div>
                     <div className="selection-corp">{org.corpName}</div>
                   </div>
@@ -1758,3 +1999,4 @@ const NoticeRegistration = () => {
 };
 
 export default NoticeRegistration;
+

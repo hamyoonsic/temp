@@ -63,6 +63,9 @@ public class NoticeResponseDto {
     
     // 태그 (상세 조회 시)
     private List<String> tags;
+
+    // 발송 계획 (상세 조회 시)
+    private SendPlanDto sendPlan;
     
     // 완료 공지 참조
     private Long parentNoticeId;
@@ -93,5 +96,18 @@ public class NoticeResponseDto {
         private String targetType;
         private String targetKey;
         private String targetName;
+    }
+
+    /**
+     * 발송 계획 DTO
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SendPlanDto {
+        private String sendMode;
+        private LocalDateTime scheduledSendAt;
+        private Boolean allowBundle;
     }
 }

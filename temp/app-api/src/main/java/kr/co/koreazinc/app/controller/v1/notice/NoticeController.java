@@ -55,6 +55,25 @@ public class NoticeController {
         
         return ApiResponse.success(response, "공지가 등록되었습니다.");
     }
+
+    /**
+     * 공지 수정 (승인 전, 작성자만)
+     * PUT /v1/api/notices/{noticeId}
+     */
+    @PutMapping("/{noticeId}")
+    public ApiResponse<Void> updateNotice(
+            @PathVariable Long noticeId,
+            @RequestBody NoticeRegistrationDto dto,
+            @RequestHeader(value = "X-User-Id", required = false) String requester) {
+        log.info("PUT /v1/api/notices/{} - 공지 수정", noticeId);
+
+        if (requester == null || requester.isBlank()) {
+            requester = dto.getCreatedBy();
+        }
+
+        noticeService.updateNotice(noticeId, dto, requester);
+        return ApiResponse.success(null, "공지 수정이 완료되었습니다.");
+    }
     
     /**
      * 공지 목록 조회
@@ -71,16 +90,19 @@ public class NoticeController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String receiverDept,
             @RequestParam(required = false) String createdBy,
+            @RequestParam(required = false) String updatedBy,
+            @RequestParam(required = false) String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         
-        log.info("GET /v1/api/notices - 공지 목록 조회: status={}, level={}, corpId={}, startDate={}, endDate={}, search={}, receiverDept={}, createdBy={}",
-            status, noticeLevel, corpId, startDate, endDate, search, receiverDept, createdBy);
+        log.info("GET /v1/api/notices - 공지 목록 조회: status={}, level={}, corpId={}, startDate={}, endDate={}, search={}, receiverDept={}, createdBy={}, updatedBy={}, sort={}",
+            status, noticeLevel, corpId, startDate, endDate, search, receiverDept, createdBy, updatedBy, sort);
         
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Sort sortSpec = parseSort(sort);
+        Pageable pageable = PageRequest.of(page, size, sortSpec);
         
         Page<NoticeResponseDto> noticePage = noticeService.getNotices(
-                status, noticeLevel, serviceId, corpId, startDate, endDate, search, receiverDept, createdBy, pageable
+                status, noticeLevel, serviceId, corpId, startDate, endDate, search, receiverDept, createdBy, updatedBy, pageable
         );
         
         Map<String, Object> response = new HashMap<>();
@@ -210,6 +232,24 @@ public class NoticeController {
      * 대시보드 통계 조회
      * GET /v1/api/notices/dashboard/stats
      */
+    /**
+     * Notice request cancel
+     * POST /v1/api/notices/{noticeId}/cancel
+     */
+    @PostMapping("/{noticeId}/cancel")
+    public ApiResponse<Void> cancelNotice(
+            @PathVariable Long noticeId,
+            @RequestHeader(value = "X-User-Id", required = false) String requester) {
+        log.info("POST /v1/api/notices/{}/cancel - cancel request", noticeId);
+
+        if (requester == null || requester.isBlank()) {
+            requester = "system";
+        }
+
+        noticeService.cancelNotice(noticeId, requester);
+        return ApiResponse.success(null, "Request cancelled.");
+    }
+
     @GetMapping("/dashboard/stats")
     public ApiResponse<NoticeService.DashboardStats> getDashboardStats() {
         log.info("GET /v1/api/notices/dashboard/stats - 대시보드 통계 조회");
@@ -217,4 +257,25 @@ public class NoticeController {
         NoticeService.DashboardStats stats = noticeService.getDashboardStats();
         return ApiResponse.success(stats);
     }
+
+    private Sort parseSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return Sort.by("createdAt").descending();
+        }
+        String[] parts = sort.split(",");
+        if (parts.length == 0 || parts[0].isBlank()) {
+            return Sort.by("createdAt").descending();
+        }
+        String field = parts[0].trim();
+        Sort.Direction direction = Sort.Direction.DESC;
+        if (parts.length > 1) {
+            try {
+                direction = Sort.Direction.fromString(parts[1].trim());
+            } catch (IllegalArgumentException ignored) {
+                direction = Sort.Direction.DESC;
+            }
+        }
+        return Sort.by(direction, field);
+    }
+
 }

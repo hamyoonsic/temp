@@ -18,7 +18,7 @@ export function getRedirectUri() {
   return `${window.location.origin}/sso-redirect`;
 }
 
-export function buildLoginUrl({ promptLogin = true } = {}) {
+export function buildLoginUrl({ promptLogin = false } = {}) {
   const redirectUri = getRedirectUri();
   const qs = new URLSearchParams({
     response_type: "code",

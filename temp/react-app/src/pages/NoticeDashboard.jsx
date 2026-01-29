@@ -375,7 +375,8 @@ export default function NoticeDashboard() {
       'APPROVED': '#06b6d4',
       'SENT': '#10b981',
       'FAILED': '#ef4444',
-      'REJECTED': '#ef4444'
+      'REJECTED': '#ef4444',
+      'CANCELLED': '#64748b'
     };
     return colors[status] || '#f59e0b';
   };
@@ -386,7 +387,8 @@ export default function NoticeDashboard() {
       'APPROVED': '발송예정',
       'SENT': '발송완료',
       'FAILED': '발송실패',
-      'REJECTED': '반려됨'
+      'REJECTED': '반려됨',
+      'CANCELLED': '취소됨'
     };
     return texts[status] || status;
   };
@@ -503,10 +505,7 @@ export default function NoticeDashboard() {
   };
 
   const handleStatClick = (status) => {
-    const statusNotices = recentNotices.filter(n => n.noticeStatus === status);
-    setModalNotices(statusNotices);
-    setModalTitle(`${getStatusText(status)} 목록`);
-    setShowListModal(true);
+    navigate('/notices/history', { state: { status } });
   };
 
   const handleEventClick = async (event) => {
@@ -711,21 +710,21 @@ export default function NoticeDashboard() {
             <div className="stat-label">결재 대기</div>
             <div className="stat-value">{stats.pendingApprovalCount}</div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card" onClick={() => handleStatClick('APPROVED')} style={{ cursor: 'pointer' }}>
             <div className="stat-label">발송 예정</div>
             <div className="stat-value">
               {stats.scheduledSendCount}
               <span className="stat-unit">건</span>
             </div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card" onClick={() => handleStatClick('FAILED')} style={{ cursor: 'pointer' }}>
             <div className="stat-label">발송 실패</div>
             <div className="stat-value">
               {stats.failedSendCount}
               <span className="stat-unit">건</span>
             </div>
           </div>
-          <div className="stat-card">
+          <div className="stat-card" onClick={() => handleStatClick('SENT')} style={{ cursor: 'pointer' }}>
             <div className="stat-label">발송 완료</div>
             <div className="stat-value">
               {stats.completedSendCount}
@@ -1009,7 +1008,7 @@ export default function NoticeDashboard() {
               <button
                 type="button"
                 className="btn-more-icon"
-                onClick={() => navigate('/notices/history', { state: { status: 'APPROVED' } })}
+                onClick={() => navigate('/notices/history', { state: { status: 'APPROVED,SENT' } })}
                 aria-label="더보기"
                 title="더보기"
               >

@@ -48,10 +48,6 @@ const NoticeApproval = () => {
   const [approvalList, setApprovalList] = useState([]);
   const [showDelegationModal, setShowDelegationModal] = useState(false);
   const [activeTab, setActiveTab] = useState('PENDING');
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalElements, setTotalElements] = useState(0);
   
   //  AdminContext에서 관리자 상태 가져오기
   const { isAdmin, isDelegatedAdmin, userInfo } = useAdmin();
@@ -73,14 +69,8 @@ const NoticeApproval = () => {
   }, []);
 
   useEffect(() => {
-    setCurrentPage(0);
-    loadApprovalList(activeTab, 0);
+    loadApprovalList(activeTab);
   }, [activeTab, currentUserId, isAdmin]);
-
-  useEffect(() => {
-    setCurrentPage(0);
-    loadApprovalList(activeTab, 0);
-  }, [pageSize]);
 
   //  모달 스크롤 제어 - 컴포넌트 안에 있어야 함!
   useEffect(() => {
@@ -92,72 +82,39 @@ const NoticeApproval = () => {
     return () => closeModal();
   }, [showDetailModal, showDelegationModal]);
 
-  const loadApprovalList = async (tab = activeTab, page = currentPage) => {
+  const loadApprovalList = async (tab = activeTab) => {
     setLoading(true);
     try {
       if (tab === 'PENDING') {
-        const params = {
-          page,
-          size: pageSize,
-          sort: 'createdAt,DESC'
-        };
-        if (filters.searchTerm) {
-          params.search = filters.searchTerm;
-        }
-        if (!isAdmin && currentUserId) {
-          params.createdBy = currentUserId;
-        }
-        const result = await approvalApi.getPendingList(params);
-        if (result.success && result.data) {
-          const payload = result.data;
-          const notices = Array.isArray(payload)
-            ? payload
-            : Array.isArray(payload.data) ? payload.data : [];
-          setApprovalList(notices);
-          setCurrentPage(payload.currentPage ?? page);
-          setTotalPages(payload.totalPages ?? 1);
-          setTotalElements(payload.totalElements ?? notices.length);
-          setPageSize(payload.pageSize ?? pageSize);
-        } else {
-          setApprovalList([]);
-          setTotalPages(1);
-          setTotalElements(0);
+        const result = await approvalApi.getPendingList({ page: 0, size: 200 });
+        if (result.success) {
+          const notices = result.data.data || result.data;
+          const list = Array.isArray(notices) ? notices : [];
+          const filtered = (!isAdmin && currentUserId)
+            ? list.filter(n => n.createdBy === currentUserId)
+            : list;
+          setApprovalList(filtered);
         }
       } else if (tab === 'MY_DECISIONS') {
-        const params = {
-          status: 'APPROVED,REJECTED,SENT',
-          page,
-          size: pageSize,
-          sort: 'updatedAt,DESC'
-        };
-        if (currentUserId) {
-          params.updatedBy = currentUserId;
-        }
-        if (filters.searchTerm) {
-          params.search = filters.searchTerm;
-        }
-        const result = await noticeApi.getList(params);
-        if (result.success && result.data) {
-          const payload = result.data;
-          const notices = Array.isArray(payload)
-            ? payload
-            : Array.isArray(payload.data) ? payload.data : [];
-          setApprovalList(notices);
-          setCurrentPage(payload.currentPage ?? page);
-          setTotalPages(payload.totalPages ?? 1);
-          setTotalElements(payload.totalElements ?? notices.length);
-          setPageSize(payload.pageSize ?? pageSize);
-        } else {
-          setApprovalList([]);
-          setTotalPages(1);
-          setTotalElements(0);
-        }
+        const [approvedResult, rejectedResult, sentResult] = await Promise.all([
+          noticeApi.getList({ status: 'APPROVED', page: 0, size: 200, sort: 'updatedAt,DESC' }),
+          noticeApi.getList({ status: 'REJECTED', page: 0, size: 200, sort: 'updatedAt,DESC' }),
+          noticeApi.getList({ status: 'SENT', page: 0, size: 200, sort: 'updatedAt,DESC' })
+        ]);
+        const approved = approvedResult.success ? (approvedResult.data.data || approvedResult.data) : [];
+        const rejected = rejectedResult.success ? (rejectedResult.data.data || rejectedResult.data) : [];
+        const sent = sentResult.success ? (sentResult.data.data || sentResult.data) : [];
+        const merged = [
+          ...(Array.isArray(approved) ? approved : []),
+          ...(Array.isArray(rejected) ? rejected : []),
+          ...(Array.isArray(sent) ? sent : [])
+        ];
+        const mine = currentUserId ? merged.filter(n => n.updatedBy === currentUserId) : [];
+        const sorted = mine.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+        setApprovalList(sorted);
       }
     } catch (error) {
       console.error('승인 목록 로드 실패:', error);
-      setApprovalList([]);
-      setTotalPages(1);
-      setTotalElements(0);
     } finally {
       setLoading(false);
     }
@@ -220,22 +177,6 @@ const NoticeApproval = () => {
     }
   };
 
-  const handleCancel = async (noticeId) => {
-    if (!window.confirm('승인 전 공지 요청을 취소하시겠습니까?')) return;
-
-    try {
-      await approvalApi.cancel(noticeId);
-      alert('공지 요청이 취소되었습니다.');
-      if (selectedNotice && selectedNotice.noticeId === noticeId) {
-        setSelectedNotice(prev => prev ? { ...prev, noticeStatus: 'CANCELLED' } : prev);
-      }
-      loadApprovalList();
-    } catch (error) {
-      console.error('취소 실패:', error);
-      alert('취소 처리 중 오류가 발생했습니다.');
-    }
-  };
-
   const openDetailModal = async (noticeId) => {
     try {
       const result = await noticeApi.getById(noticeId);
@@ -278,32 +219,12 @@ const NoticeApproval = () => {
     }
   };
 
-  const handleSearch = () => {
-    setCurrentPage(0);
-    loadApprovalList(activeTab, 0);
-  };
-
-  const changePage = async (page) => {
-    if (page < 0 || page >= totalPages) return;
-    const scrollY = window.scrollY;
-    setCurrentPage(page);
-    await loadApprovalList(activeTab, page);
-    window.scrollTo({ top: scrollY });
-  };
-
-  const getVisiblePages = () => {
-    const maxButtons = 5;
-    const pages = [];
-    let start = Math.max(0, currentPage - Math.floor(maxButtons / 2));
-    let end = Math.min(totalPages - 1, start + maxButtons - 1);
-    if (end - start + 1 < maxButtons) {
-      start = Math.max(0, end - maxButtons + 1);
+  const filteredList = approvalList.filter(item => {
+    if (filters.searchTerm && !item.title.includes(filters.searchTerm)) {
+      return false;
     }
-    for (let i = start; i <= end; i += 1) {
-      pages.push(i);
-    }
-    return pages;
-  };
+    return true;
+  });
 
   const formatDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return '-';
@@ -318,8 +239,7 @@ const NoticeApproval = () => {
       'APPROVED': { text: '승인완료', class: 'approved', color: '#3b82f6' },
       'SENT': { text: '발송완료', class: 'completed', color: '#10b981' },
       'FAILED': { text: '발송실패', class: 'failed', color: '#ef4444' },
-      'REJECTED': { text: '발송반려', class: 'rejected', color: '#dc2626' },
-      'CANCELLED': { text: '취소됨', class: 'cancelled', color: '#64748b' }
+      'REJECTED': { text: '발송반려', class: 'rejected', color: '#dc2626' }
     };
     return statusMap[status] || { text: status, class: 'default', color: '#94a3b8' };
   };
@@ -450,25 +370,12 @@ const NoticeApproval = () => {
                 type="text"
                 value={filters.searchTerm}
                 onChange={(e) => setFilters({...filters, searchTerm: e.target.value})}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="filter-input"
                 placeholder="공지 제목으로 검색"
               />
             </div>
-            <div className="filter-group">
-              <label>Page size</label>
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(parseInt(e.target.value, 10))}
-                className="filter-select"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
             <button 
-              onClick={handleSearch}
+              onClick={() => loadApprovalList(activeTab)}
               className="btn-refresh"
             >
               🔄 새로고침
@@ -482,36 +389,7 @@ const NoticeApproval = () => {
             <h2 className="section-title">
               {activeTab === 'PENDING' ? '공지발송 승인 요청 목록' : '승인/반려 목록'}
             </h2>
-            <div className="section-header-actions">
-              <span className="record-count">{totalElements}건</span>
-              {totalPages > 1 && (
-                <div className="pagination pagination-compact">
-                  <button
-                    className="page-btn"
-                    onClick={() => changePage(currentPage - 1)}
-                    disabled={currentPage === 0}
-                  >
-                    이전
-                  </button>
-                  {getVisiblePages().map(page => (
-                    <button
-                      key={page}
-                      className={`page-btn ${page === currentPage ? 'active' : ''}`}
-                      onClick={() => changePage(page)}
-                    >
-                      {page + 1}
-                    </button>
-                  ))}
-                  <button
-                    className="page-btn"
-                    onClick={() => changePage(currentPage + 1)}
-                    disabled={currentPage + 1 >= totalPages}
-                  >
-                    다음
-                  </button>
-                </div>
-              )}
-            </div>
+            <span className="record-count">{filteredList.length}건</span>
           </div>
           
           <div className="table-wrapper">
@@ -530,14 +408,14 @@ const NoticeApproval = () => {
                 </tr>
               </thead>
               <tbody>
-                {approvalList.length === 0 ? (
+                {filteredList.length === 0 ? (
                   <tr>
                     <td colSpan="9" className="no-data">
                       승인 요청 건이 없습니다.
                     </td>
                   </tr>
                 ) : (
-                  approvalList.map((item) => (
+                  filteredList.map((item) => (
                     <tr key={item.noticeId}>
                       <td className="text-center">{item.noticeId}</td>
                       <td>{getReceiverInfo(item.targets).corps}</td>
@@ -738,40 +616,20 @@ const NoticeApproval = () => {
             </div>
             
             <div className="modal-footer">
-              {selectedNotice.noticeStatus === 'PENDING' ? (
+              {isAdmin && selectedNotice.noticeStatus === 'PENDING' ? (
                 <>
-                  {isAdmin && (
-                    <>
-                      <button 
-                        className="btn btn-reject"
-                        onClick={() => handleReject(selectedNotice.noticeId)}
-                      >
-                        반려하기
-                      </button>
-                      <button 
-                        className="btn btn-approve"
-                        onClick={() => handleApprove(selectedNotice.noticeId)}
-                      >
-                        승인하기
-                      </button>
-                    </>
-                  )}
-                  {currentUserId && selectedNotice.createdBy === currentUserId && (
-                    <button
-                      className="btn btn-edit"
-                      onClick={() => navigate(`/notices/edit/${selectedNotice.noticeId}`)}
-                    >
-                      수정하기
-                    </button>
-                  )}
-                  {currentUserId && selectedNotice.createdBy === currentUserId && (
-                    <button
-                      className="btn btn-cancel"
-                      onClick={() => handleCancel(selectedNotice.noticeId)}
-                    >
-                      취소하기
-                    </button>
-                  )}
+                  <button 
+                    className="btn btn-reject"
+                    onClick={() => handleReject(selectedNotice.noticeId)}
+                  >
+                    반려하기
+                  </button>
+                  <button 
+                    className="btn btn-approve"
+                    onClick={() => handleApprove(selectedNotice.noticeId)}
+                  >
+                    승인하기
+                  </button>
                 </>
               ) : (
                 <button className="btn btn-close" onClick={() => setShowDetailModal(false)}>

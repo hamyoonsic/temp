@@ -227,6 +227,7 @@ const NoticeHistory = () => {
       'SENT': { text: '발송완료', class: 'completed', color: '#10b981' },
       'FAILED': { text: '발송실패', class: 'failed', color: '#ef4444' },
       'REJECTED': { text: '발송반려', class: 'rejected', color: '#dc2626' },
+      'CANCELLED': { text: '취소됨', class: 'cancelled', color: '#64748b' },
     };
     return statusMap[status] || { text: status, class: 'default', color: '#94a3b8' };
   };
@@ -423,9 +424,11 @@ const NoticeHistory = () => {
                 <option value="">전체</option>
                 <option value="PENDING">승인 대기</option>
                 <option value="APPROVED">승인 완료</option>
+                <option value="APPROVED,SENT">승인완료+발송완료</option>
                 <option value="SENT">발송 완료</option>
                 <option value="FAILED">발송 실패</option>
                 <option value="REJECTED">발송 반려</option>
+                <option value="CANCELLED">취소됨</option>
               </select>
             </div>
 
@@ -600,6 +603,14 @@ const NoticeHistory = () => {
                             >
                               상세
                             </button>
+                            {item.noticeStatus === 'PENDING' && currentUserId && item.createdBy === currentUserId && (
+                              <button
+                                className="btn-edit"
+                                onClick={() => navigate(`/notices/edit/${item.noticeId}`)}
+                              >
+                                수정
+                              </button>
+                            )}
                             {item.noticeStatus === 'FAILED' && (
                               <button 
                                 className="btn-retry"
@@ -778,6 +789,14 @@ const NoticeHistory = () => {
             </div>
             
             <div className="modal-footer">
+              {selectedNotice.noticeStatus === 'PENDING' && currentUserId && selectedNotice.createdBy === currentUserId && (
+                <button 
+                  className="btn btn-edit"
+                  onClick={() => navigate(`/notices/edit/${selectedNotice.noticeId}`)}
+                >
+                  수정
+                </button>
+              )}
               {selectedNotice.noticeStatus === 'FAILED' && (
                 <button 
                   className="btn btn-retry"

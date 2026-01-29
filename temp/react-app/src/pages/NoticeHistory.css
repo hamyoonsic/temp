@@ -490,12 +490,14 @@ body[style*="padding-right"] {
 }
 
 .btn-detail,
-.btn-retry {
+.btn-retry,
+.btn-edit {
   min-width: 44px;
 }
 
 .btn-detail,
-.btn-retry {
+.btn-retry,
+.btn-edit {
   padding: 0.35rem 0.6rem;
   border: none;
   border-radius: 8px;
@@ -722,6 +724,17 @@ body[style*="padding-right"] {
   border: 1px solid var(--gray-200);
   border-radius: 8px;
   padding: 12px 14px;
+}
+
+.btn-edit {
+  background: #2563eb;
+  color: #fff;
+}
+
+.btn-edit:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 .content-box table {

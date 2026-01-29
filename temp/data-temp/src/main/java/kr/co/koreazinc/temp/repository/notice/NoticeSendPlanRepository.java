@@ -21,6 +21,8 @@ public interface NoticeSendPlanRepository extends JpaRepository<NoticeSendPlan, 
      * 공지 ID로 발송 계획 조회
      */
     Optional<NoticeSendPlan> findByNoticeId(Long noticeId);
+
+    void deleteByNoticeId(Long noticeId);
     
     /**
      * 특정 시간대에 발송 예정인 계획 조회 (묶음 발송용)

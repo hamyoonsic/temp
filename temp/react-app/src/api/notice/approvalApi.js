@@ -29,6 +29,13 @@ export const approvalApi = {
   },
 
   /**
+   * 공지 요청 취소 (승인 전)
+   */
+  cancel: (noticeId) => {
+    return apiClient.post(`/notices/${noticeId}/cancel`);
+  },
+
+  /**
    * 승인 이력 조회
    */
   getHistory: (noticeId) => {

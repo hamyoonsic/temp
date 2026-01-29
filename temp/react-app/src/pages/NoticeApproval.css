@@ -192,6 +192,24 @@ body[style*="padding-right"] {
   color: var(--gray-800);
 }
 
+.filter-select {
+  padding: 0.625rem 1rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  color: var(--gray-800);
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
 .filter-input:focus {
   outline: none;
   border-color: var(--primary-500);
@@ -236,6 +254,51 @@ body[style*="padding-right"] {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 0 8px;
+}
+
+.pagination-compact {
+  padding: 0;
+}
+
+.page-btn {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  min-width: 38px;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: #1e40af;
+  color: #1e40af;
+  background: #eff6ff;
+}
+
+.page-btn.active {
+  background: #1e40af;
+  color: #fff;
+  border-color: #1e40af;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .section-title {
@@ -360,6 +423,18 @@ body[style*="padding-right"] {
   font-weight: 500;
 }
 
+.approval-table td:last-child {
+  padding-right: 0.75rem;
+  padding-left: 0.75rem;
+  text-align: center;
+}
+
+.approval-table th:last-child {
+  padding-right: 0.75rem;
+  padding-left: 0.75rem;
+  text-align: center;
+}
+
 .approval-table td.text-center {
   text-align: center;
 }
@@ -414,11 +489,15 @@ body[style*="padding-right"] {
   display: flex;
   gap: 0.5rem;
   justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
 .btn-approve,
-.btn-reject {
-  padding: 0.5rem 1rem;
+.btn-reject,
+.btn-edit,
+.btn-cancel {
+  padding: 0.4rem 0.9rem;
   border: none;
   border-radius: 8px;
   font-size: 0.8125rem;
@@ -426,6 +505,8 @@ body[style*="padding-right"] {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-sm);
+  min-width: 56px;
+  height: 32px;
 }
 
 .btn-approve {
@@ -446,6 +527,28 @@ body[style*="padding-right"] {
 
 .btn-reject:hover {
   background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-cancel {
+  background: var(--gray-500);
+  color: white;
+}
+
+.btn-cancel:hover {
+  background: var(--gray-600);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-edit {
+  background: var(--primary-500);
+  color: white;
+}
+
+.btn-edit:hover {
+  background: var(--primary-600);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
@@ -582,6 +685,15 @@ body[style*="padding-right"] {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.status-info-actions .btn {
+  min-width: 120px;
+  height: 36px;
+  padding: 0.5rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .detail-grid {
@@ -722,7 +834,7 @@ body[style*="padding-right"] {
 }
 
 .modal-footer .btn {
-  padding: 0.75rem 1.5rem;
+  padding: 0.65rem 1.4rem;
   border: none;
   border-radius: 10px;
   font-size: 0.9375rem;
@@ -730,6 +842,11 @@ body[style*="padding-right"] {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-sm);
+  line-height: 1;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 로딩 오버레이 */
@@ -792,7 +909,8 @@ body[style*="padding-right"] {
   }
   
   .action-buttons {
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: center;
   }
   
   .modal-overlay {
@@ -810,6 +928,18 @@ body[style*="padding-right"] {
   .approval-table th,
   .approval-table td {
     padding: 0.75rem 0.5rem;
+  }
+
+  .approval-table th:last-child,
+  .approval-table td:last-child {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+    text-align: center;
+  }
+
+  .approval-table td:last-child .status-badge {
+    display: inline-flex;
+    justify-content: center;
   }
 
   /* 모달 스크롤 방지 */
