@@ -25,8 +25,8 @@ export const AdminProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      // sessionStorage에서 사용자 정보 확인
-      const userDataStr = sessionStorage.getItem('userData') || sessionStorage.getItem('user_me');
+      // localStorage에서 사용자 정보 확인
+      const userDataStr = localStorage.getItem('userData') || localStorage.getItem('user_me');
 
       if (!userDataStr) {
         setIsAdmin(false);

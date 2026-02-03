@@ -1,4 +1,4 @@
-/* Login.css - Clean White Design with Soft Blue Accent */
+﻿/* Login.css - Clean White Design with Soft Blue Accent */
 
 .login-page {
   min-height: 100vh;
@@ -326,6 +326,172 @@
 }
 
 /* 반응형 */
+/* 고객지원 모달 */
+.support-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.support-modal {
+  width: 100%;
+  max-width: 420px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+  border: 1px solid #e2e8f0;
+  animation: fadeInUp 0.2s ease-out;
+}
+
+.support-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.support-modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.support-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.support-close:hover {
+  color: #1f2937;
+}
+
+.support-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.support-modal-body {
+  padding: 20px 24px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.support-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.support-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.support-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.support-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.support-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.support-link {
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.support-link:hover {
+  background: #dbeafe;
+}
+
+.support-copy {
+  border: none;
+  background: #e2e8f0;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.support-copy:hover {
+  background: #cbd5e1;
+}
+
+.support-copied {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.support-modal-footer {
+  padding: 12px 24px 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.support-confirm {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+}
+
+.support-confirm:hover {
+  background: #2563eb;
+}
 @media (max-width: 768px) {
   .login-page {
     padding: 1rem;

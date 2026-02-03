@@ -1,0 +1,23 @@
+차이는 “Microsoft 쪽 세션/계정 상태”랑 “요청 파라미터(login_hint/prompt)” 때문에 생겨요. 지금 프런트는 기본적으로 아무 prompt도 안 넣고 있습니다. authConfig.js에서 buildLoginUrl({ promptLogin: false })라서 /oauth2/login에 prompt 없음.
+
+보통 계정 선택 화면이 뜨는 조건:
+
+브라우저에 MS 계정이 여러 개 로그인돼 있음 (또는 이전 로그인 흔적)
+login_hint가 없어서 어떤 계정으로 들어갈지 모름
+서버가 prompt=select_account를 붙여서 보냄 (그럼 항상 뜸)
+안 뜨는 조건:
+
+SSO 세션이 있고 계정이 하나라서 자동 통과
+login_hint가 붙어 특정 계정으로 바로 진행
+이 코드베이스에서 관련 단서는:
+
+프런트: authConfig.js (prompt 세팅 없음)
+코어: AuthenticationCookieUtils.java에 LOGIN-HINT 쿠키 생성 로직 있음
+→ 이 쿠키를 auth 서버가 읽어 login_hint로 붙이면 계정 선택 화면이 안 나올 가능성이 큼.
+실제 /oauth2/login 구현은 auth 서버 쪽(이 레포 안 보임)이라, 거기서 authorize URL 만드는 부분을 확인해야 확실합니다.
+“항상 안 나오게”는 완벽 보장 어렵고 아래 중 하나를 선택해야 해요:
+
+login_hint 사용: 사용자를 특정하면 계정 선택 스킵 가능 (단, 계정이 다른 경우 문제)
+prompt=none: SSO 세션 있을 때만 자동 통과, 세션 없으면 에러
+prompt=login: 항상 로그인 화면으로 강제 (계정 선택 대신 로그인 입력 화면)
+원하면 auth 서버 /oauth2/login 쪽 코드 경로 알려주면, 지금 레포 기준으로 “항상 안 나오게” 세팅 방법 정확히 짚어줄게요.

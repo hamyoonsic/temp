@@ -1,4 +1,4 @@
-// react-test/src/pages/SSORedirect.jsx
+﻿// react-test/src/pages/SSORedirect.jsx
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AUTH_BASE, CLIENT_ID, getRedirectUri } from "../auth/authConfig";
@@ -97,15 +97,15 @@ export default function SSORedirect() {
 
         setUserMe(safeMe);
 
-        // 4) sessionStorage에 사용자 정보 저장
+        // 4) localStorage에 사용자 정보 저장
         if (safeMe.deptNm) {
-          sessionStorage.setItem('userOrgName', safeMe.deptNm);
-          sessionStorage.setItem('userName', safeMe.userKoNm || safeMe.userNm);
-          sessionStorage.setItem('userId', safeMe.userId);
+          localStorage.setItem('userOrgName', safeMe.deptNm);
+          localStorage.setItem('userName', safeMe.userKoNm || safeMe.userNm);
+          localStorage.setItem('userId', safeMe.userId);
         }
         
         // 5) NoticeApproval용 userData도 저장 (원본 meJson 사용)
-        sessionStorage.setItem('userData', JSON.stringify({
+        localStorage.setItem('userData', JSON.stringify({
           userId: meJson?.userId || "",
           userKoNm: meJson?.userKoNm || "",
           email: meJson?.email || "",
@@ -113,12 +113,12 @@ export default function SSORedirect() {
           license: meJson?.license || []
         }));
         
-        console.log('SSORedirect - sessionStorage 저장 완료:', {
+        console.log('SSORedirect - localStorage 저장 완료:', {
           userOrgName: safeMe.deptNm,
           userName: safeMe.userKoNm || safeMe.userNm,
           userId: safeMe.userId,
-          hasUserData: !!sessionStorage.getItem('userData'),
-          hasUserMe: !!sessionStorage.getItem('user_me')
+          hasUserData: !!localStorage.getItem('userData'),
+          hasUserMe: !!localStorage.getItem('user_me')
         });
 
         // 6) 성공 → 원래 가려던 URL 또는 대시보드

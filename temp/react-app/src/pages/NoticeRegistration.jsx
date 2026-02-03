@@ -666,21 +666,21 @@ const NoticeRegistration = () => {
   const loadUserInfo = () => {
     try {
       console.log('🔍 사용자 정보 로드 시작...');
-      console.log('sessionStorage 확인:', {
-        hasUserData: !!sessionStorage.getItem('userData'),
-        hasUserMe: !!sessionStorage.getItem('user_me'),
-        hasUserOrgName: !!sessionStorage.getItem('userOrgName'),
-        hasUserName: !!sessionStorage.getItem('userName'),
-        hasUserId: !!sessionStorage.getItem('userId')
+      console.log('localStorage 확인:', {
+        hasUserData: !!localStorage.getItem('userData'),
+        hasUserMe: !!localStorage.getItem('user_me'),
+        hasUserOrgName: !!localStorage.getItem('userOrgName'),
+        hasUserName: !!localStorage.getItem('userName'),
+        hasUserId: !!localStorage.getItem('userId')
       });
       
-      // 1. 우선순위: sessionStorage에서 직접 저장된 값
-      const storedOrgName = sessionStorage.getItem('userOrgName');
-      const storedUserName = sessionStorage.getItem('userName');
-      const storedUserId = sessionStorage.getItem('userId');
+      // 1. 우선순위: localStorage에서 직접 저장된 값
+      const storedOrgName = localStorage.getItem('userOrgName');
+      const storedUserName = localStorage.getItem('userName');
+      const storedUserId = localStorage.getItem('userId');
       
       if (storedOrgName && storedUserName && storedUserId) {
-        console.log(' sessionStorage에서 직접 로드:', {
+        console.log(' localStorage에서 직접 로드:', {
           userId: storedUserId,
           orgUnitName: storedOrgName,
           userName: storedUserName
@@ -700,9 +700,9 @@ const NoticeRegistration = () => {
       }
       
       // 2. userData에서 추출
-      let userDataStr = sessionStorage.getItem('userData');
+      let userDataStr = localStorage.getItem('userData');
       if (!userDataStr) {
-        userDataStr = sessionStorage.getItem('user_me');
+        userDataStr = localStorage.getItem('user_me');
       }
       
       if (userDataStr) {
@@ -756,7 +756,7 @@ const NoticeRegistration = () => {
       }
 
       const notice = result.data;
-      const currentUserId = sessionStorage.getItem('userId') || userInfo.userId;
+      const currentUserId = localStorage.getItem('userId') || userInfo.userId;
       if (notice.noticeStatus !== 'PENDING') {
         alert('승인 대기 상태의 공지만 수정할 수 있습니다.');
         navigate('/notices/history');
@@ -1129,7 +1129,7 @@ const NoticeRegistration = () => {
       ? false 
       : (formData.noticeType.includes('점검') || formData.noticeType.includes('장애'));
     
-    const userDataStr = sessionStorage.getItem('userData') || sessionStorage.getItem('user_me');
+    const userDataStr = localStorage.getItem('userData') || localStorage.getItem('user_me');
     const userEmail = userDataStr ? JSON.parse(userDataStr).email : null;
 
     const hasDeptTargets = formData.receiverDepts.length > 0;

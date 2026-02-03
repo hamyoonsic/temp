@@ -66,7 +66,7 @@ const NoticeApproval = () => {
   const [currentUserId, setCurrentUserId] = useState('');
 
   useEffect(() => {
-    const storedUserId = sessionStorage.getItem('userId');
+    const storedUserId = localStorage.getItem('userId');
     if (storedUserId) {
       setCurrentUserId(storedUserId);
     }

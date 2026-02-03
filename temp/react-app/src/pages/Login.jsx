@@ -1,10 +1,12 @@
 // react-test/src/pages/Login.jsx
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { buildLoginUrl } from "../auth/authConfig";
-import { getAccessToken, getUserMe } from "../auth/session";
+import { getAccessToken } from "../auth/session";
 import "./Login.css";
 
 export default function Login() {
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [copiedField, setCopiedField] = useState("");
   const envLabel = useMemo(() => {
     const mode = import.meta?.env?.MODE;
     if (!mode) return "DEV";
@@ -12,14 +14,41 @@ export default function Login() {
   }, []);
 
   const onMicrosoftLogin = () => {
-    const authUrl = buildLoginUrl({ promptLogin: false });
+    const authUrl = buildLoginUrl();
     window.location.replace(authUrl);
+  };
+
+  const onSupportClick = (event) => {
+    event.preventDefault();
+    setIsSupportOpen(true);
+  };
+
+  const copyText = async (field, value) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const el = document.createElement("textarea");
+        el.value = value;
+        el.setAttribute("readonly", "");
+        el.style.position = "absolute";
+        el.style.left = "-9999px";
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+      }
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(""), 1500);
+    } catch {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(""), 1500);
+    }
   };
 
   // 이미 로그인 상태면 대시보드로
   const token = getAccessToken();
-  const me = getUserMe();
-  if (token && me) {
+  if (token) {
     window.location.replace("/NoticeDashboard");
     return null;
   }
@@ -72,7 +101,10 @@ export default function Login() {
           </button>
 
           <div className="help-text">
-            로그인에 문제가 있으신가요? <a href="#support">고객지원</a>
+            로그인에 문제가 있으신가요?{" "}
+            <a href="#support" onClick={onSupportClick}>
+              고객지원
+            </a>
           </div>
         </div>
 
@@ -99,6 +131,96 @@ export default function Login() {
           <p className="copyright">© 2026 서린정보기술. All rights reserved.</p>
         </div>
       </div>
+
+      {isSupportOpen && (
+        <div
+          className="support-modal-backdrop"
+          onClick={() => setIsSupportOpen(false)}
+        >
+          <div
+            className="support-modal"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="support-title"
+          >
+            <div className="support-modal-header">
+              <h2 id="support-title">고객지원</h2>
+              <button
+                type="button"
+                className="support-close"
+                onClick={() => setIsSupportOpen(false)}
+                aria-label="닫기"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M6 6l12 12M18 6l-12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="support-modal-body">
+              <div className="support-item">
+                <span className="support-label">이메일</span>
+                <div className="support-row">
+                  <span className="support-value">hamyoonsic@sorin.co.kr</span>
+                  <div className="support-actions">
+                    <a
+                      className="support-link"
+                      href="mailto:hamyoonsic@sorin.co.kr"
+                    >
+                      메일보내기
+                    </a>
+                    <button
+                      type="button"
+                      className="support-copy"
+                      onClick={() =>
+                        copyText("email", "hamyoonsic@sorin.co.kr")
+                      }
+                    >
+                      복사
+                    </button>
+                  </div>
+                </div>
+                {copiedField === "email" && (
+                  <span className="support-copied">복사됨</span>
+                )}
+              </div>
+              <div className="support-item">
+                <span className="support-label">전화</span>
+                <div className="support-row">
+                  <span className="support-value">02-6947-2694</span>
+                  <div className="support-actions">
+                    <button
+                      type="button"
+                      className="support-copy"
+                      onClick={() => copyText("phone", "02-6947-2694")}
+                    >
+                      복사
+                    </button>
+                  </div>
+                </div>
+                {copiedField === "phone" && (
+                  <span className="support-copied">복사됨</span>
+                )}
+              </div>
+            </div>
+            <div className="support-modal-footer">
+              <button
+                type="button"
+                className="support-confirm"
+                onClick={() => setIsSupportOpen(false)}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

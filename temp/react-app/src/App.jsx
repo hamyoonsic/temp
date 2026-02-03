@@ -1,6 +1,7 @@
 //App.jsx
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
+import AutoLogin from "./pages/AutoLogin";
 import SSORedirect from "./pages/SSORedirect";
 import NoticeDashboard from "./pages/NoticeDashboard";
 import NoticeRegistration from './pages/NoticeRegistration';
@@ -13,7 +14,7 @@ import { AdminProvider } from "./contexts/AdminContext";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<AutoLogin />} />
 
       {/* 로그인/콜백은 헤더 없이 */}
       <Route path="/login" element={<Login />} />

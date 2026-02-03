@@ -2,25 +2,29 @@
 import { STORAGE_KEYS } from "./authConfig";
 
 export function setAccessToken(token) {
-  sessionStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
+  localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token);
 }
 
 export function getAccessToken() {
-  return sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
 }
 
 export function clearSession() {
-  sessionStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-  sessionStorage.removeItem(STORAGE_KEYS.USER_ME);
-  sessionStorage.removeItem(STORAGE_KEYS.RETURN_URL);
+  localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.USER_ME);
+  localStorage.removeItem(STORAGE_KEYS.RETURN_URL);
+  localStorage.removeItem("userData");
+  localStorage.removeItem("userOrgName");
+  localStorage.removeItem("userName");
+  localStorage.removeItem("userId");
 }
 
 export function setUserMe(me) {
-  sessionStorage.setItem(STORAGE_KEYS.USER_ME, JSON.stringify(me));
+  localStorage.setItem(STORAGE_KEYS.USER_ME, JSON.stringify(me));
 }
 
 export function getUserMe() {
-  const raw = sessionStorage.getItem(STORAGE_KEYS.USER_ME);
+  const raw = localStorage.getItem(STORAGE_KEYS.USER_ME);
   try {
     return raw ? JSON.parse(raw) : null;
   } catch {
@@ -29,11 +33,11 @@ export function getUserMe() {
 }
 
 export function setReturnUrl(url) {
-  sessionStorage.setItem(STORAGE_KEYS.RETURN_URL, url);
+  localStorage.setItem(STORAGE_KEYS.RETURN_URL, url);
 }
 
 export function popReturnUrl(fallback = "/NoticeDashboard") {
-  const url = sessionStorage.getItem(STORAGE_KEYS.RETURN_URL) || fallback;
-  sessionStorage.removeItem(STORAGE_KEYS.RETURN_URL);
+  const url = localStorage.getItem(STORAGE_KEYS.RETURN_URL) || fallback;
+  localStorage.removeItem(STORAGE_KEYS.RETURN_URL);
   return url;
 }

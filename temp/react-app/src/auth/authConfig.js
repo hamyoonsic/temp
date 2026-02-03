@@ -18,7 +18,7 @@ export function getRedirectUri() {
   return `${window.location.origin}/sso-redirect`;
 }
 
-export function buildLoginUrl({ promptLogin = false } = {}) {
+export function buildLoginUrl({ promptLogin = false, prompt } = {}) {
   const redirectUri = getRedirectUri();
   const qs = new URLSearchParams({
     response_type: "code",
@@ -26,7 +26,11 @@ export function buildLoginUrl({ promptLogin = false } = {}) {
     redirect_uri: redirectUri,
   });
 
-  if (promptLogin) qs.set("prompt", "login");
+  if (prompt) {
+    qs.set("prompt", prompt);
+  } else if (promptLogin) {
+    qs.set("prompt", "login");
+  }
   return `${AUTH_BASE}/oauth2/login?${qs.toString()}`;
 }
 

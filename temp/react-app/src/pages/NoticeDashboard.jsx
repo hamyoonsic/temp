@@ -74,9 +74,9 @@ export default function NoticeDashboard() {
   const [deptStats, setDeptStats] = useState([]);
 
   useEffect(() => {
-    const token = sessionStorage.getItem("access_token");
+    const token = localStorage.getItem("access_token");
     if (!token) navigate("/login", { replace: true });
-    const storedUserId = sessionStorage.getItem('userId');
+    const storedUserId = localStorage.getItem('userId');
     if (storedUserId) {
       setCurrentUserId(storedUserId);
     }

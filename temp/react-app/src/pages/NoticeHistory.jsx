@@ -71,7 +71,7 @@ const NoticeHistory = () => {
   useEffect(() => {
     loadCorporations();
     loadHistoryList(filters);
-    const storedUserId = sessionStorage.getItem('userId');
+    const storedUserId = localStorage.getItem('userId');
     if (storedUserId) {
       setCurrentUserId(storedUserId);
     }

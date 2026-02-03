@@ -6,7 +6,7 @@ import { getAccessToken, getUserMe } from "../auth/session";
 export default function AutoLogin() {
   const [msg] = useState("통합인증(SSO) 로그인 화면으로 이동 중…");
 
-  const loginUrl = useMemo(() => buildLoginUrl({ promptLogin: false }), []);
+  const loginUrl = useMemo(() => buildLoginUrl({ prompt: "none" }), []);
 
   useEffect(() => {
     const token = getAccessToken();

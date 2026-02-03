@@ -27,7 +27,7 @@ class ApiClient {
     //  2. X-User-Id, X-User-Name 헤더 자동 추가
     try {
       // userData 또는 user_me에서 사용자 정보 가져오기
-      const userDataStr = sessionStorage.getItem('userData') || sessionStorage.getItem('user_me');
+      const userDataStr = localStorage.getItem('userData') || localStorage.getItem('user_me');
       
       if (userDataStr) {
         const userData = JSON.parse(userDataStr);
