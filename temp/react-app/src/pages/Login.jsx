@@ -1,7 +1,7 @@
-// react-test/src/pages/Login.jsx
+﻿// react-test/src/pages/Login.jsx
 import { useMemo, useState } from "react";
 import { buildLoginUrl } from "../auth/authConfig";
-import { getAccessToken } from "../auth/session";
+import { clearSession, getAccessToken, isAccessTokenValid } from "../auth/session";
 import "./Login.css";
 
 export default function Login() {
@@ -14,6 +14,14 @@ export default function Login() {
   }, []);
 
   const onMicrosoftLogin = () => {
+    const token = getAccessToken();
+    if (isAccessTokenValid(token)) {
+      window.location.replace("/NoticeDashboard");
+      return;
+    }
+    if (token) {
+      clearSession();
+    }
     const authUrl = buildLoginUrl();
     window.location.replace(authUrl);
   };
@@ -45,13 +53,6 @@ export default function Login() {
       setTimeout(() => setCopiedField(""), 1500);
     }
   };
-
-  // 이미 로그인 상태면 대시보드로
-  const token = getAccessToken();
-  if (token) {
-    window.location.replace("/NoticeDashboard");
-    return null;
-  }
 
   return (
     <div className="login-page">
@@ -224,3 +225,5 @@ export default function Login() {
     </div>
   );
 }
+
+

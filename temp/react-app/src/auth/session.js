@@ -9,6 +9,27 @@ export function getAccessToken() {
   return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
 }
 
+function decodeJwtPayload(token) {
+  const parts = token.split(".");
+  if (parts.length < 2) return null;
+  try {
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "===".slice((base64.length + 3) % 4);
+    const json = atob(padded);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+export function isAccessTokenValid(token, { leewaySeconds = 30 } = {}) {
+  if (!token) return false;
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== "number") return false;
+  const now = Math.floor(Date.now() / 1000);
+  return payload.exp > now + leewaySeconds;
+}
+
 export function clearSession() {
   localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
   localStorage.removeItem(STORAGE_KEYS.USER_ME);
