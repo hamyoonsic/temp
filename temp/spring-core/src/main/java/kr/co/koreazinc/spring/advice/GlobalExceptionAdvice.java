@@ -48,7 +48,18 @@ public class GlobalExceptionAdvice {
 
         @ExceptionHandler(Exception.class)
         public void handle(HttpServletRequest request, HttpServletResponse response, Exception exception) throws ServletException {
-            HttpEnhancer.create(request, response).forward(exception, HttpStatus.INTERNAL_SERVER_ERROR);
+            String errorId = java.util.UUID.randomUUID().toString();
+            String correlationId = java.util.Optional.ofNullable(request.getHeader("X-Correlation-Id")).orElse(java.util.UUID.randomUUID().toString());
+            org.slf4j.MDC.put("errorId", errorId);
+            org.slf4j.MDC.put("correlationId", correlationId);
+            request.setAttribute("errorId", errorId);
+            request.setAttribute("correlationId", correlationId);
+            try {
+                log.error("Unhandled exception (servlet advice), errorId={}, correlationId={}", errorId, correlationId, exception);
+                HttpEnhancer.create(request, response).forward(exception, HttpStatus.INTERNAL_SERVER_ERROR);
+            } finally {
+                org.slf4j.MDC.clear();
+            }
         }
 
         @ModelAttribute
@@ -81,6 +92,11 @@ public class GlobalExceptionAdvice {
 
         @ExceptionHandler(Exception.class)
         public Mono<Void> handle(ServerWebExchange exchange, Exception exception) {
+            String errorId = java.util.UUID.randomUUID().toString();
+            String correlationId = java.util.Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Correlation-Id")).orElse(java.util.UUID.randomUUID().toString());
+            exchange.getRequest().getAttributes().put("errorId", errorId);
+            exchange.getRequest().getAttributes().put("correlationId", correlationId);
+            log.error("Unhandled exception (reactive advice), errorId={}, correlationId={}", errorId, correlationId, exception);
             return HttpEnhancer.create(exchange).forward(exception, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 

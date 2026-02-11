@@ -1,0 +1,263 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>공지 메일 전송 데이터 구조</title>
+  <style>
+    :root {
+      --bg: #f7f3ee;
+      --paper: #fff9f2;
+      --ink: #1f1a16;
+      --muted: #6b5f57;
+      --accent: #0f766e;
+      --accent-2: #b45309;
+      --border: #e7d9cc;
+      --code-bg: #f1e7dc;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "S-Core Dream", "Nanum Myeongjo", "Noto Serif KR", "Times New Roman", serif;
+      line-height: 1.65;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    header {
+      background: linear-gradient(135deg, #fff9f2 0%, #f6efe7 100%);
+      border: 1px solid var(--border);
+      padding: 28px 28px 24px;
+      box-shadow: 0 14px 30px rgba(31, 26, 22, 0.08);
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 15px;
+    }
+    section {
+      margin-top: 32px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      padding: 24px 24px 20px;
+    }
+    h2 {
+      font-size: 20px;
+      margin: 0 0 14px;
+      color: var(--accent);
+    }
+    h3 {
+      font-size: 16px;
+      margin: 18px 0 8px;
+      color: var(--accent-2);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+    }
+    th {
+      background: #f3e7da;
+      font-weight: 600;
+    }
+    code, pre {
+      font-family: "Cascadia Mono", "Fira Code", "Consolas", monospace;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+    .pill {
+      display: inline-block;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #e7efe9;
+      color: #0f5132;
+      border: 1px solid #cfe1d6;
+      margin-left: 6px;
+    }
+    .note {
+      background: #fff4e6;
+      border: 1px solid #f2c8a3;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: #7a4b1c;
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .path {
+      background: #f7efe7;
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      font-size: 13px;
+      margin-top: 6px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>공지 메일 전송 데이터 구조</h1>
+      <div class="sub">외부 메일 API 연계 개발자를 위한 전송 스펙 요약</div>
+      <div class="sub">기준 코드: spring-core, app-api (현재 구현 기준)</div>
+    </header>
+
+    <section>
+      <h2>1. 전송 개요</h2>
+      <p>
+        공지 메일은 <strong>spring-core</strong>의 <code>MailUtils.remoteSend</code>에서 외부 메일 API로 전송됩니다.
+        발송 API는 <code>POST {baseUrl}/v1/mail/{sender}</code> 형태이며, <code>sender</code>는 <code>MailInfo.getSender()</code> 결과값입니다.
+      </p>
+      <div class="path">temp/spring-core/src/main/java/kr/co/koreazinc/spring/utility/MailUtils.java</div>
+      <div class="path">temp/spring-core/src/main/java/kr/co/koreazinc/spring/model/MailInfo.java</div>
+    </section>
+
+    <section>
+      <h2>2. 인증</h2>
+      <p>Authorization 헤더에 OAuth2 Bearer 토큰을 사용합니다.</p>
+      <pre><code>Authorization: Bearer {access_token}</code></pre>
+    </section>
+
+    <section>
+      <h2>3. HTTP 요청</h2>
+      <p><strong>Endpoint</strong></p>
+      <pre><code>POST {baseUrl}/v1/mail/{sender}</code></pre>
+      <p><strong>Accept</strong></p>
+      <pre><code>application/json</code></pre>
+    </section>
+
+    <section>
+      <h2>4. JSON Payload 구조</h2>
+      <p>실제 전송되는 JSON은 아래 형태입니다.</p>
+      <pre><code>{
+  "from": "보낸사람 이메일",
+  "to": "수신자1;수신자2;...",
+  "cc": "참조1;참조2;...",
+  "bcc": "숨은참조1;숨은참조2;...",
+  "title": "메일 제목",
+  "contentType": "HTML",
+  "bodyType": "HTML",
+  "isHtml": true,
+  "contentTypeAlt": "text/html",
+  "content": "&lt;html&gt;...&lt;/html&gt;",
+  "attachments": [
+    {
+      "name": "파일명.ext",
+      "contentBytes": "Base64 문자열"
+    }
+  ]
+}</code></pre>
+      <div class="note">주의: <code>to/cc/bcc</code>는 배열이 아니라 <strong>세미콜론(;)으로 join된 문자열</strong>로 전송됩니다.</div>
+    </section>
+
+    <section>
+      <h2>5. 필드 설명</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>필드</th>
+            <th>타입</th>
+            <th>설명</th>
+            <th>출처</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>from</td>
+            <td>String</td>
+            <td>발신자 이메일</td>
+            <td>공지의 senderEmail 또는 작성자 이메일</td>
+          </tr>
+          <tr>
+            <td>to</td>
+            <td>String</td>
+            <td>수신자 이메일 목록 (세미콜론 join)</td>
+            <td>공지 대상(법인/조직/개인)에서 수집</td>
+          </tr>
+          <tr>
+            <td>cc</td>
+            <td>String</td>
+            <td>참조 이메일 목록 (세미콜론 join)</td>
+            <td>승인자 이메일 (있을 때만)</td>
+          </tr>
+          <tr>
+            <td>bcc</td>
+            <td>String</td>
+            <td>숨은 참조 이메일 목록</td>
+            <td>현재 공지 메일에는 기본값 없음</td>
+          </tr>
+          <tr>
+            <td>title</td>
+            <td>String</td>
+            <td>메일 제목</td>
+            <td>공지 mailSubject 우선, 없으면 title</td>
+          </tr>
+          <tr>
+            <td>content</td>
+            <td>String (HTML)</td>
+            <td>메일 본문 HTML</td>
+            <td>buildEmailContent(notice) 결과</td>
+          </tr>
+          <tr>
+            <td>attachments</td>
+            <td>Array</td>
+            <td>첨부파일 목록 (옵션)</td>
+            <td>공지 첨부파일</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. attachments 구조</h2>
+      <pre><code>"attachments": [
+  {
+    "name": "파일명.ext",
+    "contentBytes": "Base64 문자열"
+  }
+]</code></pre>
+      <p class="muted">첨부가 없으면 <code>attachments</code> 필드는 전송되지 않습니다.</p>
+    </section>
+
+    <section>
+      <h2>7. 메일 본문 생성 규칙 요약</h2>
+      <p>
+        본문은 공지 내용을 HTML로 변환하며, 제목/중요도/발신/승인 정보가 포함됩니다.
+        에디터 HTML을 정리하고 테이블 정렬/테두리 스타일을 정규화합니다.
+      </p>
+      <div class="path">temp/app-api/src/main/java/kr/co/koreazinc/app/service/notice/NoticeMailService.java</div>
+    </section>
+
+    <section>
+      <h2>8. 연계 개발자가 알아야 할 핵심</h2>
+      <ul>
+        <li>요청은 JSON이며 <strong>to/cc/bcc는 문자열</strong>입니다.</li>
+        <li>본문은 HTML이며 <code>isHtml=true</code> 고정입니다.</li>
+        <li>첨부는 Base64 인코딩된 문자열로 전달됩니다.</li>
+        <li>엔드포인트는 <code>/v1/mail/{sender}</code> 형태입니다.</li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>

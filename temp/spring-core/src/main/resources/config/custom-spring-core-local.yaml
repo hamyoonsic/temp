@@ -4,6 +4,9 @@ server:
     whitelabel:
       enabled: false
 
+error:
+  show-trace: true
+
 logging:
   file:
     path: logs

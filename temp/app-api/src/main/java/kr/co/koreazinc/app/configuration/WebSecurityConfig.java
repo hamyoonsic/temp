@@ -19,7 +19,6 @@ import kr.co.koreazinc.spring.security.authorization.BasicAuthenticationEntryPoi
 import kr.co.koreazinc.spring.security.filter.TokenAuthenticationFilter;
 import kr.co.koreazinc.spring.security.model.ResponseToken;
 import kr.co.koreazinc.spring.security.utility.AuthenticationTokenUtils;
-import kr.co.koreazinc.spring.security.property.OAuth2Property;
 import lombok.RequiredArgsConstructor;
 
 @EnableWebSecurity
@@ -35,7 +34,6 @@ public class WebSecurityConfig {
     private final BasicAccessDeniedHandler.ServletHandler accessDeniedHandler;
 
     private final BasicAuthenticationEntryPoint.ServletEntryPoint authenticationEntryPoint;
-    private final OAuth2Property oauth2Property;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -60,7 +58,7 @@ public class WebSecurityConfig {
     public AuthenticationManagerImpl authenticationManager() {
         AuthenticationManagerImpl authenticationManager = new AuthenticationManagerImpl();
         authenticationManager
-                .setAuthenticationProvider(new TokenAuthenticationProvider(userDetailsService, oauth2Property));
+                .setAuthenticationProvider(new TokenAuthenticationProvider(userDetailsService));
         return authenticationManager;
     }
 

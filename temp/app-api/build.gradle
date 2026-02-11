@@ -5,6 +5,8 @@ dependencies {
     implementation project(":cloud-discovery")
     implementation project(":cloud-tomcat")
     implementation project(":data-temp")
+
+    testRuntimeOnly "com.h2database:h2"
 }
 
 bootRun {

@@ -1,0 +1,30 @@
+spring:
+  aop:
+    proxy-target-class: true
+  task:
+    scheduling:
+      enabled: false
+  cloud:
+    discovery:
+      enabled: false
+
+temp:
+  datasource:
+    jdbc-url: jdbc:h2:mem:notice_testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        hbm2ddl:
+          auto: create-drop
+        show_sql: false
+        format_sql: false
+
+notice:
+  mail:
+    test-mode: true
+    calendar-test-mode: true
+    whitelist-mode: false

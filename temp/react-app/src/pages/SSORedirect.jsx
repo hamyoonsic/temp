@@ -53,6 +53,13 @@ export default function SSORedirect() {
         }
 
         const tokenJson = await tokenRes.json();
+        try {
+          sessionStorage.setItem(
+            "debug_token_response",
+            JSON.stringify(tokenJson)
+          );
+        } catch {}
+        console.log("SSORedirect - token response:", tokenJson);
         const accessToken = tokenJson.access_token;
         if (!accessToken) throw new Error("token 응답에 access_token이 없습니다.");
 
@@ -130,6 +137,9 @@ export default function SSORedirect() {
       } catch (e) {
         console.error(e);
         clearSession();
+        try {
+          sessionStorage.setItem("debug_sso_error", String(e?.message || e));
+        } catch {}
         alert("로그인 처리 중 오류가 발생했습니다.");
         navigate("/login", { replace: true });
       }

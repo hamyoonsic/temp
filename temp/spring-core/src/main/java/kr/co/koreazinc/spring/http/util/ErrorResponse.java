@@ -21,6 +21,8 @@ import jakarta.servlet.ServletException;
 import kr.co.koreazinc.spring.http.enhancer.HttpEnhancer;
 import kr.co.koreazinc.spring.support.SuppressWarning;
 import kr.co.koreazinc.spring.utility.MessageUtils;
+import kr.co.koreazinc.spring.utility.PropertyUtils;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -50,18 +52,32 @@ public class ErrorResponse {
     @Schema(description = "Trace")
     private String trace;
 
+    @Schema(description = "에러 식별자 (클라이언트에 노출되는 추적 ID)")
+    private String errorId;
+
     @Schema(description = "메시지")
     private String message;
 
     public static class ErrorResponseBuilder {
 
         public ErrorResponseBuilder exception(Map<String, Object> errorAttributes, Throwable exception) {
+            // errorId: prefer attribute if provided (set by filters/advice), otherwise generate
+            Object existingErrorId = errorAttributes.get("errorId");
+            this.errorId = existingErrorId != null ? String.valueOf(existingErrorId) : UUID.randomUUID().toString();
+
             if (exception != null) {
                 while (exception instanceof ServletException && exception.getCause() != null) {
                     exception = exception.getCause();
                 }
                 this.error = exception.getClass().getName();
-                this.trace = addStackTrace(exception);
+                // show stacktrace only when enabled via property OR explicit attribute (useful for tests/dev)
+                boolean showTrace = Boolean.parseBoolean(PropertyUtils.getProperty("error.show-trace", "false"))
+                    || Boolean.TRUE.equals(errorAttributes.get("showTrace"));
+                if (showTrace) {
+                    this.trace = addStackTrace(exception);
+                } else {
+                    this.trace = null;
+                }
             }
             this.message = addErrorMessage(errorAttributes, exception);
             return this;

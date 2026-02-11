@@ -49,7 +49,18 @@ public class GlobalExceptionFilter {
             try {
                 filterChain.doFilter(request, response);
             } catch (Exception exception) {
-                HttpEnhancer.create(request, response).forward(exception, resolveStatus(exception));
+                String errorId = java.util.UUID.randomUUID().toString();
+                String correlationId = java.util.Optional.ofNullable(request.getHeader("X-Correlation-Id")).orElse(java.util.UUID.randomUUID().toString());
+                org.slf4j.MDC.put("errorId", errorId);
+                org.slf4j.MDC.put("correlationId", correlationId);
+                request.setAttribute("errorId", errorId);
+                request.setAttribute("correlationId", correlationId);
+                try {
+                    log.error("Unhandled servlet exception, errorId={}, correlationId={}", errorId, correlationId, exception);
+                    HttpEnhancer.create(request, response).forward(exception, resolveStatus(exception));
+                } finally {
+                    org.slf4j.MDC.clear();
+                }
             }
         }
 
@@ -66,8 +77,13 @@ public class GlobalExceptionFilter {
         @Override
         public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
             return chain.filter(exchange).onErrorResume(exception -> {
-                return HttpEnhancer.create(exchange).forward(exception,
-                        HttpStatus.INTERNAL_SERVER_ERROR);
+                String errorId = java.util.UUID.randomUUID().toString();
+                String correlationId = java.util.Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Correlation-Id")).orElse(java.util.UUID.randomUUID().toString());
+                exchange.getRequest().getAttributes().put("errorId", errorId);
+                exchange.getRequest().getAttributes().put("correlationId", correlationId);
+                // log with explicit ids (reactive context may not preserve MDC)
+                log.error("Unhandled reactive exception, errorId={}, correlationId={}", errorId, correlationId, exception);
+                return HttpEnhancer.create(exchange).forward(exception, HttpStatus.INTERNAL_SERVER_ERROR);
             });
         }
 
